@@ -1,0 +1,11 @@
+@use '../mixins' as m
+
+.footer
+    padding: 40px 80px
+    position: absolute
+    bottom: 0
+    width: -webkit-fill-available
+    @include m.media(tablet)
+        padding: 12px 48px
+    @include m.media(phone)
+        padding: 12px 24px

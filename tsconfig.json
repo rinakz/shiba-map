@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "outDir": "./dist/",
+    "sourceMap": true,
+    "noImplicitAny": true,
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "baseUrl": "./src",
+    "strict": true,
+
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+
+    /* Linting */
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* Settings Project */
+    "paths": {
+            "~assets/*": ["./assets/*"],
+            "~styles/*": ["./styles/*"],
+            "~components/*": ["./components/*"],
+            "~constants/*": ["./constants/*"],
+            "~hooks/*": ["./hooks/*"],
+            "~routes/*": ["./routes/*"],
+            "~types/*": ["./types/*"],
+          },
+    "types": ["vite/client", "node"],
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}
