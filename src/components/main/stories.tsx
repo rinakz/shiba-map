@@ -11,11 +11,7 @@ export const Stories = () => {
         {[1, 2, 3].map((el) => {
           return (
             <div key={el}>
-              <img
-                className={stls.story}
-                src={`story${el + 1}.png`}
-                alt="story"
-              />
+              <img className={stls.story} src={`story${el}.png`} alt="story" />
             </div>
           );
         })}
