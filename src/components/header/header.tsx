@@ -1,13 +1,13 @@
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import { Toolbar } from "@mui/material";
-import stls from "~styles/components/Header.module.sass";
+import stls from "../../styles/components/Header.module.sass";
 import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
-import { PATH } from "~routes/path";
-import { IconSibkaHeader } from "~assets/icons/IconSibkaHeader";
-import { IconPlacemark } from "~assets/icons/IconPlacemark";
-import { IconProfile } from "~assets/icons/IconProfile";
+import { PATH } from "../../routes/path";
+import { IconSibkaHeader } from "../../assets/icons/IconSibkaHeader";
+import { IconPlacemark } from "../../assets/icons/IconPlacemark";
+import { IconProfile } from "../../assets/icons/IconProfile";
 
 export function Header() {
   const navigate = useNavigate();

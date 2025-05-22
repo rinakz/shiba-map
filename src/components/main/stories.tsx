@@ -1,6 +1,6 @@
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import stls from "~styles/components/Main.module.sass";
+import stls from "../../styles/components/Main.module.sass";
 
 export const Stories = () => {
   const [emblaRef] = useEmblaCarousel({ loop: false }, [Autoplay()]);

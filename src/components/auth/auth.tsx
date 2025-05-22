@@ -2,7 +2,7 @@ import { Checkbox } from "@mui/material";
 import Maps from "./maps";
 import { Controller, useForm } from "react-hook-form";
 import { AuthFormType } from "./types";
-import { LayoutPage } from "~components/general/layout-page";
+import { LayoutPage } from "../../components/general/layout-page";
 
 const label = { inputProps: { "aria-label": "Checkbox demo" } };
 

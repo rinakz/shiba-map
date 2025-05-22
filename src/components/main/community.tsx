@@ -1,11 +1,11 @@
-import stls from "~styles/components/Main.module.sass";
+import stls from "../../styles/components/Main.module.sass";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@mui/material";
 import { useNavigate } from "react-router";
-import { LayoutPage } from "~components/general/layout-page";
-import { PATH } from "~routes/path";
-import { IconPawButton } from "~assets/icons/IconPawButton";
-import Footer from "~components/footer/footer";
+import { LayoutPage } from "../../components/general/layout-page";
+import { PATH } from "../../routes/path";
+import { IconPawButton } from "../../assets/icons/IconPawButton";
+import Footer from "../../components/footer/footer";
 
 export default function Community() {
   const navigate = useNavigate();

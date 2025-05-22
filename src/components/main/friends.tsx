@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { LayoutPage } from "~components/general/layout-page";
-import stls from "~styles/components/Main.module.sass";
+import { LayoutPage } from "../../components/general/layout-page";
+import stls from "../../styles/components/Main.module.sass";
 
 export default function Friends() {
   const [isVisible, setIsVisible] = useState(false);
