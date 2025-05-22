@@ -8,12 +8,12 @@ export const Stories = () => {
   return (
     <div ref={emblaRef} style={{ overflow: "hidden", width: "100%" }}>
       <div style={{ display: "flex", width: "100%" }}>
-        {[1, 2, 3].map((el, index) => {
+        {[1, 2, 3].map((el) => {
           return (
-            <div key={index}>
+            <div key={el}>
               <img
                 className={stls.story}
-                src={`story${index + 1}.png`}
+                src={`story${el + 1}.png`}
                 alt="story"
               />
             </div>
