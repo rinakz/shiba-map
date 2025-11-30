@@ -1,5 +1,4 @@
 // import { YMaps, Map, Placemark, Clusterer } from "@pbe/react-yandex-maps";
-import jsonData from "../../address.json";
 
 export default function GeneralMap() {
   return (
