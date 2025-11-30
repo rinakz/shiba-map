@@ -1,180 +1,125 @@
-import { Checkbox } from "@mui/material";
-import Maps from "./maps";
-import { Controller, useForm } from "react-hook-form";
-import { AuthFormType } from "./types";
-import { LayoutPage } from "../../components/general/layout-page";
-
-const label = { inputProps: { "aria-label": "Checkbox demo" } };
+import { useForm } from "react-hook-form";
+import { LayoutPage } from "../general/layout-page";
+import { FirstStep } from "./first-step";
+import { SecondStep } from "./second-step";
+import { ThirdStep } from "./third-step";
+import { Box, Step, Stepper } from "@mui/material";
+import { useEffect, useState } from "react";
+import stls from "./auth.module.sass";
+import useWindowSize from "../../hooks/use-window-size";
+import { IconCrown } from "../../assets/icons/IconCrown";
+import { useNavigate } from "react-router-dom";
+import colors from "../../styles/config/Color.module.sass";
+import { PATH } from "../../constants/path";
+import type { AuthFormType } from "./types";
 
 export const Auth = () => {
   const {
-    // setValue,
     control,
-    // handleSubmit,
     formState: { errors },
-    // setError,
-    // watch,
-    // clearErrors,
+    setError,
+    watch,
+    clearErrors,
   } = useForm<AuthFormType>({
     mode: "onSubmit",
     defaultValues: {
       nickname: "",
       password: "",
-      tgname: { name: "", show: true },
+      tgname: "",
+      isShowTgName: false,
       chat: "",
       sibaname: "",
       icon: "default",
       location: "",
+      gender: "male",
+      email: "",
     },
   });
+
+  const [activeStep, setActiveStep] = useState(1);
+  const { width } = useWindowSize();
+  const navigate = useNavigate();
+
+  const formData = watch();
+
+  const [tablet, setTablet] = useState(false);
+
+  useEffect(() => {
+    setTablet(width < 1000);
+  }, [width]);
+
   return (
     <LayoutPage>
-      <div
-        style={{
-          width: "-webkit-fill-available",
-          height: "fit-content",
-          maxWidth: "500px",
-          marginTop: "112px",
-        }}
-      >
-        в разработке...
-        <img width="100%" src="sticker.gif" alt="in-processing" />
-      </div>
-      {/* <form
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-          width: "100%",
-        }}
-      >
-        <h1 style={{ marginBottom: "12px", fontSize: "46px" }}>Регистрация</h1>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          никнейм
-          <Controller
-            control={control}
-            name="nickname"
-            render={({ field }) => (
-              <input onChange={(e) => field.onChange(e)} value={field.value} />
-            )}
-          />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          пароль
-          <Controller
-            control={control}
-            name="password"
-            render={({ field }) => (
-              <input onChange={(e) => field.onChange(e)} value={field.value} />
-            )}
-          />
-        </div>
-        <div style={{ display: "flex", gap: "12px" }}>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            имя пользователя в телеграмм
-            <Controller
-              control={control}
-              name="tgname"
-              render={({ field }) => (
-                <input
-                  onChange={(e) => field.onChange(e)}
-                  value={field.value.name}
-                />
-              )}
-            />
+      <div className={stls.pageContainer}>
+        <div className={stls.loginContainer}>
+          <div style={{ width: "84px", height: "84px", display: "flex" }}>
+            <img style={{ width: "inherit" }} src="logo.png" />
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-            }}
-          >
-            <span>Показывать имя</span>
-            <Controller
-              control={control}
-              name="tgname"
-              render={({ field }) => (
-                <Checkbox
-                  {...label}
-                  value={field.value.show}
-                  checked={field.value.show}
-                  onChange={(e) => field.onChange(e)}
-                  color="default"
-                />
-              )}
-            />
-          </div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          чат в телеграмм
-          <Controller
-            control={control}
-            name="chat"
-            render={({ field }) => (
-              <input onChange={(e) => field.onChange(e)} value={field.value} />
-            )}
-          />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          имя питомца
-          <Controller
-            control={control}
-            name="sibaname"
-            render={({ field }) => (
-              <input onChange={(e) => field.onChange(e)} value={field.value} />
-            )}
-          />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span>иконка на карте</span>
-          <Controller
-            control={control}
-            name="icon"
-            render={({ field }) => (
-              <div style={{ display: "flex", gap: "12px" }}>
-                <img
-                  style={{
-                    border:
-                      field.value === "default" ? "1px solid green" : "none",
-                  }}
-                  onClick={() => field.onChange("default")}
-                  src="/sibka.png"
-                  alt="default"
-                  width={60}
-                  height={60}
-                />
-                <img
-                  style={{
-                    border:
-                      field.value === "white" ? "1px solid green" : "none",
-                  }}
-                  onClick={() => field.onChange("white")}
-                  src="/sibka-wht.png"
-                  alt="white"
-                  width={60}
-                  height={60}
-                />
-                <img
-                  style={{
-                    border:
-                      field.value === "black" ? "1px solid green" : "none",
-                  }}
-                  onClick={() => field.onChange("black")}
-                  src="/sibka-blk.png"
-                  alt="black"
-                  width={60}
-                  height={60}
-                />
+          <div className={stls.formContainer}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+            >
+              <div
+                style={{ display: "flex", gap: "8px", alignItems: "center" }}
+              >
+                <IconCrown />
+                <h1 style={{ fontSize: "40px" }}>Регистрация</h1>
               </div>
-            )}
-          />
+              <Box className={stls.stepperContainer}>
+                <Stepper>
+                  {[1, 2, 3].map((label) => (
+                    <Step
+                      className={stls.step}
+                      style={{
+                        background:
+                          label <= activeStep ? "#FFFCF5" : "transparent",
+                      }}
+                      key={label}
+                    >
+                      <h1 style={{ fontSize: "20px", color: "#FEAE11" }}>
+                        {label}
+                      </h1>
+                    </Step>
+                  ))}
+                </Stepper>
+              </Box>
+            </div>
+            <form className={stls.form}>
+              {activeStep === 1 && (
+                <FirstStep control={control} setActiveStep={setActiveStep} />
+              )}
+              {activeStep === 2 && (
+                <SecondStep control={control} setActiveStep={setActiveStep} />
+              )}
+              {activeStep === 3 && (
+                <ThirdStep
+                  control={control}
+                  setActiveStep={setActiveStep}
+                  formData={formData}
+                />
+              )}
+            </form>
+          </div>{" "}
+          {activeStep === 3 ? (
+            <div>
+              Нажимая кнопку, вы соглашаетесь с{" "}
+              <span style={{ color: colors.yellow, cursor: "pointer" }}>
+                Политикой конфиденциальности
+              </span>
+            </div>
+          ) : (
+            <div>
+              Есть аккаунт?{" "}
+              <span
+                style={{ color: colors.yellow, cursor: "pointer" }}
+                onClick={() => navigate(PATH.Login)}
+              >
+                Войти
+              </span>
+            </div>
+          )}
         </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          геолокация
-          <Maps />
-        </div>
-      </form> */}
+      </div>
     </LayoutPage>
   );
 };

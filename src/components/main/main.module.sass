@@ -1,0 +1,132 @@
+@use '../../styles/mixins' as m
+
+.mainContainer
+    width: 100%
+
+.naming
+    display: flex
+    flex-direction: column
+    gap: 56px
+    padding-top: 60px
+    @include m.media(tablet, laptop, phone)
+        padding-top: 30px
+        gap: 28px
+    @include m.media(phone)
+        svg
+            height: 54px
+    .friend
+        font-size: 31px
+        @include m.media(tablet, laptop, phone)
+            font-size: 18px
+
+.iconsContainer
+    display: flex
+    width: 50%
+    gap: 30px
+    justify-content: end
+    @include m.media(phone)
+        width: 100%
+        height: auto
+
+.iconFirst
+    height: fit-content
+    width: 50%
+    & img
+        width: 100%
+        animation: fadeIn 1s ease-in-out
+        @include m.media(phone)
+            transform: translateX(-100%)
+            animation: slideInFromRight 1s ease-in-out forwards
+
+.iconSecond
+    display: flex
+    flex-direction: column
+    align-items: end
+    gap: 30px
+    width: 40%
+    cursor: pointer
+    justify-content: space-between
+    & img
+        animation: fadeIn 1s ease-in-out
+        width: -webkit-fill-available
+        height: auto
+        @include m.media(phone)
+            transform: translateX(100%)
+            animation: slideInFromRight 1s ease-in-out forwards
+
+.mainText
+    font-size: 120px
+    @include m.media(laptop)
+        font-size: 76px
+    @include m.media(tablet)
+        font-size: 68px
+    @include m.media(phone)
+        font-size: 56px
+
+.servicesContainerHidden
+    opacity: 0
+
+.servicesContainer
+    transition: opacity 1s ease-in-out
+    opacity: 1
+    background: #FFFCF5,
+    border-radius: 60px,
+    padding: 60px,
+    width: 100%
+    height: auto
+    img
+        width: 300px
+        max-width: 300px
+    h1
+        font-size: 48px
+    p
+        font-size: 24px
+    @include m.media(tablet)
+        h1
+            font-size: 36px
+        p
+            font-size: 18px
+        img
+            max-width: 200px
+            max-height: 250px
+
+    @include m.media(phone)
+        padding: 20px
+        border-radius: 20px,
+        img
+            max-width: 200px
+            max-height: 250px
+        h1
+            font-size: 32px
+        p
+            font-size: 18px
+            line-height: 28px
+
+@keyframes fadeIn
+    from
+        opacity: 0
+
+    to
+        opacity: 1
+
+@keyframes slideInFromRight
+    to
+        transform: translateX(0)
+
+.story
+    min-height: 100vh
+    width: 473px
+    @include m.media(phone)
+        width: 100vw
+        min-height: 100vh
+
+.serviceTitle
+    display: flex
+    align-items: center
+    gap: 30px
+    margin-bottom: 60px
+    justify-content: space-between
+    @include m.media(phone)
+        flex-direction: column
+        align-items: end
+        margin-bottom: 40px

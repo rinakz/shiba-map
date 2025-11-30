@@ -1,0 +1,86 @@
+[
+  {
+    "image": "/sibka.png",
+    "geometry": [55.927488, 37.724571],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Оски</h3><span style=color:#65635E>@reenakz</span></div></a>"
+    }
+  },
+  {
+    "image": "/sibka.png",
+    "geometry": [55.912048, 37.752741],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Лора</h3><span style=color:#65635E>@Vi_ledi</span></div></a>"
+    }
+  },
+  {
+    "image": "/sibka.png",
+    "geometry": [55.91254, 37.752407],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Мелисса</h3><span style=color:#65635E>@lindwiora</span></div></a>"
+    }
+  },
+  {
+    "image": "/sibka.png",
+    "geometry": [55.924589, 37.724189],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Нати</h3><span style=color:#65635E>@oh_kudriavceva</span></div></a>"
+    }
+  },
+  {
+    "image": "/sibka.png",
+    "geometry": [55.928305, 37.724359],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Гами</h3><span style=color:#65635E>@yurist1973</span></div></a>"
+    }
+  },
+  {
+    "image": "/sibka.png",
+    "geometry": [55.923793, 37.727993],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Симба</h3><span style=color:#65635E>Viola</span></div></a>"
+    }
+  },
+  {
+    "image": "/sibka-blk.png",
+    "geometry": [55.913013, 37.780568],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Мики</h3><span style=color:#65635E>@martiny_ice</span></div></a>"
+    }
+  },
+  {
+    "image": "/sibka.png",
+    "geometry": [55.915533, 37.782476],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Плюша</h3><span style=color:#65635E>@chinova_olga</span></div></a>"
+    }
+  },
+  {
+    "image": "/sibka-wht.png",
+    "geometry": [55.928461, 37.734497],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Юки</h3><span style=color:#65635E>AD</span></div></a>"
+    }
+  },
+  {
+    "image": "/sibka.png",
+    "geometry": [55.936807, 37.843486],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Сато</h3><span style=color:#65635E>@Luna9262667487</span></div></a>"
+    }
+  },
+  {
+    "image": "/sibka.png",
+    "geometry": [55.925672, 37.722567],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Юки</h3><span style=color:#65635E>@baevms</span></div></a>"
+    }
+  },
+  {
+    "image": "/sibka.png",
+    "geometry": [55.915664, 37.757447],
+    "properties": {
+      "balloonContent": "<a style=text-decoration:none color=inherit href=https://t.me/sibiki_mytischi><div><h3 style=color:#E95B47>Кито</h3><span style=color:#65635E>@OlgaHalilova</span></div></a>"
+    }
+  }
+]

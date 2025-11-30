@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
-import stls from "../../styles/components/Main.module.sass";
-import { LayoutPage } from "../../components/general/layout-page";
+import { useEffect, useRef, useState } from "react";
+import stls from "./Main.module.sass";
+import { LayoutPage } from "../general/layout-page";
 
 export default function Coffee() {
   const [isVisible, setIsVisible] = useState(false);

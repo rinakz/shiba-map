@@ -2,7 +2,8 @@ import { Typography } from "@mui/material";
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import GeneralMap from "./general-map";
 import { IconRight } from "../../assets/icons/IconRight";
-import { CODE } from "../../code";
+
+const CODE = "сибики";
 
 export default function Map() {
   const [password, setPassword] = useState("");

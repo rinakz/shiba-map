@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
-import stls from "../../styles/components/LayoutPage.module.sass";
+import { useState, useEffect, type ReactElement } from "react";
+import stls from "./LayoutPage.module.sass";
 import useWindowSize from "../../hooks/use-window-size";
 
 type TypeLayoutPageProps = {
-  children: any;
-  classNames?: any;
+  children: ReactElement;
+  classNames?: string;
   column?: boolean;
-  style?: any;
+  style?: object;
 };
 
 export function LayoutPage({ children, column, style }: TypeLayoutPageProps) {
