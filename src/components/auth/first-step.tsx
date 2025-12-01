@@ -8,24 +8,31 @@ import { IconSibka } from "../../assets/icons/IconSibka";
 import { IconSibkaWhite } from "../../assets/icons/IconSibkaWhite";
 import { IconSibkaBlack } from "../../assets/icons/IconSibkaBlack";
 import type { AuthFormType } from "./types";
-import type { FC } from "react";
+import { useState, type FC } from "react";
+import stls from "./auth.module.sass";
 
 interface FirstStep {
   control: Control<AuthFormType>;
   setActiveStep: (value: number) => void;
+  formData: AuthFormType;
 }
 
-export const FirstStep: FC<FirstStep> = ({ control, setActiveStep }) => {
+export const FirstStep: FC<FirstStep> = ({
+  control,
+  setActiveStep,
+  formData,
+}) => {
+  const [error, setError] = useState<string | null>(null);
+  const handleNextStep = () => {
+    setError(null);
+    if (formData.sibaname && formData.gender && formData.icon) {
+      setActiveStep(2);
+    } else {
+      setError("Заполните все поля");
+    }
+  };
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        height: "100%",
-        gap: "40px",
-      }}
-    >
+    <div className={stls.stepContainer}>
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         <Controller
           control={control}
@@ -89,12 +96,11 @@ export const FirstStep: FC<FirstStep> = ({ control, setActiveStep }) => {
             )}
           />
         </div>
+        {error && (
+          <span style={{ fontSize: "12px", color: "#E95B47" }}>{error}</span>
+        )}
       </div>
-      <Button
-        iconRight={<IconRight />}
-        onClick={() => setActiveStep(2)}
-        size="large"
-      >
+      <Button iconRight={<IconRight />} onClick={handleNextStep} size="large">
         Продолжить
       </Button>
     </div>

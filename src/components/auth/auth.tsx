@@ -14,13 +14,7 @@ import { PATH } from "../../constants/path";
 import type { AuthFormType } from "./types";
 
 export const Auth = () => {
-  const {
-    control,
-    formState: { errors },
-    setError,
-    watch,
-    clearErrors,
-  } = useForm<AuthFormType>({
+  const { control, watch } = useForm<AuthFormType>({
     mode: "onSubmit",
     defaultValues: {
       nickname: "",
@@ -86,10 +80,18 @@ export const Auth = () => {
             </div>
             <form className={stls.form}>
               {activeStep === 1 && (
-                <FirstStep control={control} setActiveStep={setActiveStep} />
+                <FirstStep
+                  control={control}
+                  setActiveStep={setActiveStep}
+                  formData={formData}
+                />
               )}
               {activeStep === 2 && (
-                <SecondStep control={control} setActiveStep={setActiveStep} />
+                <SecondStep
+                  control={control}
+                  setActiveStep={setActiveStep}
+                  formData={formData}
+                />
               )}
               {activeStep === 3 && (
                 <ThirdStep

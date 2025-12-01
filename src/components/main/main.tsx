@@ -2,9 +2,10 @@ import Friends from "./friends";
 import Coffee from "./cofee";
 import Community from "./community";
 import { Tour } from "../tour";
+import { USER_LOCALSTORAGE } from "../../constants/constants";
 
 export const Main = () => {
-  const isAuthUser = undefined;
+  const isAuthUser = localStorage.getItem(USER_LOCALSTORAGE);
 
   return (
     <>
@@ -17,6 +18,7 @@ export const Main = () => {
             height: "100%",
           }}
         >
+          Добро пожаловать!
           <Friends />
           <Coffee />
           <Community />

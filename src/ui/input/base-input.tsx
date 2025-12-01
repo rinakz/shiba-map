@@ -10,6 +10,7 @@ interface InputProps {
   description?: string;
   onChange?: ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement>;
   value?: string;
+  type?: string;
 }
 
 const CustomTextField = styled(TextField)({
@@ -31,6 +32,7 @@ export const Input: FC<InputProps> = ({
   placeholder,
   description,
   icon,
+  type,
   ...props
 }) => (
   <div
@@ -43,6 +45,7 @@ export const Input: FC<InputProps> = ({
   >
     {label}
     <CustomTextField
+      type={type}
       placeholder={placeholder}
       className={styles.inputContainer}
       {...props}

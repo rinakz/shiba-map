@@ -1,13 +1,14 @@
 import { Checkbox } from "@mui/material";
 import { Controller, type Control } from "react-hook-form";
 import { IconRight } from "../../assets/icons/IconRight";
-import { Button, Input } from "../../ui";
-import { IconButton } from "../../ui/icon-button/icon-button";
+import { Button, IconButton, Input } from "../../ui";
 import { IconPawButton } from "../../assets/icons/IconPawButton";
 import { useNavigate } from "react-router-dom";
 import type { AuthFormType } from "./types";
-import type { FC } from "react";
+import { useState, type FC } from "react";
 import { supabase } from "../../api/supabase-сlient";
+import stls from "./auth.module.sass";
+import { PATH } from "../../constants/path";
 
 const label = { inputProps: { "aria-label": "Checkbox demo" } };
 
@@ -24,64 +25,61 @@ export const ThirdStep: FC<ThirdStep> = ({
 }) => {
   const navigate = useNavigate();
 
-  const handleRegister = async (e) => {
-    console.log(formData, "insertSibaError");
-    e.preventDefault();
-    // setError(null);
-    // setSuccessMessage("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const { data, error } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-    });
+  const handleRegister = async () => {
+    setError(null);
+    setIsLoading(true);
+    if (formData.tgname && formData.chat) {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
 
-    if (error) {
-      // setError(error.message);
+      if (error) {
+        setError(error.message);
+      } else {
+        const { error: insertError } = await supabase.from("users").insert([
+          {
+            user_id: data.user?.id && data.user.id,
+            email: formData.email,
+            nickname: formData.nickname,
+            tgname: formData.tgname,
+            is_show_tgname: formData.isShowTgName,
+            telegram_chat: formData.chat,
+          },
+        ]);
+
+        if (insertError) {
+          setError(insertError.message);
+        } else {
+          const { error: insertSibaError } = await supabase
+            .from("sibains")
+            .insert([
+              {
+                siba_user_id: data.user?.id && data.user.id,
+                siba_name: formData.sibaname,
+                siba_icon: formData.icon,
+                siba_gender: formData.gender,
+              },
+            ]);
+
+          if (insertSibaError) {
+            setError(insertSibaError.message);
+          } else {
+            navigate(PATH.Login);
+          }
+        }
+      }
     } else {
-      const { error: insertError } = await supabase.from("users").insert([
-        {
-          user_id: data.user.id,
-          email: formData.email,
-          nickname: formData.nickname,
-          tgname: formData.tgname,
-          is_show_tgname: formData.isShowTgName,
-          telegram_chat: formData.chat,
-        },
-      ]);
-
-      if (insertError) {
-        // setError(insertError.message);
-      } else {
-        // setSuccessMessage("Пользователь успешно зарегистрирован! Письмо с подтверждением email отправленно на указанный адрес электронной почты");
-      }
-
-      const { error: insertSibaError } = await supabase.from("sibains").insert([
-        {
-          siba_user_id: data.user.id,
-          siba_name: formData.sibaname,
-          siba_icon: formData.icon,
-          siba_gender: formData.gender,
-        },
-      ]);
-
-      if (insertSibaError) {
-        // setError(insertError.message);
-      } else {
-        // setSuccessMessage("Пользователь успешно зарегистрирован! Письмо с подтверждением email отправленно на указанный адрес электронной почты");
-      }
+      setError("Заполните все поля");
     }
+    setIsLoading(false);
   };
-  console.log(formData, "!!!!");
+
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        height: "100%",
-        gap: "40px",
-      }}
-    >
+    <div className={stls.stepContainer}>
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <Controller
@@ -127,6 +125,9 @@ export const ThirdStep: FC<ThirdStep> = ({
           )}
         />
       </div>
+      {error && (
+        <span style={{ fontSize: "12px", color: "#E95B47" }}>{error}</span>
+      )}
       <div style={{ display: "flex", gap: "16px" }}>
         <IconButton
           onClick={() => setActiveStep(2)}
@@ -143,6 +144,7 @@ export const ThirdStep: FC<ThirdStep> = ({
           iconRight={<IconPawButton />}
           size="large"
           onClick={handleRegister}
+          loading={isLoading}
         >
           Зарегистрироваться
         </Button>

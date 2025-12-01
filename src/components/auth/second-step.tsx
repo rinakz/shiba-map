@@ -2,30 +2,36 @@ import { useState, type FC } from "react";
 import { Controller, type Control } from "react-hook-form";
 import { IconRight } from "../../assets/icons/IconRight";
 import stls from "./auth.module.sass";
-import { Button, Input } from "../../ui";
+import { Button, IconButton, Input } from "../../ui";
 import { IconEyeClose } from "../../assets/icons/IconEyeClose";
 import { IconEyeOpen } from "../../assets/icons/IconEyeOpen";
-import { IconButton } from "../../ui/icon-button/icon-button";
 import type { AuthFormType } from "./types";
 
 interface SecondStep {
   control: Control<AuthFormType>;
   setActiveStep: (value: number) => void;
+  formData: AuthFormType;
 }
 
-export const SecondStep: FC<SecondStep> = ({ control, setActiveStep }) => {
+export const SecondStep: FC<SecondStep> = ({
+  control,
+  setActiveStep,
+  formData,
+}) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleNextStep = () => {
+    setError(null);
+    if (formData.nickname && formData.email && formData.password) {
+      setActiveStep(3);
+    } else {
+      setError("Заполните все поля");
+    }
+  };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        height: "100%",
-        gap: "40px",
-      }}
-    >
+    <div className={stls.stepContainer}>
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         <Controller
           control={control}
@@ -56,6 +62,7 @@ export const SecondStep: FC<SecondStep> = ({ control, setActiveStep }) => {
           name="password"
           render={({ field }) => (
             <Input
+              type={showPassword ? "text" : "password"}
               label="Пароль"
               placeholder="Введите пароль"
               value={field.value}
@@ -72,6 +79,9 @@ export const SecondStep: FC<SecondStep> = ({ control, setActiveStep }) => {
           )}
         />
       </div>
+      {error && (
+        <span style={{ fontSize: "12px", color: "#E95B47" }}>{error}</span>
+      )}
       <div style={{ display: "flex", gap: "16px" }}>
         <IconButton
           onClick={() => setActiveStep(1)}
@@ -86,7 +96,7 @@ export const SecondStep: FC<SecondStep> = ({ control, setActiveStep }) => {
         <Button
           style={{ width: "100%" }}
           iconRight={<IconRight />}
-          onClick={() => setActiveStep(3)}
+          onClick={handleNextStep}
           size="large"
         >
           Продолжить

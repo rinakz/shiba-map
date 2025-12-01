@@ -25,6 +25,7 @@ export const Button: FC<ButtonProps> = ({
   ...props
 }) => (
   <button
+    disabled={loading}
     ref={innerRef}
     className={cn(className, styles.button, styles[variant], styles[size])}
     type={type}
