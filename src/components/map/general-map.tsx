@@ -20,7 +20,7 @@ export const GeneralMap = () => {
   const mapRef = useRef<any | null>(null);
   const navigate = useNavigate();
 
-  const myCoordinate = JSON.parse(mySiba?.coordinates);
+  const myCoordinate = mySiba?.coordinates && JSON.parse(mySiba?.coordinates);
 
   const [coordinates, setCoordinates] = useState(
     myCoordinate ?? [55.75, 37.57]
