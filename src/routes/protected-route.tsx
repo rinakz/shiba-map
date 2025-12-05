@@ -1,4 +1,4 @@
-import React, { FC } from "react";
+import React, { type FC } from "react";
 import { Navigate } from "react-router-dom";
 import { PATH } from "../constants/path";
 

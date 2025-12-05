@@ -86,7 +86,7 @@ export const Login = () => {
                       className={stls.eyeIcon}
                       onClick={() => setShowPassword((prev) => !prev)}
                     >
-                      {showPassword ? <IconEyeClose /> : <IconEyeOpen />}
+                      {showPassword ? <IconEyeOpen /> : <IconEyeClose /> }
                     </div>
                   }
                   description="Забыли пароль?"

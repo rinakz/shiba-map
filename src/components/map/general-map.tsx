@@ -1,6 +1,63 @@
-// import { YMaps, Map, Placemark, Clusterer } from "@pbe/react-yandex-maps";
+import {
+  YMaps,
+  Map,
+  Clusterer,
+  Placemark,
+  SearchControl,
+} from "@pbe/react-yandex-maps";
+import { useContext, useRef, useState, type FormEvent } from "react";
+import { AppContext } from "../context/app-context";
+import stls from "./map.module.sass";
+import { Button } from "../../ui";
+import { IconMap } from "../../assets/icons/IconMap";
+import type { ShibaType } from "../../types";
 
-export default function GeneralMap() {
+export const GeneralMap = () => {
+  const { sibaIns, mySiba } = useContext(AppContext);
+  const mapRef = useRef<any | null>(null);
+
+  const myCoordinate = mySiba?.coordinates;
+
+  const [coordinates, setCoordinates] = useState(
+    myCoordinate ?? [55.75, 37.57]
+  ); // Начальные координаты
+
+  const [isShowAccept, setIsShowAccept] = useState(true);
+
+  const getLocation = (event: FormEvent<HTMLElement>) => {
+    event.preventDefault();
+    if (!navigator.geolocation) {
+      console.log("Geolocation is not supported by your browser");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setIsShowAccept(false);
+        setCoordinates([position.coords.latitude, position.coords.longitude]);
+        if (location && position.coords.latitude) {
+          mapRef.current.setCenter(
+            [position.coords.latitude, position.coords.longitude],
+            14,
+            {
+              duration: 500, // Optional animation duration
+              timingFunction: "ease-in-out", // Optional timing function
+            }
+          );
+        }
+      },
+      (error) => {
+        console.log(error.message);
+      }
+    );
+  };
+
+  function onActionTickComplete(e: any) {
+    const projection = e.get("target").options.get("projection");
+    const { globalPixelCenter, zoom } = e.get("tick");
+    setCoordinates(projection.fromGlobalPixels(globalPixelCenter, zoom));
+  }
+
   return (
     <div
       style={{
@@ -8,35 +65,55 @@ export default function GeneralMap() {
         flexDirection: "column",
         justifyContent: "space-between",
         marginTop: "112px",
+        position: "relative",
       }}
     >
-      {/* <YMaps>
+      {isShowAccept && (
+        <>
+          <div className={stls.coordinateCard}>
+            <h1 style={{ fontSize: "28px" }}>Ваша локация</h1>
+            Подтвердите ваше местоположение для быстрого поиска друзей рядом
+          </div>
+          <div className={stls.coordinateButton}>
+            <Button onClick={getLocation} iconRight={<IconMap />} size="large">
+              Подтвердить
+            </Button>
+          </div>
+        </>
+      )}
+      <YMaps query={{ apikey: "8c4bcb7f-e5cd-4ecc-b94c-e669d323affe" }}>
         <Map
           height="88vh"
           width="100%"
+          instanceRef={mapRef}
+          onActionTickComplete={onActionTickComplete}
+          modules={["control.ZoomControl"]}
           defaultState={{
-            center: [55.928322, 37.780288],
-            zoom: 12,
+            center: coordinates,
+            zoom: 10,
             controls: ["zoomControl"],
           }}
-          modules={["control.ZoomControl"]}
         >
+          <SearchControl options={{ float: "right", noPlacemark: true }} />
           <Clusterer>
-            {jsonData.map((el, idx) => (
-              <Placemark
-                key={idx}
-                modules={["geoObject.addon.balloon"]}
-                options={{
-                  iconLayout: "default#image",
-                  iconImageHref: el.image,
-                  iconImageSize: [42, 42],
-                }}
-                {...el}
-              />
-            ))}
+            {sibaIns
+              .filter((el: ShibaType) => el.coordinates)
+              .map((el: ShibaType) => (
+                <Placemark
+                  key={el.id}
+                  modules={["geoObject.addon.balloon"]}
+                  options={{
+                    iconLayout: "default#image",
+                    iconImageHref: `/${el.siba_icon}.png`,
+                    iconImageSize: [42, 42],
+                  }}
+                  geometry={JSON.parse(el.coordinates)}
+                  properties={{ balloonContent: "" }}
+                />
+              ))}
           </Clusterer>
         </Map>
-      </YMaps> */}
+      </YMaps>
     </div>
   );
-}
+};

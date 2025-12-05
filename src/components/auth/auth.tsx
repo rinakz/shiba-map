@@ -4,14 +4,15 @@ import { FirstStep } from "./first-step";
 import { SecondStep } from "./second-step";
 import { ThirdStep } from "./third-step";
 import { Box, Step, Stepper } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import stls from "./auth.module.sass";
-import useWindowSize from "../../hooks/use-window-size";
+// import useWindowSize from "../../hooks/use-window-size";
 import { IconCrown } from "../../assets/icons/IconCrown";
 import { useNavigate } from "react-router-dom";
 import colors from "../../styles/config/Color.module.sass";
 import { PATH } from "../../constants/path";
 import type { AuthFormType } from "./types";
+import { FourthStep } from "./fourth-step";
 
 export const Auth = () => {
   const { control, watch } = useForm<AuthFormType>({
@@ -31,16 +32,16 @@ export const Auth = () => {
   });
 
   const [activeStep, setActiveStep] = useState(1);
-  const { width } = useWindowSize();
+  // const { width } = useWindowSize();
   const navigate = useNavigate();
 
   const formData = watch();
 
-  const [tablet, setTablet] = useState(false);
+  // const [tablet, setTablet] = useState(false);
 
-  useEffect(() => {
-    setTablet(width < 1000);
-  }, [width]);
+  // useEffect(() => {
+  //   setTablet(width < 1000);
+  // }, [width]);
 
   return (
     <LayoutPage>
@@ -61,7 +62,7 @@ export const Auth = () => {
               </div>
               <Box className={stls.stepperContainer}>
                 <Stepper>
-                  {[1, 2, 3].map((label) => (
+                  {[1, 2, 3, 4].map((label) => (
                     <Step
                       className={stls.step}
                       style={{
@@ -99,6 +100,9 @@ export const Auth = () => {
                   setActiveStep={setActiveStep}
                   formData={formData}
                 />
+              )}
+              {activeStep === 4 && (
+                <FourthStep setActiveStep={setActiveStep} formData={formData} />
               )}
             </form>
           </div>{" "}

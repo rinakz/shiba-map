@@ -1,7 +1,7 @@
-import { FC, ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import cn from "classnames";
 import styles from "./button.module.sass";
 import { CircularProgress } from "@mui/material";
+import type { ButtonHTMLAttributes, FC, ReactNode, Ref } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;

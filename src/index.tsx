@@ -1,9 +1,14 @@
-import { createRoot } from "react-dom/client";
+import ReactDOM from "react-dom/client";
 import "./styles/base.sass";
 import { App } from "./app";
+import { AppProvider } from "./components/context/app-context";
 
-const container = document.getElementById("root")!;
+const root = ReactDOM.createRoot(
+  document.getElementById("root") as HTMLElement
+);
 
-const root = createRoot(container);
-
-root.render(<App />);
+root.render(
+  <AppProvider>
+    <App />
+  </AppProvider>
+);

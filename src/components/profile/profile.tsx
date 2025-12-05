@@ -2,7 +2,7 @@
 // import { Controller, useForm } from "react-hook-form";
 import { LayoutPage } from "../general/layout-page";
 
-const label = { inputProps: { "aria-label": "Checkbox demo" } };
+// const label = { inputProps: { "aria-label": "Checkbox demo" } };
 
 export const Profile = () => {
   return (

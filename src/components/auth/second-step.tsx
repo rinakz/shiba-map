@@ -72,7 +72,7 @@ export const SecondStep: FC<SecondStep> = ({
                   className={stls.eyeIcon}
                   onClick={() => setShowPassword((prev) => !prev)}
                 >
-                  {showPassword ? <IconEyeClose /> : <IconEyeOpen />}
+                  {showPassword ? <IconEyeOpen /> : <IconEyeClose />}
                 </div>
               }
             />

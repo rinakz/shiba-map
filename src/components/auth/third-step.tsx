@@ -2,13 +2,9 @@ import { Checkbox } from "@mui/material";
 import { Controller, type Control } from "react-hook-form";
 import { IconRight } from "../../assets/icons/IconRight";
 import { Button, IconButton, Input } from "../../ui";
-import { IconPawButton } from "../../assets/icons/IconPawButton";
-import { useNavigate } from "react-router-dom";
 import type { AuthFormType } from "./types";
 import { useState, type FC } from "react";
-import { supabase } from "../../api/supabase-сlient";
 import stls from "./auth.module.sass";
-import { PATH } from "../../constants/path";
 
 const label = { inputProps: { "aria-label": "Checkbox demo" } };
 
@@ -23,59 +19,15 @@ export const ThirdStep: FC<ThirdStep> = ({
   setActiveStep,
   formData,
 }) => {
-  const navigate = useNavigate();
-
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleRegister = async () => {
+  const handleNextStep = () => {
     setError(null);
-    setIsLoading(true);
     if (formData.tgname && formData.chat) {
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        const { error: insertError } = await supabase.from("users").insert([
-          {
-            user_id: data.user?.id && data.user.id,
-            email: formData.email,
-            nickname: formData.nickname,
-            tgname: formData.tgname,
-            is_show_tgname: formData.isShowTgName,
-            telegram_chat: formData.chat,
-          },
-        ]);
-
-        if (insertError) {
-          setError(insertError.message);
-        } else {
-          const { error: insertSibaError } = await supabase
-            .from("sibains")
-            .insert([
-              {
-                siba_user_id: data.user?.id && data.user.id,
-                siba_name: formData.sibaname,
-                siba_icon: formData.icon,
-                siba_gender: formData.gender,
-              },
-            ]);
-
-          if (insertSibaError) {
-            setError(insertSibaError.message);
-          } else {
-            navigate(PATH.Login);
-          }
-        }
-      }
+      setActiveStep(4);
     } else {
       setError("Заполните все поля");
     }
-    setIsLoading(false);
   };
 
   return (
@@ -141,12 +93,11 @@ export const ThirdStep: FC<ThirdStep> = ({
         />
         <Button
           style={{ width: "100%" }}
-          iconRight={<IconPawButton />}
+          iconRight={<IconRight />}
+          onClick={handleNextStep}
           size="large"
-          onClick={handleRegister}
-          loading={isLoading}
         >
-          Зарегистрироваться
+          Продолжить
         </Button>
       </div>
     </div>
