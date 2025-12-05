@@ -29,22 +29,22 @@ export const Profile = () => {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <IconPeople /> {user.nickname}
+            <IconPeople /> {user?.nickname}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <IconChat />
-            {user.is_show_tgname ? user.telegram_chat : "Информация скрыта"}
+            {user?.is_show_tgname ? user?.telegram_chat : "Информация скрыта"}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <IconTg />
-            {user.is_show_tgname ? user.tgname : "Информация скрыта"}
+            {user?.is_show_tgname ? user?.tgname : "Информация скрыта"}
           </div>
         </div>
         <img
           style={{ width: 92, height: 92 }}
-          src={`${mySiba.siba_icon}.png`}
+          src={`/${mySiba?.siba_icon}.png`}
         />
-        <h1 style={{ fontSize: 64 }}>{mySiba.siba_name}</h1>
+        <h1 style={{ fontSize: 64 }}>{mySiba?.siba_name}</h1>
       </div>
     </LayoutPage>
   );

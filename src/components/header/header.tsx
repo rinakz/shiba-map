@@ -8,7 +8,7 @@ import { PATH } from "../../constants/path";
 import { useLocation } from "react-router-dom";
 import { USER_LOCALSTORAGE } from "../../constants/constants";
 
-const isOpenHeaderPaths: string[] = [PATH.Home, PATH.Profile];
+const isNotOpenHeaderPaths: string[] = [PATH.Login, PATH.Tour, PATH.Auth];
 
 export function Header() {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export function Header() {
   const authUser = localStorage.getItem(USER_LOCALSTORAGE);
 
   useEffect(() => {
-    if (isOpenHeaderPaths.includes(pathname)) {
+    if (!isNotOpenHeaderPaths.includes(pathname)) {
       setIsOpenHeader(true);
     } else {
       setIsOpenHeader(false);

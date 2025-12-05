@@ -59,9 +59,14 @@ export const Main = () => {
     if (authUser) {
       getUserByEmail();
       getSibaIns();
-      getMySiba();
     }
   }, [authUser]);
+
+  useEffect(() => {
+    if (authUser && user?.user_id) {
+      getMySiba();
+    }
+  }, [authUser, user]);
 
   return (
     <>

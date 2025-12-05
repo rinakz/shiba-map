@@ -5,13 +5,13 @@ import { IconPeople } from "../../assets/icons/IconPeople";
 import { IconChat } from "../../assets/icons/IconChat";
 import { IconTg } from "../../assets/icons/IconTg";
 import { useParams } from "react-router-dom";
-import type { ShibaType } from "../../types";
+import type { ShibaType, ShibaUser } from "../../types";
 import { supabase } from "../../api/supabase-сlient";
 
 export const Siba = () => {
   const { sibaIns } = useContext(AppContext);
   const { id } = useParams();
-  const [sibaUser, setSibaUser] = useState();
+  const [sibaUser, setSibaUser] = useState<ShibaUser>();
 
   const siba = sibaIns.find((el: ShibaType) => el.id == id);
 

@@ -124,7 +124,7 @@ export const GeneralMap = () => {
                   modules={["geoObject.addon.balloon"]}
                   options={{
                     iconLayout: "default#image",
-                    iconImageHref: `/${el.siba_icon}.png`,
+                    iconImageHref: `/${el?.siba_icon}.png`,
                     iconImageSize: [42, 42],
                   }}
                   geometry={JSON.parse(el.coordinates)}
