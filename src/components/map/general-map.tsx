@@ -5,7 +5,7 @@ import {
   Placemark,
   SearchControl,
 } from "@pbe/react-yandex-maps";
-import { useContext, useRef, useState, type FormEvent } from "react";
+import { useContext, useEffect, useRef, useState, type FormEvent } from "react";
 import { AppContext } from "../context/app-context";
 import stls from "./map.module.sass";
 import { Button, IconButton } from "../../ui";
@@ -20,12 +20,7 @@ export const GeneralMap = () => {
   const mapRef = useRef<any | null>(null);
   const navigate = useNavigate();
 
-  const myCoordinate = mySiba?.coordinates && JSON.parse(mySiba?.coordinates);
-
-  const [coordinates, setCoordinates] = useState(
-    myCoordinate ?? [55.75, 37.57]
-  ); // Начальные координаты
-
+  const [coordinates, setCoordinates] = useState([55.75, 37.57]); // Начальные координаты
   const [isShowAccept, setIsShowAccept] = useState(true);
 
   const getLocation = (event: FormEvent<HTMLElement>) => {
@@ -61,6 +56,12 @@ export const GeneralMap = () => {
     const { globalPixelCenter, zoom } = e.get("tick");
     setCoordinates(projection.fromGlobalPixels(globalPixelCenter, zoom));
   }
+
+  useEffect(() => {
+    if (mySiba?.coordinates) {
+      setCoordinates(JSON.parse(mySiba?.coordinates));
+    }
+  }, [mySiba?.coordinates]);
 
   return (
     <div
