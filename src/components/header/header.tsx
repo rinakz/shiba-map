@@ -8,7 +8,7 @@ import { PATH } from "../../constants/path";
 import { useLocation } from "react-router-dom";
 import { USER_LOCALSTORAGE } from "../../constants/constants";
 
-const isOpenHeaderPaths: string[] = [PATH.Home];
+const isOpenHeaderPaths: string[] = [PATH.Home, PATH.Profile];
 
 export function Header() {
   const navigate = useNavigate();

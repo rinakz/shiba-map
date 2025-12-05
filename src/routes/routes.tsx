@@ -6,12 +6,11 @@ import { PATH } from "../constants/path";
 import { Login } from "../components/login/login";
 import type { FC } from "react";
 import { Main } from "../components";
+import { Siba } from "../components/siba/siba";
 export const Routes: FC = () => {
   // const initData = window.Telegram.WebApp;
-  
 
   return (
-    
     <BrowserRouter>
       <Header />
       <main>
@@ -22,6 +21,7 @@ export const Routes: FC = () => {
           <Route path={PATH.Login} element={<Login />} />
 
           <Route path={PATH.Profile} element={<Profile />} />
+          <Route path={PATH.Siba} element={<Siba />} />
         </MainRouter>
       </main>
     </BrowserRouter>

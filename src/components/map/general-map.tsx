@@ -8,13 +8,17 @@ import {
 import { useContext, useRef, useState, type FormEvent } from "react";
 import { AppContext } from "../context/app-context";
 import stls from "./map.module.sass";
-import { Button } from "../../ui";
+import { Button, IconButton } from "../../ui";
 import { IconMap } from "../../assets/icons/IconMap";
 import type { ShibaType } from "../../types";
+import { IconUser } from "../../assets/icons/IconUser";
+import { useNavigate } from "react-router-dom";
+import { PATH } from "../../constants/path";
 
 export const GeneralMap = () => {
   const { sibaIns, mySiba } = useContext(AppContext);
   const mapRef = useRef<any | null>(null);
+  const navigate = useNavigate();
 
   const myCoordinate = mySiba?.coordinates;
 
@@ -68,18 +72,31 @@ export const GeneralMap = () => {
         position: "relative",
       }}
     >
-      {isShowAccept && (
+      {!isShowAccept ? (
         <>
           <div className={stls.coordinateCard}>
             <h1 style={{ fontSize: "28px" }}>Ваша локация</h1>
             Подтвердите ваше местоположение для быстрого поиска друзей рядом
           </div>
           <div className={stls.coordinateButton}>
-            <Button onClick={getLocation} iconRight={<IconMap />} size="large">
+            <Button
+              style={{ width: "100%" }}
+              onClick={getLocation}
+              iconRight={<IconMap />}
+              size="large"
+            >
               Подтвердить
             </Button>
           </div>
         </>
+      ) : (
+        <div className={stls.coordinateButton}>
+          <IconButton
+            onClick={() => navigate(PATH.Profile)}
+            size="large"
+            icon={<IconUser />}
+          ></IconButton>
+        </div>
       )}
       <YMaps query={{ apikey: "8c4bcb7f-e5cd-4ecc-b94c-e669d323affe" }}>
         <Map
@@ -100,6 +117,9 @@ export const GeneralMap = () => {
               .filter((el: ShibaType) => el.coordinates)
               .map((el: ShibaType) => (
                 <Placemark
+                  onClick={() => {
+                    navigate(`siba/${el.id}`);
+                  }}
                   key={el.id}
                   modules={["geoObject.addon.balloon"]}
                   options={{
@@ -108,7 +128,9 @@ export const GeneralMap = () => {
                     iconImageSize: [42, 42],
                   }}
                   geometry={JSON.parse(el.coordinates)}
-                  properties={{ balloonContent: "" }}
+                  properties={{
+                    balloonContent: `<h1 style={{ fontSize: "14px" }}>${el.siba_name}</h1>`,
+                  }}
                 />
               ))}
           </Clusterer>
