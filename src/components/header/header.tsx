@@ -8,6 +8,7 @@ import { IconSibkaHeader } from "../../assets/icons/IconSibkaHeader";
 import { IconPlacemark } from "../../assets/icons/IconPlacemark";
 import { PATH } from "../../constants/path";
 import { useLocation } from "react-router-dom";
+import { USER_LOCALSTORAGE } from "../../constants/constants";
 
 const isOpenHeaderPaths: string[] = [PATH.Home];
 
@@ -15,7 +16,7 @@ export function Header() {
   const navigate = useNavigate();
   const [isOpenHeader, setIsOpenHeader] = useState(false);
   const { pathname } = useLocation();
-  const isAuthUser = undefined;
+  const authUser = localStorage.getItem(USER_LOCALSTORAGE);
 
   useEffect(() => {
     if (isOpenHeaderPaths.includes(pathname)) {
@@ -39,7 +40,7 @@ export function Header() {
 
   return (
     <>
-      {isOpenHeader && isAuthUser && (
+      {isOpenHeader && authUser && (
         <div className={stls.header}>
           <AppBar
             className={scroll ? stls.appbarScroll : stls.appbar}
@@ -55,24 +56,8 @@ export function Header() {
                 }}
               >
                 <IconSibkaHeader />
-                <h1 style={{ fontSize: "46px" }}>SIBINATOR</h1>
+                <h1 style={{ fontSize: "24px" }}>SIBINATOR</h1>
               </div>
-
-              <Box sx={{ display: { sm: "block" } }}>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <div
-                    className={stls.buttonPhone}
-                    onClick={() => navigate(PATH.Login)}
-                  >
-                    <IconPlacemark />
-                  </div>
-                  {/* <div className={stls.buttonPhone}>
-                <a color="inherit" href="tel:+79660060596">
-                  <IconPhoneButton />
-                </a>
-              </div> */}
-                </div>
-              </Box>
             </Toolbar>
           </AppBar>
         </div>
