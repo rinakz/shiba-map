@@ -5,7 +5,7 @@ import {
   Placemark,
   SearchControl,
 } from "@pbe/react-yandex-maps";
-import { useContext, useEffect, useRef, useState, type FormEvent } from "react";
+import { useContext, useRef, useState, type FormEvent } from "react";
 import { AppContext } from "../context/app-context";
 import stls from "./map.module.sass";
 import { Button, IconButton } from "../../ui";
