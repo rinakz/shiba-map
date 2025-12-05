@@ -1,11 +1,9 @@
 import AppBar from "@mui/material/AppBar";
-import Box from "@mui/material/Box";
 import { Toolbar } from "@mui/material";
 import stls from "./Header.module.sass";
 import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import { IconSibkaHeader } from "../../assets/icons/IconSibkaHeader";
-import { IconPlacemark } from "../../assets/icons/IconPlacemark";
 import { PATH } from "../../constants/path";
 import { useLocation } from "react-router-dom";
 import { USER_LOCALSTORAGE } from "../../constants/constants";
