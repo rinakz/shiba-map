@@ -1,15 +1,21 @@
 import { LinearProgress, Box } from "@mui/material";
 import { styled } from "@mui/system";
 
-const CustomLinearProgress = styled(LinearProgress)(({ color }) => ({
-  height: "24px",
-  borderRadius: "20px",
-  backgroundColor: "#EEEADE", // Цвет линии под ней с прозрачностью 50%
+type CustomLinearProgressProps = {
+  customColor: string;
+};
 
-  "& .MuiLinearProgress-bar": {
-    backgroundColor: color, // Цвет закрашенной верхней линии
-  },
-}));
+const CustomLinearProgress = styled(LinearProgress)(
+  ({ customColor }: CustomLinearProgressProps) => ({
+    height: "24px",
+    borderRadius: "20px",
+    backgroundColor: "#EEEADE", // Цвет линии под ней с прозрачностью 50%
+
+    "& .MuiLinearProgress-bar": {
+      backgroundColor: customColor, // Цвет закрашенной верхней линии
+    },
+  })
+);
 
 type ProgressBarType = {
   value: number;
@@ -24,7 +30,7 @@ export const ProgressBar = ({ value, color }: ProgressBarType) => {
       <CustomLinearProgress
         variant="determinate"
         value={percentage}
-        color={color}
+        customColor={color}
       />
     </Box>
   );
