@@ -4,7 +4,7 @@ export type ShibaType = {
   siba_name: string;
   siba_icon: string;
   siba_gender: string;
-  coordinates: string;
+  coordinates: string[];
 };
 
 export type ShibaUser = {

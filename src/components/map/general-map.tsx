@@ -14,6 +14,8 @@ import type { ShibaType } from "../../types";
 import { IconUser } from "../../assets/icons/IconUser";
 import { useNavigate } from "react-router-dom";
 import { PATH } from "../../constants/path";
+import { Popover } from "@mui/material";
+import { Siba } from "../siba/siba";
 
 export const GeneralMap = () => {
   const { sibaIns, mySiba } = useContext(AppContext);
@@ -22,6 +24,8 @@ export const GeneralMap = () => {
 
   const [coordinates, setCoordinates] = useState([55.75, 37.57]); // Начальные координаты
   const [isShowAccept, setIsShowAccept] = useState(true);
+  const [isOpenSiba, setIsOpenSiba] = useState(false);
+  const [selectedSibaId, setSelectedSibaId] = useState<string | null>(null);
 
   const getLocation = (event: FormEvent<HTMLElement>) => {
     event.preventDefault();
@@ -59,7 +63,7 @@ export const GeneralMap = () => {
 
   useEffect(() => {
     if (mySiba?.coordinates) {
-      setCoordinates(JSON.parse(mySiba?.coordinates));
+      setCoordinates(mySiba?.coordinates);
     }
   }, [mySiba?.coordinates]);
 
@@ -119,24 +123,35 @@ export const GeneralMap = () => {
               .map((el: ShibaType) => (
                 <Placemark
                   onClick={() => {
-                    navigate(`siba/${el.id}`);
+                    setIsOpenSiba(true);
+                    setSelectedSibaId(el.id);
+                    // navigate(`siba/${el.id}`);
                   }}
                   key={el.id}
-                  modules={["geoObject.addon.balloon"]}
                   options={{
                     iconLayout: "default#image",
                     iconImageHref: `/${el?.siba_icon}.png`,
                     iconImageSize: [42, 42],
                   }}
-                  geometry={JSON.parse(el.coordinates)}
-                  properties={{
-                    balloonContent: `<h1 style={{ fontSize: "14px" }}>${el.siba_name}</h1>`,
-                  }}
+                  geometry={el.coordinates}
                 />
               ))}
           </Clusterer>
         </Map>
       </YMaps>
+      <Popover
+        open={isOpenSiba}
+        onClose={() => {
+          setIsOpenSiba(false);
+          setSelectedSibaId(null);
+        }}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "left",
+        }}
+      >
+        {selectedSibaId && <Siba id={selectedSibaId} />}
+      </Popover>
     </div>
   );
 };

@@ -4,13 +4,20 @@ import { AppContext } from "../context/app-context";
 import { IconPeople } from "../../assets/icons/IconPeople";
 import { IconChat } from "../../assets/icons/IconChat";
 import { IconTg } from "../../assets/icons/IconTg";
-import { useParams } from "react-router-dom";
 import type { ShibaType, ShibaUser } from "../../types";
 import { supabase } from "../../api/supabase-сlient";
+import { ProgressBar } from "../progress-bar";
+import stls from "../profile/profile.module.sass";
+import { IconCafe } from "../../assets/icons/IconCafe";
+import { IconPark } from "../../assets/icons/IconPark";
+import { IconGroomer } from "../../assets/icons/IconGroomer";
 
-export const Siba = () => {
+type SibaProps = {
+  id: string;
+};
+
+export const Siba = ({ id }: SibaProps) => {
   const { sibaIns } = useContext(AppContext);
-  const { id } = useParams();
   const [sibaUser, setSibaUser] = useState<ShibaUser>();
 
   const siba = sibaIns.find((el: ShibaType) => el.id == id);
@@ -39,41 +46,105 @@ export const Siba = () => {
 
   return (
     <LayoutPage>
-      <div
-        style={{
-          marginTop: "112px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          width: "100%",
-          gap: 12,
-        }}
-      >
+      <div style={{ minWidth: "300px" }} className={stls.profileContainer}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            alignItems: "center",
+            width: "100%",
+          }}
+        >
+          <img
+            style={{ width: 92, height: 92 }}
+            src={`/${siba?.siba_icon}.png`}
+          />
+          <h1 style={{ fontSize: 64 }}>{siba?.siba_name}</h1>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-around",
+              width: "100%",
+            }}
+          >
+            <span style={{ color: "#74736E" }}>
+              {siba?.siba_gender === "male" ? "Мальчик" : "Девочка"}
+            </span>
+            <span style={{ color: "#74736E" }}>level: {siba?.level ?? 0}</span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-around",
+              width: "100%",
+            }}
+          >
+            <span>Подписки: {siba?.followers ?? 0}</span>{" "}
+            <span>Подписчики: {siba?.followings ?? 0}</span>
+          </div>
+        </div>
+        <div
+          style={{ flexDirection: "column", background: "#FEAE11" }}
+          className={stls.ownerCard}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <IconPeople /> {sibaUser?.nickname}
+          </div>
+          <div className={stls.ownerInfo}>
+            <IconChat />
+            {sibaUser?.is_show_tgname
+              ? sibaUser?.telegram_chat
+              : "Информация скрыта"}
+          </div>
+          <div className={stls.ownerInfo}>
+            <IconTg />
+            {sibaUser?.is_show_tgname ? sibaUser?.tgname : "Информация скрыта"}
+          </div>
+        </div>
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             width: "100%",
-            justifyContent: "flex-start",
+            gap: "12px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <IconPeople /> {sibaUser?.nickname}
+          Достижения
+          <div
+            style={{ background: "#FEAE11" }}
+            className={stls.progressContainer}
+          >
+            <div className={stls.progressTitle}>
+              <IconCafe />
+              <p>Кафе</p>
+            </div>
+            <ProgressBar value={siba?.cafe ?? 0} color="#7A7B7B" />
+            <span>{((siba?.cafe ?? 0) / 20) * 100}%</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <IconChat />
-            {sibaUser?.telegram_chat}
+          <div
+            style={{ background: "#FEAE11" }}
+            className={stls.progressContainer}
+          >
+            <div className={stls.progressTitle}>
+              <IconPark />
+              <p>Парки </p>
+            </div>{" "}
+            <ProgressBar value={siba?.park ?? 0} color="#2BB26E" />
+            <span>{((siba?.park ?? 0) / 20) * 100}%</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <IconTg />
-            {sibaUser?.is_show_tgname ? sibaUser?.tgname : "Информация скрыта"}
+          <div
+            style={{ background: "#FEAE11" }}
+            className={stls.progressContainer}
+          >
+            <div className={stls.progressTitle}>
+              <IconGroomer />
+              <p>Грумер </p>
+            </div>
+            <ProgressBar value={siba?.groomer ?? 0} color="#333944" />
+            <span>{((siba?.groomer ?? 0) / 20) * 100}%</span>
           </div>
         </div>
-        <img
-          style={{ width: 92, height: 92 }}
-          src={`/${siba?.siba_icon}.png`}
-        />
-        <h1 style={{ fontSize: 64 }}>{siba?.siba_name}</h1>
       </div>
     </LayoutPage>
   );
