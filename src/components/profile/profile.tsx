@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, type ChangeEvent } from "react";
 import { LayoutPage } from "../general/layout-page";
 import { AppContext } from "../context/app-context";
 import { IconPeople } from "../../assets/icons/IconPeople";
@@ -17,21 +17,23 @@ import { supabase } from "../../api/supabase-сlient";
 export const Profile = () => {
   const { mySiba, user } = useContext(AppContext);
 
-  const [avatar, setAvatar] = useState<string | ArrayBuffer | null>(null);
+  const [avatar, setAvatar] = useState<string | null>(null);
   const [isEdit, setIsEdit] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileChange = (event) => {
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (error) {
       setError(null);
     }
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatar(reader.result);
-      };
-      reader.readAsDataURL(file);
+    if (event.target.files) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAvatar(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -49,12 +51,12 @@ export const Profile = () => {
       setError(uploadError.message);
       return;
     }
-    const {data, error: urlError } = supabase.storage
+    const { data } = supabase.storage
       .from("sibinator")
       .getPublicUrl(uploadData.path);
 
-    if (urlError) {
-      setError(urlError.message);
+    if (!data) {
+      setError("Ошибка");
       return;
     }
 
