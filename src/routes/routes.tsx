@@ -1,11 +1,8 @@
 import { Routes as MainRouter, Route, BrowserRouter } from "react-router-dom";
-import { Auth } from "../components/auth/auth";
-import { Header } from "../components/header/header";
-import { Profile } from "../components/profile/profile";
 import { PATH } from "../constants/path";
-import { Login } from "../components/login/login";
 import type { FC } from "react";
-import { Main } from "../components";
+import { Header } from "../shared/header/header";
+import { AuthPage, LoginPage, MainPage, ProfilePage } from "../pages";
 export const Routes: FC = () => {
   // const initData = window.Telegram.WebApp;
 
@@ -14,12 +11,12 @@ export const Routes: FC = () => {
       <Header />
       <main>
         <MainRouter>
-          <Route path={PATH.Home} element={<Main />} />
+          <Route path={PATH.Home} element={<MainPage />} />
 
-          <Route path={PATH.Auth} element={<Auth />} />
-          <Route path={PATH.Login} element={<Login />} />
+          <Route path={PATH.Auth} element={<AuthPage />} />
+          <Route path={PATH.Login} element={<LoginPage />} />
 
-          <Route path={PATH.Profile} element={<Profile />} />
+          <Route path={PATH.Profile} element={<ProfilePage />} />
           {/* <Route path={PATH.Siba} element={<Siba />} /> */}
         </MainRouter>
       </main>
