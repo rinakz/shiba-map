@@ -12,7 +12,7 @@ import { Button, LayoutPage } from "../../shared/ui";
 import { IconRight } from "../../shared/icons/IconRight";
 import { IconAvatar } from "../../shared/icons/IconAvatar";
 import { supabase } from "../../shared/api/supabase-сlient";
-import { USER_LOCALSTORAGE } from "../../constants/constants";
+import { USER_LOCALSTORAGE } from "../../shared/constants/constants";
 
 export const ProfilePage = () => {
   const authUser = localStorage.getItem(USER_LOCALSTORAGE);

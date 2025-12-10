@@ -5,7 +5,7 @@ import stls from "./auth.module.sass";
 import { IconCrown } from "../../shared/icons/IconCrown";
 import { useNavigate } from "react-router-dom";
 import colors from "../../styles/config/Color.module.sass";
-import { PATH } from "../../constants/path";
+import { PATH } from "../../shared/constants/path";
 import type { AuthFormType } from "./types";
 import { LayoutPage } from "../../shared/ui";
 import {

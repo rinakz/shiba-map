@@ -1,6 +1,6 @@
 import { useState, useEffect, type ReactElement } from "react";
 import stls from "./layoutPage.module.sass";
-import useWindowSize from "../../../hooks/use-window-size";
+import useWindowSize from "../../hooks/use-window-size";
 
 type TypeLayoutPageProps = {
   children: ReactElement;

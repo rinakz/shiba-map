@@ -1,5 +1,5 @@
 import { Routes as MainRouter, Route, BrowserRouter } from "react-router-dom";
-import { PATH } from "../constants/path";
+import { PATH } from "../shared/constants/path";
 import type { FC } from "react";
 import { Header } from "../shared/header/header";
 import { AuthPage, LoginPage, MainPage, ProfilePage } from "../pages";

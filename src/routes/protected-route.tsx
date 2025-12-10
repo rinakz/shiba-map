@@ -1,6 +1,6 @@
 import React, { type FC } from "react";
 import { Navigate } from "react-router-dom";
-import { PATH } from "../constants/path";
+import { PATH } from "../shared/constants/path";
 
 export interface ProtectedRouteProps {
   isAuth: boolean;

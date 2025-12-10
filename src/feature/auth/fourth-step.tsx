@@ -7,7 +7,7 @@ import { Button, IconButton } from "../../shared/ui";
 import { IconRight } from "../../shared/icons/IconRight";
 import { supabase } from "../../shared/api/supabase-сlient";
 import { useNavigate } from "react-router-dom";
-import { PATH } from "../../constants/path";
+import { PATH } from "../../shared/constants/path";
 import { IconMap } from "../../shared/icons/IconMap";
 
 interface FourthStep {

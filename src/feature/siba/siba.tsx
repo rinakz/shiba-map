@@ -3,7 +3,7 @@ import { AppContext } from "../../shared/context/app-context";
 import { IconPeople } from "../../shared/icons/IconPeople";
 import { IconChat } from "../../shared/icons/IconChat";
 import { IconTg } from "../../shared/icons/IconTg";
-import type { ShibaType, ShibaUser } from "../../types";
+import type { ShibaType, ShibaUser } from "../../shared/types";
 import { supabase } from "../../shared/api/supabase-сlient";
 import stls from "../siba/siba.module.sass";
 import { IconCafe } from "../../shared/icons/IconCafe";

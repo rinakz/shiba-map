@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { ShibaType } from "../../types";
+import type { ShibaType } from "../types";
 
 const AppContext = React.createContext<any>(null);
 

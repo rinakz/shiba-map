@@ -2,15 +2,15 @@ import { useState } from "react";
 import { IconPawButton } from "../../shared/icons/IconPawButton";
 import colors from "../../styles/config/Color.module.sass";
 import { useNavigate } from "react-router-dom";
-import { PATH } from "../../constants/path";
+import { PATH } from "../../shared/constants/path";
 import { IconEyeClose } from "../../shared/icons/IconEyeClose";
 import { IconEyeOpen } from "../../shared/icons/IconEyeOpen";
 import { IconCrown } from "../../shared/icons/IconCrown";
 import stls from "./login.module.sass";
 import { Button, Input, LayoutPage } from "../../shared/ui";
 import { supabase } from "../../shared/api/supabase-сlient";
-import { USER_LOCALSTORAGE } from "../../constants/constants";
-import { useLocalStorage } from "../../hooks/use-local-storage";
+import { USER_LOCALSTORAGE } from "../../shared/constants/constants";
+import { useLocalStorage } from "../../shared/hooks/use-local-storage";
 
 export const LoginPage = () => {
   const navigate = useNavigate();

@@ -10,10 +10,10 @@ import { AppContext } from "../../shared/context/app-context";
 import stls from "./map.module.sass";
 import { Button, IconButton } from "../../shared/ui";
 import { IconMap } from "../../shared/icons/IconMap";
-import type { ShibaType } from "../../types";
+import type { ShibaType } from "../../shared/types";
 import { IconUser } from "../../shared/icons/IconUser";
 import { useNavigate } from "react-router-dom";
-import { PATH } from "../../constants/path";
+import { PATH } from "../../shared/constants/path";
 import { Popover } from "@mui/material";
 import { Siba } from "..";
 

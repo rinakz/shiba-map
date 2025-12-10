@@ -1,4 +1,4 @@
-import { USER_LOCALSTORAGE } from "../../constants/constants";
+import { USER_LOCALSTORAGE } from "../../shared/constants/constants";
 import { useContext, useEffect } from "react";
 import { supabase } from "../../shared/api/supabase-сlient";
 import { AppContext } from "../../shared/context/app-context";

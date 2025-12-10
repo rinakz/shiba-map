@@ -4,9 +4,9 @@ import stls from "./Header.module.sass";
 import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import { IconSibkaHeader } from "../../shared/icons/IconSibkaHeader";
-import { PATH } from "../../constants/path";
+import { PATH } from "../constants/path";
 import { useLocation } from "react-router-dom";
-import { USER_LOCALSTORAGE } from "../../constants/constants";
+import { USER_LOCALSTORAGE } from "../constants/constants";
 
 const isNotOpenHeaderPaths: string[] = [PATH.Login, PATH.Tour, PATH.Auth];
 

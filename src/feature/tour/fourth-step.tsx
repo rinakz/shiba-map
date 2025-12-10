@@ -2,7 +2,7 @@ import stls from "./tour.module.sass";
 import { Button } from "../../shared/ui";
 import { IconPawButton } from "../../shared/icons/IconPawButton";
 import { useNavigate } from "react-router-dom";
-import { PATH } from "../../constants/path";
+import { PATH } from "../../shared/constants/path";
 
 export const FourthStep = () => {
   const navigate = useNavigate();
