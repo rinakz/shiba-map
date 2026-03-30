@@ -6,14 +6,15 @@ import type { ShibaType, ShibaUser } from "../../shared/types";
 import { supabase } from "../../shared/api/supabase-сlient";
 import stls from "../siba/siba.module.sass";
 import { LayoutPage, ProgressBar } from "../../shared/ui";
-import { IconCafe, IconGroomer, IconPark, IconPeople, IconTg } from "../../shared/icons";
+import { IconCafe, IconGroomer, IconPark, IconPeople, IconTg, IconRight } from "../../shared/icons";
+import { Button } from "../../shared/ui";
 
 type SibaProps = {
   id: string;
 };
 
 export const Siba = ({ id }: SibaProps) => {
-  const { sibaIns } = useContext(AppContext);
+  const { sibaIns, mySiba, authUserId, setMySiba } = useContext(AppContext);
 
   const siba = sibaIns.find((el: ShibaType) => el.id == id);
 
@@ -34,6 +35,41 @@ export const Siba = ({ id }: SibaProps) => {
       return (data as ShibaUser | null) ?? undefined;
     },
   });
+
+  const canSubscribe =
+    Boolean(siba?.siba_user_id) &&
+    Boolean(authUserId) &&
+    siba?.siba_user_id !== authUserId;
+
+  const handleSubscribe = async () => {
+    if (!authUserId || !siba?.siba_user_id) return;
+    try {
+      // Создать связь друзей (в обе стороны)
+      await supabase.from("user_friends").upsert(
+        [
+          { user_id: authUserId, friend_user_id: siba.siba_user_id },
+          { user_id: siba.siba_user_id, friend_user_id: authUserId },
+        ],
+        { onConflict: "user_id,friend_user_id" },
+      );
+
+      // Обновить счётчики followers/followings (минимально, без гонок)
+      const targetFollowers = (siba?.followers ?? 0) + 1;
+      await supabase.from("sibains")
+        .update({ followers: targetFollowers })
+        .eq("id", siba.id);
+
+      if (mySiba?.id) {
+        const myFollowings = (mySiba.followings ?? 0) + 1;
+        await supabase.from("sibains")
+          .update({ followings: myFollowings })
+          .eq("id", mySiba.id);
+        setMySiba({ ...mySiba, followings: myFollowings });
+      }
+    } catch (e) {
+      console.error("Subscribe error:", e);
+    }
+  };
 
   return (
     <LayoutPage>
@@ -70,6 +106,15 @@ export const Siba = ({ id }: SibaProps) => {
             <IconTg />
             {sibaUser?.is_show_tgname ? sibaUser?.tgname : "Информация скрыта"}
           </div>
+          {canSubscribe && (
+            <Button
+              size="medium"
+              iconRight={<IconRight />}
+              onClick={handleSubscribe}
+            >
+              Подписаться
+            </Button>
+          )}
         </div>
         <div className={stls.achievements}>
           Достижения

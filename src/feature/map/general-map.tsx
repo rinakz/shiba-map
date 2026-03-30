@@ -19,10 +19,13 @@ import { Button, IconButton } from "../../shared/ui";
 import type { ShibaType } from "../../shared/types";
 import { useNavigate } from "react-router-dom";
 import { PATH } from "../../shared/constants/path";
-import { Popover } from "@mui/material";
+import { Dialog, Modal, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import { Siba } from "..";
 import { IconMap } from "../../shared/icons/IconMap";
 import { IconUser } from "../../shared/icons/IconUser";
+import { IconCafe } from "../../shared/icons/IconCafe";
+import { IconPark } from "../../shared/icons/IconPark";
+import { IconGroomer } from "../../shared/icons/IconGroomer";
 import { MapVerificationOverlay } from "./map-verification-overlay";
 import {
   jitterCoords,
@@ -30,8 +33,26 @@ import {
   resolveCurrentSiba,
   uploadVerificationPhoto,
 } from "./general-map.utils";
+import { PlaceForm } from "./place-form";
+import { fetchPlaces } from "./general-map.utils";
+import type { Place } from "./place-types";
+import { useQuery } from "@tanstack/react-query";
+import { PlaceDetail } from "./place-detail";
+import { renderToStaticMarkup } from "react-dom/server";
 
 const ymapsApiKey = import.meta.env.VITE_YMAPS_API_KEY as string | undefined;
+
+const placeIconHrefByKind = {
+  cafe: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+    renderToStaticMarkup(<IconCafe />),
+  )}`,
+  park: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+    renderToStaticMarkup(<IconPark />),
+  )}`,
+  groomer: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+    renderToStaticMarkup(<IconGroomer />),
+  )}`,
+} as const;
 
 type MapActionTick = {
   globalPixelCenter: [number, number];
@@ -69,6 +90,10 @@ export const GeneralMap = () => {
   const [isVerifyLoading, setIsVerifyLoading] = useState(false);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const isVerified = Boolean(mySiba?.photos || user?.invited_by_code);
+  const isMobile = useMediaQuery("(max-width:600px)");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isPlaceFormOpen, setIsPlaceFormOpen] = useState<null | "cafe" | "park" | "groomer">(null);
+  const [selectedPlace, setSelectedPlace] = useState<{ kind: "cafe" | "park" | "groomer"; place: Place } | null>(null);
 
   const getLocation = (event: FormEvent<HTMLElement>) => {
     event.preventDefault();
@@ -110,6 +135,22 @@ export const GeneralMap = () => {
       if (normalized) setCoordinates(normalized);
     }
   }, [mySiba?.coordinates]);
+
+  const cafesQuery = useQuery({
+    queryKey: ["places", "cafe"],
+    queryFn: () => fetchPlaces("cafe"),
+    enabled: isVerified,
+  });
+  const parksQuery = useQuery({
+    queryKey: ["places", "park"],
+    queryFn: () => fetchPlaces("park"),
+    enabled: isVerified,
+  });
+  const groomersQuery = useQuery({
+    queryKey: ["places", "groomer"],
+    queryFn: () => fetchPlaces("groomer"),
+    enabled: isVerified,
+  });
 
   const handleVerifyClick = () => {
     setVerifyError(null);
@@ -168,15 +209,7 @@ export const GeneralMap = () => {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        marginTop: "112px",
-        position: "relative",
-      }}
-    >
+    <div className={stls.mapContainer}>
       {!isShowAccept ? (
         <>
           <div className={stls.coordinateCard}>
@@ -200,6 +233,11 @@ export const GeneralMap = () => {
             onClick={() => navigate(PATH.Profile)}
             size="large"
             icon={<IconUser />}
+          ></IconButton>
+          <IconButton
+            onClick={() => setIsFilterOpen(true)}
+            size="large"
+            icon={<IconMap />}
           ></IconButton>
         </div>
       )}
@@ -262,6 +300,57 @@ export const GeneralMap = () => {
                         />
                       );
                     })}
+                  {(cafesQuery.data ?? []).map((p) => {
+                    const norm = normalizeCoords(p.coordinates);
+                    if (!norm) return null;
+                    return (
+                      <Placemark
+                        key={`cafe-${p.id}`}
+                        geometry={norm}
+                      properties={{ hintContent: p.name }}
+                      options={{
+                        iconLayout: "default#image",
+                        iconImageHref: placeIconHrefByKind.cafe,
+                        iconImageSize: [40, 40],
+                      }}
+                        onClick={() => setSelectedPlace({ kind: "cafe", place: p })}
+                      />
+                    );
+                  })}
+                  {(parksQuery.data ?? []).map((p) => {
+                    const norm = normalizeCoords(p.coordinates);
+                    if (!norm) return null;
+                    return (
+                      <Placemark
+                        key={`park-${p.id}`}
+                        geometry={norm}
+                        properties={{ hintContent: p.name }}
+                        options={{
+                          iconLayout: "default#image",
+                          iconImageHref: placeIconHrefByKind.park,
+                          iconImageSize: [40, 40],
+                        }}
+                        onClick={() => setSelectedPlace({ kind: "park", place: p })}
+                      />
+                    );
+                  })}
+                  {(groomersQuery.data ?? []).map((p) => {
+                    const norm = normalizeCoords(p.coordinates);
+                    if (!norm) return null;
+                    return (
+                      <Placemark
+                        key={`groomer-${p.id}`}
+                        geometry={norm}
+                        properties={{ hintContent: p.name }}
+                        options={{
+                          iconLayout: "default#image",
+                          iconImageHref: placeIconHrefByKind.groomer,
+                          iconImageSize: [40, 40],
+                        }}
+                        onClick={() => setSelectedPlace({ kind: "groomer", place: p })}
+                      />
+                    );
+                  })}
                 </Clusterer>
               )}
             </Map>
@@ -288,19 +377,126 @@ export const GeneralMap = () => {
           onVerifyFileChange={handleVerifyFileChange}
         />
       )}
-      <Popover
-        open={isOpenSiba}
-        onClose={() => {
-          setIsOpenSiba(false);
-          setSelectedSibaId(null);
-        }}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "left",
+      {isMobile ? (
+        <SwipeableDrawer
+          anchor="bottom"
+          open={isOpenSiba}
+          onClose={() => {
+            setIsOpenSiba(false);
+            setSelectedSibaId(null);
+          }}
+          onOpen={() => {
+            /* required by component, no-op */
+          }}
+          PaperProps={{
+            sx: {
+              height: "auto",
+              maxHeight: "85vh",
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+            },
+          }}
+        >
+          <div style={{ width: "100%" }}>
+            {selectedSibaId && <Siba id={selectedSibaId} />}
+          </div>
+        </SwipeableDrawer>
+      ) : (
+        <Dialog
+          open={isOpenSiba}
+          onClose={() => {
+            setIsOpenSiba(false);
+            setSelectedSibaId(null);
+          }}
+          fullWidth
+          maxWidth="xs"
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+            },
+          }}
+        >
+          <div style={{ width: "100%" }}>
+            {selectedSibaId && <Siba id={selectedSibaId} />}
+          </div>
+        </Dialog>
+      )}
+      <Modal open={isFilterOpen} onClose={() => setIsFilterOpen(false)}>
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 74,
+            display: "flex",
+            justifyContent: "center",
+            padding: "8px 16px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              gap: 14,
+              background: "rgba(255, 252, 245, 0.95)",
+              borderRadius: 24,
+              padding: "8px 12px",
+              boxShadow: "0px 4px 12px rgba(0,0,0,0.12)",
+            }}
+          >
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#FFFCF5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+              onClick={() => { setIsFilterOpen(false); setIsPlaceFormOpen("cafe"); }}>
+              <IconCafe />
+            </div>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#FFFCF5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+              onClick={() => { setIsFilterOpen(false); setIsPlaceFormOpen("park"); }}>
+              <IconPark />
+            </div>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#FFFCF5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+              onClick={() => { setIsFilterOpen(false); setIsPlaceFormOpen("groomer"); }}>
+              <IconGroomer />
+            </div>
+          </div>
+        </div>
+      </Modal>
+      <SwipeableDrawer
+        anchor="bottom"
+        open={Boolean(isPlaceFormOpen)}
+        onOpen={() => {}}
+        onClose={() => setIsPlaceFormOpen(null)}
+        PaperProps={{
+          sx: {
+            height: "auto",
+            maxHeight: "85vh",
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            p: 2,
+            background: "rgba(255, 252, 245, 0.95)",
+          },
         }}
       >
-        {selectedSibaId && <Siba id={selectedSibaId} />}
-      </Popover>
+        {isPlaceFormOpen && (
+          <PlaceForm
+            kind={isPlaceFormOpen}
+            onClose={() => setIsPlaceFormOpen(null)}
+          />
+        )}
+      </SwipeableDrawer>
+      <SwipeableDrawer
+        anchor="bottom"
+        open={Boolean(selectedPlace)}
+        onOpen={() => {}}
+        onClose={() => setSelectedPlace(null)}
+        PaperProps={{
+          sx: {
+            height: "auto",
+            maxHeight: "85vh",
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+          },
+        }}
+      >
+        {selectedPlace && <PlaceDetail kind={selectedPlace.kind} place={selectedPlace.place} />}
+      </SwipeableDrawer>
     </div>
   );
 };

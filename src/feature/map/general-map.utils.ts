@@ -1,6 +1,20 @@
 import { supabase } from "../../shared/api/supabase-сlient";
 import { SIBA_PHOTOS_BUCKET } from "../../shared/constants/storage";
 import type { ShibaType } from "../../shared/types";
+import type { Place, PlaceKind, PlaceVisit } from "./place-types";
+
+type VisitRow = {
+  id: string;
+  siba_id: string;
+  visited_at: string;
+  cafe_id?: string;
+  place_id?: string;
+};
+
+type SibaNameRow = {
+  id: string;
+  siba_name: string;
+};
 
 type ResolveCurrentSibaParams = {
   mySiba?: ShibaType;
@@ -145,4 +159,65 @@ export const uploadVerificationPhoto = async (
   }
 
   return photoUrl;
+};
+
+const tableByKind: Record<PlaceKind, string> = {
+  cafe: "cafes",
+  park: "parks",
+  groomer: "groomers",
+};
+
+export const fetchPlaces = async (kind: PlaceKind): Promise<Place[]> => {
+  const table = tableByKind[kind];
+  const { data, error } = await supabase.from(table).select("*");
+  if (error) throw error;
+  return (data ?? []) as Place[];
+};
+
+export const fetchPlaceVisits = async (
+  kind: PlaceKind,
+  placeId: string,
+): Promise<PlaceVisit[]> => {
+  const table =
+    kind === "cafe"
+      ? "siba_cafe_visits"
+      : kind === "park"
+      ? "siba_park_visits"
+      : "siba_groomer_visits";
+
+  // В cafe — cafe_id, в park/groomer — place_id (унифицируем в TS через alias).
+  const filterColumn = kind === "cafe" ? "cafe_id" : "place_id";
+  const { data: visits, error: visitsErr } = await supabase
+    .from(table)
+    .select(`id, ${filterColumn}, siba_id, visited_at`)
+    .eq(filterColumn, placeId)
+    .order("visited_at", { ascending: false });
+
+  if (visitsErr) throw visitsErr;
+  const safeVisits = (visits ?? []) as VisitRow[];
+
+  if (!safeVisits.length) return [];
+
+  // Подтягиваем siba_name отдельно, чтобы не зависеть от названия FK и alias join'ов.
+  const sibaIds = Array.from(new Set(safeVisits.map((v) => v.siba_id)));
+  const { data: sibas, error: sibasErr } = await supabase
+    .from("sibains")
+    .select("id,siba_name")
+    .in("id", sibaIds);
+
+  if (sibasErr) throw sibasErr;
+  const nameById = new Map<string, string>(
+    ((sibas ?? []) as SibaNameRow[]).map((s) => [s.id, s.siba_name]),
+  );
+
+  return safeVisits.map((v) => {
+    const place_id = kind === "cafe" ? v.cafe_id : v.place_id;
+    return {
+      id: v.id,
+      place_id,
+      siba_id: v.siba_id,
+      visited_at: v.visited_at,
+      siba_name: nameById.get(v.siba_id),
+    } as PlaceVisit;
+  });
 };

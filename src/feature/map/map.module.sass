@@ -1,3 +1,5 @@
+@use '../../styles/mixins' as m
+
 .coordinateCard
     display: flex
     flex-direction: column
@@ -10,16 +12,26 @@
 
 .coordinateButton
     position: absolute
-    bottom: 0
+    bottom: 96px
     z-index: 1
     display: flex
     justify-content: center
     width: 100%
     button
-        margin: 56px 20px
+        margin: 0 12px
 
 .mapWrapper
     position: relative
+
+.mapContainer
+    display: flex
+    flex-direction: column
+    justify-content: space-between
+    position: relative
+    margin-top: 112px
+    padding: 8px
+    @include m.media(phone)
+        padding: 12px
 
 .mapBlocked
     filter: blur(6px)

@@ -37,6 +37,7 @@ import {
   submitProfile,
   toggleWantToWalk,
 } from "./profile.utils";
+import { PATH } from "../../shared/constants/path";
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
@@ -60,6 +61,7 @@ export const ProfilePage = () => {
   const [isWantToWalkLoading, setIsWantToWalkLoading] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isPromoRevealed, setIsPromoRevealed] = useState(false);
 
   const userQuery = useQuery({
     queryKey: authUserId ? profileQueryKeys.user(authUserId) : ["user", "guest"],
@@ -190,6 +192,20 @@ export const ProfilePage = () => {
     <LayoutPage>
       <div className={stls.profileContainer}>
         <div className={stls.sibaInfoContainer}>
+          {!isEdit && (
+            <div className={stls.centerRow} style={{ justifyContent: "flex-start" }}>
+              <IconButton
+                size="medium"
+                variant="secondary"
+                icon={
+                  <span style={{ display: "flex", transform: "rotate(-180deg)" }}>
+                    <IconRight />
+                  </span>
+                }
+                onClick={() => navigate(PATH.Home)}
+              />
+            </div>
+          )}
           {isEdit ? (
             <div
               className={stls.photoWrapper}
@@ -279,8 +295,29 @@ export const ProfilePage = () => {
             <IconTg />
             {user?.is_show_tgname ? user?.tgname : "Информация скрыта"}
           </div>
-          <div className={stls.ownerInfo}>
-            Мой промокод: {user?.promo_code ?? "—"}
+          <div className={stls.promoRow}>
+            Мой промокод:
+            <span
+              className={cn(stls.promoValue, { [stls.promoBlur]: !isPromoRevealed })}
+              onClick={async () => {
+                const code = user?.promo_code ?? "—";
+                try {
+                  await navigator.clipboard.writeText(code);
+                  setError("Промокод скопирован");
+                  setIsPromoRevealed(true);
+                  window.setTimeout(() => {
+                    setIsPromoRevealed(false);
+                  }, 2000);
+                  setTimeout(() => setError(null), 1200);
+                } catch {
+                  setError("Не удалось скопировать промокод");
+                  setTimeout(() => setError(null), 1200);
+                }
+              }}
+              title="Скопировать"
+            >
+              {user?.promo_code ?? "—"}
+            </span>
           </div>
         </div>
         {isEdit && (

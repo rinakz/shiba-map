@@ -39,16 +39,16 @@ export function Header() {
           className={scroll ? stls.appbarScroll : stls.appbar}
           component="nav"
           sx={{
-            height: { xs: 64, md: 72 },
-            minHeight: { xs: 64, md: 72 },
+            height: { xs: 96, md: 72 },
+            minHeight: { xs: 96, md: 72 },
             backgroundColor: scroll ? "rgba(238, 234, 222, 0.7)" : "transparent",
           }}
         >
           <Toolbar
             className={stls.toolbar}
             sx={{
-              minHeight: { xs: 56, sm: 64, md: 72 },
-              px: { xs: 1.5, sm: 2.5, md: 4 },
+              minHeight: { xs: 84, sm: 64, md: 72 },
+              px: { xs: 2.5, sm: 2.5, md: 4 },
             }}
           >
             <div onClick={() => navigate(PATH.Home)} className={stls.logoBlock}>
