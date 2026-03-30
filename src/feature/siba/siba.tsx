@@ -1,6 +1,6 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import cn from "classnames";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppContext } from "../../shared/context/app-context";
 import type { ShibaType, ShibaUser } from "../../shared/types";
 import { supabase } from "../../shared/api/supabase-сlient";
@@ -8,13 +8,16 @@ import stls from "../siba/siba.module.sass";
 import { LayoutPage, ProgressBar } from "../../shared/ui";
 import { IconCafe, IconGroomer, IconPark, IconPeople, IconTg, IconRight } from "../../shared/icons";
 import { Button } from "../../shared/ui";
+import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
 
 type SibaProps = {
   id: string;
 };
 
 export const Siba = ({ id }: SibaProps) => {
-  const { sibaIns, mySiba, authUserId, setMySiba } = useContext(AppContext);
+  const { sibaIns, authUserId } = useContext(AppContext);
+  const queryClient = useQueryClient();
+  const isMobile = useMediaQuery("(max-width:600px)");
 
   const siba = sibaIns.find((el: ShibaType) => el.id == id);
 
@@ -41,10 +44,104 @@ export const Siba = ({ id }: SibaProps) => {
     Boolean(authUserId) &&
     siba?.siba_user_id !== authUserId;
 
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [listMode, setListMode] = useState<"followers" | "followings" | null>(null);
+
+  const isSubscribedQuery = useQuery<boolean>({
+    queryKey: ["is-subscribed", authUserId, siba?.siba_user_id],
+    enabled: Boolean(authUserId && siba?.siba_user_id && canSubscribe),
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("user_friends")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", authUserId!)
+        .eq("friend_user_id", siba!.siba_user_id);
+      if (error) throw error;
+      return (count ?? 0) > 0;
+    },
+  });
+
+  const followersCountQuery = useQuery<number>({
+    queryKey: ["user-friends-counts", "followers", siba?.siba_user_id],
+    enabled: Boolean(authUserId && siba?.siba_user_id),
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("user_friends")
+        .select("*", { count: "exact", head: true })
+        .eq("friend_user_id", siba!.siba_user_id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  const followingsCountQuery = useQuery<number>({
+    queryKey: ["user-friends-counts", "followings", siba?.siba_user_id],
+    enabled: Boolean(authUserId && siba?.siba_user_id),
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("user_friends")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", siba!.siba_user_id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  const followersListQuery = useQuery<ShibaType[]>({
+    queryKey: ["friends-list", "followers", siba?.siba_user_id],
+    enabled: Boolean(listMode === "followers" && siba?.siba_user_id),
+    queryFn: async () => {
+      const { data: links, error: linksError } = await supabase
+        .from("user_friends")
+        .select("user_id")
+        .eq("friend_user_id", siba!.siba_user_id);
+      if (linksError) throw linksError;
+      const userIds = (links ?? []).map((x: { user_id: string }) => x.user_id);
+      if (!userIds.length) return [];
+      const { data: sibas, error: sibasError } = await supabase
+        .from("sibains")
+        .select("*")
+        .in("siba_user_id", userIds);
+      if (sibasError) throw sibasError;
+      return (sibas ?? []) as ShibaType[];
+    },
+  });
+
+  const followingsListQuery = useQuery<ShibaType[]>({
+    queryKey: ["friends-list", "followings", siba?.siba_user_id],
+    enabled: Boolean(listMode === "followings" && siba?.siba_user_id),
+    queryFn: async () => {
+      const { data: links, error: linksError } = await supabase
+        .from("user_friends")
+        .select("friend_user_id")
+        .eq("user_id", siba!.siba_user_id);
+      if (linksError) throw linksError;
+      const userIds = (links ?? []).map((x: { friend_user_id: string }) => x.friend_user_id);
+      if (!userIds.length) return [];
+      const { data: sibas, error: sibasError } = await supabase
+        .from("sibains")
+        .select("*")
+        .in("siba_user_id", userIds);
+      if (sibasError) throw sibasError;
+      return (sibas ?? []) as ShibaType[];
+    },
+  });
+
+  const listData =
+    listMode === "followers"
+      ? (followersListQuery.data ?? [])
+      : listMode === "followings"
+      ? (followingsListQuery.data ?? [])
+      : [];
+
   const handleSubscribe = async () => {
     if (!authUserId || !siba?.siba_user_id) return;
+    if (isSubscribing) return;
+    if (isSubscribedQuery.data) return;
     try {
-      // Создать связь друзей (в обе стороны)
+      setIsSubscribing(true);
+
+      // Создать связь друзей (в обе стороны): подписка взаимная.
       await supabase.from("user_friends").upsert(
         [
           { user_id: authUserId, friend_user_id: siba.siba_user_id },
@@ -52,29 +149,25 @@ export const Siba = ({ id }: SibaProps) => {
         ],
         { onConflict: "user_id,friend_user_id" },
       );
-
-      // Обновить счётчики followers/followings (минимально, без гонок)
-      const targetFollowers = (siba?.followers ?? 0) + 1;
-      await supabase.from("sibains")
-        .update({ followers: targetFollowers })
-        .eq("id", siba.id);
-
-      if (mySiba?.id) {
-        const myFollowings = (mySiba.followings ?? 0) + 1;
-        await supabase.from("sibains")
-          .update({ followings: myFollowings })
-          .eq("id", mySiba.id);
-        setMySiba({ ...mySiba, followings: myFollowings });
-      }
+      // Счётчики считаем из user_friends, поэтому достаточно инвалидации.
+      await queryClient.invalidateQueries({
+        queryKey: ["user-friends-counts"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["is-subscribed", authUserId, siba?.siba_user_id],
+      });
     } catch (e) {
       console.error("Subscribe error:", e);
+    } finally {
+      setIsSubscribing(false);
     }
   };
 
   return (
     <LayoutPage>
-      <div className={stls.profileContainer}>
-        <div className={stls.sibaInfoContainer}>
+      <>
+        <div className={stls.profileContainer}>
+          <div className={stls.sibaInfoContainer}>
           <div
             className={cn(stls.avatarFrame, {
               [stls.wantToWalk]: siba?.want_to_walk,
@@ -94,8 +187,18 @@ export const Siba = ({ id }: SibaProps) => {
             <span className={stls.mutedText}>level: {siba?.level ?? 0}</span>
           </div>
           <div className={stls.statsRow}>
-            <span>Подписки: {siba?.followers ?? 0}</span>{" "}
-            <span>Подписчики: {siba?.followings ?? 0}</span>
+            <span
+              style={{ cursor: "pointer" }}
+              onClick={() => setListMode("followers")}
+            >
+              Подписки: {followersCountQuery.data ?? 0}
+            </span>{" "}
+            <span
+              style={{ cursor: "pointer" }}
+              onClick={() => setListMode("followings")}
+            >
+              Подписчики: {followingsCountQuery.data ?? 0}
+            </span>
           </div>
         </div>
         <div className={stls.ownerCard}>
@@ -106,11 +209,13 @@ export const Siba = ({ id }: SibaProps) => {
             <IconTg />
             {sibaUser?.is_show_tgname ? sibaUser?.tgname : "Информация скрыта"}
           </div>
-          {canSubscribe && (
+          {canSubscribe && !isSubscribedQuery.data && (
             <Button
               size="medium"
               iconRight={<IconRight />}
               onClick={handleSubscribe}
+              disabled={isSubscribing || Boolean(isSubscribedQuery.data)}
+              loading={isSubscribing || isSubscribedQuery.isLoading}
             >
               Подписаться
             </Button>
@@ -144,6 +249,59 @@ export const Siba = ({ id }: SibaProps) => {
           </div>
         </div>
       </div>
+        {isMobile ? (
+          <SwipeableDrawer
+            anchor="bottom"
+            open={Boolean(listMode)}
+            onOpen={() => {}}
+            onClose={() => setListMode(null)}
+            PaperProps={{
+              sx: {
+                height: "auto",
+                maxHeight: "85vh",
+                borderTopLeftRadius: 16,
+                borderTopRightRadius: 16,
+              },
+            }}
+          >
+            <div style={{ padding: 12 }}>
+              <h3>{listMode === "followers" ? "Подписки" : "Подписчики"}</h3>
+              {listData.map((item) => (
+                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0" }}>
+                  <img
+                    src={item.photos ?? `/${item.siba_icon}.png`}
+                    alt={item.siba_name}
+                    style={{ width: 28, height: 28, borderRadius: 14, objectFit: "cover" }}
+                  />
+                  <span>{item.siba_name}</span>
+                </div>
+              ))}
+            </div>
+          </SwipeableDrawer>
+        ) : (
+          <Dialog
+            open={Boolean(listMode)}
+            onClose={() => setListMode(null)}
+            fullWidth
+            maxWidth="xs"
+            PaperProps={{ sx: { borderRadius: 2 } }}
+          >
+            <div style={{ padding: 12 }}>
+              <h3>{listMode === "followers" ? "Подписки" : "Подписчики"}</h3>
+              {listData.map((item) => (
+                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0" }}>
+                  <img
+                    src={item.photos ?? `/${item.siba_icon}.png`}
+                    alt={item.siba_name}
+                    style={{ width: 28, height: 28, borderRadius: 14, objectFit: "cover" }}
+                  />
+                  <span>{item.siba_name}</span>
+                </div>
+              ))}
+            </div>
+          </Dialog>
+        )}
+      </>
     </LayoutPage>
   );
 };

@@ -13,6 +13,8 @@ export type ShibaType = {
   followers?: number | null;
   followings?: number | null;
   level?: number | null;
+  // Computed on the server in `public.siba_map_markers` (photo OR invited_by_code).
+  is_verified?: boolean | null;
 };
 
 export type ShibaUser = {

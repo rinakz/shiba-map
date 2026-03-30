@@ -8,6 +8,8 @@ import { useLocation } from "react-router-dom";
 import { AppContext } from "../context/app-context";
 import { isNotOpenHeaderPaths } from "../constants";
 import { PATH } from "../constants/path";
+import { Button } from "../ui";
+import { NewsPanel } from "./news-panel";
 
 export function Header() {
   const navigate = useNavigate();
@@ -15,6 +17,7 @@ export function Header() {
   const { authUserId } = useContext(AppContext);
 
   const [scroll, setScroll] = useState(0);
+  const [isNewsOpen, setIsNewsOpen] = useState(false);
 
   const isOpenHeader = useMemo(
     () => !isNotOpenHeaderPaths.includes(pathname),
@@ -55,7 +58,19 @@ export function Header() {
               <IconSibkaHeader />
               <h1 className={stls.title}>SIBINATOR</h1>
             </div>
+            <div className={stls.actions}>
+              <Button size="small" onClick={() => setIsNewsOpen(true)}>
+                News
+              </Button>
+            </div>
           </Toolbar>
+          {authUserId && (
+            <NewsPanel
+              authUserId={authUserId}
+              open={isNewsOpen}
+              onClose={() => setIsNewsOpen(false)}
+            />
+          )}
         </AppBar>
       </div>
     )

@@ -17,7 +17,7 @@ import { AppContext } from "../../shared/context/app-context";
 import stls from "./map.module.sass";
 import { Button, IconButton } from "../../shared/ui";
 import type { ShibaType } from "../../shared/types";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PATH } from "../../shared/constants/path";
 import { Dialog, Modal, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import { Siba } from "..";
@@ -28,10 +28,15 @@ import { IconPark } from "../../shared/icons/IconPark";
 import { IconGroomer } from "../../shared/icons/IconGroomer";
 import { MapVerificationOverlay } from "./map-verification-overlay";
 import {
+  extractClusterItems,
   jitterCoords,
   normalizeCoords,
-  resolveCurrentSiba,
-  uploadVerificationPhoto,
+  onMapActionTickComplete,
+  requestBrowserLocation,
+  type ClusterItem,
+  type MapActionTickEvent,
+  type ClusterEventUnknown,
+  verifyFileToSibaPhoto,
 } from "./general-map.utils";
 import { PlaceForm } from "./place-form";
 import { fetchPlaces } from "./general-map.utils";
@@ -39,6 +44,7 @@ import type { Place } from "./place-types";
 import { useQuery } from "@tanstack/react-query";
 import { PlaceDetail } from "./place-detail";
 import { renderToStaticMarkup } from "react-dom/server";
+import { ClusterItemsOverlay } from "./cluster-items-overlay";
 
 const ymapsApiKey = import.meta.env.VITE_YMAPS_API_KEY as string | undefined;
 
@@ -54,33 +60,14 @@ const placeIconHrefByKind = {
   )}`,
 } as const;
 
-type MapActionTick = {
-  globalPixelCenter: [number, number];
-  zoom: number;
-};
-
-type MapTargetPayload = {
-  options: {
-    get: (name: "projection") => {
-      fromGlobalPixels: (
-        globalPixelCenter: [number, number],
-        zoom: number,
-      ) => [number, number];
-    };
-  };
-};
-
-interface MapActionTickEvent {
-  get(key: "target"): MapTargetPayload;
-  get(key: "tick"): MapActionTick;
-}
-
 export const GeneralMap = () => {
   const { sibaIns, mySiba, setMySiba, authUserId, user } =
     useContext(AppContext);
   const mapRef = useRef<ymaps.Map | undefined>(undefined);
   const verifyFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [clusterItems, setClusterItems] = useState<ClusterItem[] | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [coordinates, setCoordinates] = useState([55.75, 37.57]); // Начальные координаты
   const [isShowAccept, setIsShowAccept] = useState(true);
@@ -95,39 +82,26 @@ export const GeneralMap = () => {
   const [isPlaceFormOpen, setIsPlaceFormOpen] = useState<null | "cafe" | "park" | "groomer">(null);
   const [selectedPlace, setSelectedPlace] = useState<{ kind: "cafe" | "park" | "groomer"; place: Place } | null>(null);
 
-  const getLocation = (event: FormEvent<HTMLElement>) => {
-    event.preventDefault();
-    if (!navigator.geolocation) {
-      console.log("Geolocation is not supported by your browser");
-      return;
-    }
+  const clusterEventsAttachedRef = useRef(false);
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setIsShowAccept(false);
-        setCoordinates([position.coords.latitude, position.coords.longitude]);
-        if (location && position.coords.latitude && mapRef.current) {
-          mapRef.current.setCenter(
-            [position.coords.latitude, position.coords.longitude],
-            14,
-            {
-              duration: 500, // Optional animation duration
-              timingFunction: "ease-in-out", // Optional timing function
-            },
-          );
-        }
-      },
-      (error) => {
-        console.log(error.message);
-      },
-    );
+  const handleClusterClick = (e: unknown) => {
+    const items = extractClusterItems({
+      event: e as ClusterEventUnknown,
+      sibaIns,
+      cafes: cafesQuery.data ?? [],
+      parks: parksQuery.data ?? [],
+      groomers: groomersQuery.data ?? [],
+    });
+    if (items.length) setClusterItems(items);
   };
 
-  function onActionTickComplete(e: MapActionTickEvent) {
-    const projection = e.get("target").options.get("projection");
-    const { globalPixelCenter, zoom } = e.get("tick");
-    setCoordinates(projection.fromGlobalPixels(globalPixelCenter, zoom));
-  }
+  const getLocation = (event: FormEvent<HTMLElement>) => {
+    event.preventDefault();
+    requestBrowserLocation({ mapRef, setIsShowAccept, setCoordinates });
+  };
+
+  const onActionTickComplete = (e: MapActionTickEvent) =>
+    onMapActionTickComplete(e, setCoordinates);
 
   useEffect(() => {
     if (mySiba?.coordinates) {
@@ -135,6 +109,14 @@ export const GeneralMap = () => {
       if (normalized) setCoordinates(normalized);
     }
   }, [mySiba?.coordinates]);
+
+  useEffect(() => {
+    const search = new URLSearchParams(location.search);
+    const sibaId = search.get("siba");
+    if (!sibaId) return;
+    setSelectedSibaId(sibaId);
+    setIsOpenSiba(true);
+  }, [location.search]);
 
   const cafesQuery = useQuery({
     queryKey: ["places", "cafe"],
@@ -158,43 +140,17 @@ export const GeneralMap = () => {
   };
 
   const handleVerifyFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setVerifyError("Можно загрузить только изображение.");
-      event.target.value = "";
-      return;
-    }
-
-    const maxSizeMb = 10;
-    if (file.size > maxSizeMb * 1024 * 1024) {
-      setVerifyError(`Файл слишком большой. Максимум ${maxSizeMb} МБ.`);
-      event.target.value = "";
-      return;
-    }
-
     setIsVerifyLoading(true);
     setVerifyError(null);
     try {
-      const targetSiba = await resolveCurrentSiba({
-        mySiba,
+      await verifyFileToSibaPhoto({
+        event,
         authUserId,
-        coordinates,
+        coordinates: coordinates as [number, number],
+        mySiba,
         setMySiba: (next) => setMySiba(next),
+        setVerifyError,
       });
-
-      if (!targetSiba?.id || !targetSiba?.siba_user_id) {
-        setVerifyError(
-          "Не удалось определить профиль сибы. Завершите регистрацию питомца в профиле.",
-        );
-        return;
-      }
-
-      const photoUrl = await uploadVerificationPhoto(targetSiba, file);
-
-      // photos выступает как ключ успешной верификации
-      setMySiba({ ...targetSiba, photos: photoUrl });
     } catch (error) {
       console.error("Ошибка верификации сибы:", error);
       setVerifyError(
@@ -263,9 +219,21 @@ export const GeneralMap = () => {
             >
               <SearchControl options={{ float: "right", noPlacemark: true }} />
               {isVerified && (
-                <Clusterer>
+                  <Clusterer
+                    options={{ clusterDisableClickZoom: true }}
+                    instanceRef={(inst: { events?: { add: (name: string, cb: (e: unknown) => void) => void } } | null) => {
+                      if (!inst || clusterEventsAttachedRef.current) return;
+                      clusterEventsAttachedRef.current = true;
+                      inst.events?.add("click", handleClusterClick);
+                    }}
+                  >
                   {sibaIns
-                    .filter((el: ShibaType) => el.coordinates && el.photos)
+                    // Показываем сиб на карте, если он прошёл верификацию:
+                    // фото ИЛИ приглашение по промокоду (computed `is_verified` из view).
+                    .filter((el: ShibaType) => {
+                      if (!el.coordinates) return false;
+                      return Boolean(el.photos) || Boolean(el.is_verified);
+                    })
                     .map((el: ShibaType) => {
                       const normalized = normalizeCoords(el.coordinates);
                       if (!normalized) return null;
@@ -295,6 +263,8 @@ export const GeneralMap = () => {
                             hintContent: el.want_to_walk
                               ? "Хочу гулять"
                               : undefined,
+                            siba_id: el.id,
+                            item_type: "siba",
                           }}
                           geometry={displayCoords}
                         />
@@ -307,7 +277,7 @@ export const GeneralMap = () => {
                       <Placemark
                         key={`cafe-${p.id}`}
                         geometry={norm}
-                      properties={{ hintContent: p.name }}
+                      properties={{ hintContent: p.name, item_type: "place", place_kind: "cafe", place_id: p.id }}
                       options={{
                         iconLayout: "default#image",
                         iconImageHref: placeIconHrefByKind.cafe,
@@ -324,7 +294,7 @@ export const GeneralMap = () => {
                       <Placemark
                         key={`park-${p.id}`}
                         geometry={norm}
-                        properties={{ hintContent: p.name }}
+                        properties={{ hintContent: p.name, item_type: "place", place_kind: "park", place_id: p.id }}
                         options={{
                           iconLayout: "default#image",
                           iconImageHref: placeIconHrefByKind.park,
@@ -341,7 +311,7 @@ export const GeneralMap = () => {
                       <Placemark
                         key={`groomer-${p.id}`}
                         geometry={norm}
-                        properties={{ hintContent: p.name }}
+                        properties={{ hintContent: p.name, item_type: "place", place_kind: "groomer", place_id: p.id }}
                         options={{
                           iconLayout: "default#image",
                           iconImageHref: placeIconHrefByKind.groomer,
@@ -351,7 +321,7 @@ export const GeneralMap = () => {
                       />
                     );
                   })}
-                </Clusterer>
+                  </Clusterer>
               )}
             </Map>
           </YMaps>
@@ -377,6 +347,24 @@ export const GeneralMap = () => {
           onVerifyFileChange={handleVerifyFileChange}
         />
       )}
+      <ClusterItemsOverlay
+        open={Boolean(clusterItems)}
+        items={clusterItems ?? []}
+        sibaIns={sibaIns}
+        cafes={cafesQuery.data ?? []}
+        parks={parksQuery.data ?? []}
+        groomers={groomersQuery.data ?? []}
+        onClose={() => setClusterItems(null)}
+        onOpenSiba={(sid) => {
+          setClusterItems(null);
+          setIsOpenSiba(true);
+          setSelectedSibaId(sid);
+        }}
+        onOpenPlace={(kind, place) => {
+          setClusterItems(null);
+          setSelectedPlace({ kind, place });
+        }}
+      />
       {isMobile ? (
         <SwipeableDrawer
           anchor="bottom"

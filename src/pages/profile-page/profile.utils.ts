@@ -67,6 +67,14 @@ export const fetchMySibaByUserId = async (authUserId: string) => {
 };
 
 export const fetchAllSibas = async () => {
+  // Prefer safer public view with computed verification (photo OR promo).
+  const { data: viewData, error: viewError } = await supabase
+    .from("siba_map_markers")
+    .select("*");
+
+  if (!viewError) return viewData ?? [];
+
+  // Fallback to direct table (dev / before migration).
   const { data, error } = await supabase.from("sibains").select("*");
   if (error) throw error;
   return data ?? [];

@@ -15,4 +15,6 @@ export type PlaceVisit = {
   siba_id: string;
   visited_at: string;
   siba_name?: string;
+  siba_icon?: string | null;
+  siba_photo?: string | null;
 };
