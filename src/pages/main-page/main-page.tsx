@@ -1,7 +1,7 @@
 import { useContext, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppContext } from "../../shared/context/app-context";
-import { GeneralMap, Tour } from "../../feature";
+import { GeneralMap } from "../../feature";
 import {
   fetchAllSibas,
   fetchMySibaByUserId,
@@ -54,7 +54,7 @@ export const MainPage = () => {
       </div>
     );
   }
-  if (!authUserId) return <Tour />;
+  if (!authUserId) return null;
 
   return <GeneralMap />;
 };
