@@ -4,7 +4,15 @@ export type ShibaType = {
   siba_name: string;
   siba_icon: string;
   siba_gender: string;
-  coordinates: string[];
+  coordinates: number[] | string[];
+  photos?: string | null;
+  want_to_walk?: boolean | null;
+  cafe?: number | null;
+  park?: number | null;
+  groomer?: number | null;
+  followers?: number | null;
+  followings?: number | null;
+  level?: number | null;
 };
 
 export type ShibaUser = {
@@ -13,5 +21,6 @@ export type ShibaUser = {
   nickname: string;
   tgname: string;
   is_show_tgname: boolean;
-  telegram_chat: string;
+  promo_code?: string;
+  invited_by_code?: string | null;
 };

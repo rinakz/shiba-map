@@ -11,19 +11,24 @@ interface SecondStep {
   control: Control<AuthFormType>;
   setActiveStep: (value: number) => void;
   formData: AuthFormType;
+  authMethod: "email" | "telegram";
 }
 
 export const SecondStep: FC<SecondStep> = ({
   control,
   setActiveStep,
   formData,
+  authMethod,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleNextStep = () => {
     setError(null);
-    if (formData.nickname && formData.email && formData.password) {
+    if (
+      (authMethod === "telegram" && formData.nickname) ||
+      (authMethod === "email" && formData.nickname && formData.email && formData.password)
+    ) {
       setActiveStep(3);
     } else {
       setError("Заполните все поля");
@@ -45,36 +50,52 @@ export const SecondStep: FC<SecondStep> = ({
             />
           )}
         />
-        <Controller
-          control={control}
-          name="email"
-          render={({ field }) => (
-            <Input
-              label="Ваш e-mail"
-              onChange={(e) => field.onChange(e)}
-              value={field.value}
-              placeholder="Введите ваш e-mail"
+        {authMethod === "email" && (
+          <>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field }) => (
+                <Input
+                  label="Ваш e-mail"
+                  onChange={(e) => field.onChange(e)}
+                  value={field.value}
+                  placeholder="Введите ваш e-mail"
+                />
+              )}
             />
-          )}
-        />
+            <Controller
+              control={control}
+              name="password"
+              render={({ field }) => (
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  label="Пароль"
+                  placeholder="Введите пароль"
+                  value={field.value}
+                  onChange={(e) => field.onChange(e)}
+                  icon={
+                    <div
+                      className={stls.eyeIcon}
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    >
+                      {showPassword ? <IconEyeOpen /> : <IconEyeClose />}
+                    </div>
+                  }
+                />
+              )}
+            />
+          </>
+        )}
         <Controller
           control={control}
-          name="password"
+          name="inviteCode"
           render={({ field }) => (
             <Input
-              type={showPassword ? "text" : "password"}
-              label="Пароль"
-              placeholder="Введите пароль"
-              value={field.value}
+              label="У меня есть код"
               onChange={(e) => field.onChange(e)}
-              icon={
-                <div
-                  className={stls.eyeIcon}
-                  onClick={() => setShowPassword((prev) => !prev)}
-                >
-                  {showPassword ? <IconEyeOpen /> : <IconEyeClose />}
-                </div>
-              }
+              value={field.value}
+              placeholder="Введите промокод друга (необязательно)"
             />
           )}
         />

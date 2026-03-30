@@ -23,7 +23,7 @@ export const ThirdStep: FC<ThirdStep> = ({
 
   const handleNextStep = () => {
     setError(null);
-    if (formData.tgname && formData.chat) {
+    if (formData.tgname) {
       setActiveStep(4);
     } else {
       setError("Заполните все поля");
@@ -63,19 +63,6 @@ export const ThirdStep: FC<ThirdStep> = ({
             <span style={{ fontSize: "14px" }}>Показывать имя</span>
           </div>
         </div>
-        <Controller
-          control={control}
-          name="chat"
-          render={({ field }) => (
-            <Input
-              label="Чат в телеграм"
-              onChange={(e) => field.onChange(e)}
-              value={field.value}
-              placeholder="Укажите чат в телеграм"
-              description="Укажите чат, в котором Вас смогут найти другие пользователи, если не хотите, чтобы с Вами связывались через личные сообщения"
-            />
-          )}
-        />
       </div>
       {error && (
         <span style={{ fontSize: "12px", color: "#E95B47" }}>{error}</span>

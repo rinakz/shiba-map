@@ -1,73 +1,60 @@
-import { USER_LOCALSTORAGE } from "../../shared/constants/constants";
 import { useContext, useEffect } from "react";
-import { supabase } from "../../shared/api/supabase-сlient";
+import { useQuery } from "@tanstack/react-query";
 import { AppContext } from "../../shared/context/app-context";
 import { GeneralMap, Tour } from "../../feature";
+import {
+  fetchAllSibas,
+  fetchMySibaByUserId,
+  fetchUserById,
+  profileQueryKeys,
+} from "../profile-page/profile.utils";
 
 export const MainPage = () => {
-  const authUser = localStorage.getItem(USER_LOCALSTORAGE);
+  const { authUserId, isAuthLoading, setUser, setSibaIns, setMySiba } =
+    useContext(AppContext);
 
-  const { user, setUser, setSibaIns, setMySiba } = useContext(AppContext);
+  const userQuery = useQuery({
+    queryKey: authUserId ? profileQueryKeys.user(authUserId) : ["user", "guest"],
+    queryFn: () => fetchUserById(authUserId as string),
+    enabled: Boolean(authUserId),
+  });
 
-  const getUserByEmail = async () => {
-    if (authUser) {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("email", JSON.parse(authUser).email);
+  const sibasQuery = useQuery({
+    queryKey: profileQueryKeys.allSibas(),
+    queryFn: fetchAllSibas,
+    enabled: Boolean(authUserId),
+  });
 
-      if (error) {
-        console.error("Ошибка при получении пользователя:", error);
-        return null;
-      }
+  const mySibaQuery = useQuery({
+    queryKey: authUserId ? profileQueryKeys.mySiba(authUserId) : ["mySiba", "guest"],
+    queryFn: () => fetchMySibaByUserId(authUserId as string),
+    enabled: Boolean(authUserId),
+  });
 
-      setUser(data[0]);
-    }
-  };
-
-  const getSibaIns = async () => {
-    if (authUser) {
-      const { data, error } = await supabase.from("sibains").select("*");
-
-      if (error) {
-        console.error("Ошибка при получении сиб:", error);
-        return null;
-      }
-
-      setSibaIns(data);
-    }
-  };
-
-  const getMySiba = async () => {
-    if (authUser && user?.user_id) {
-      const { data, error } = await supabase
-        .from("sibains")
-        .select("*")
-        .eq("siba_user_id", user.user_id);
-
-      if (error) {
-        console.error("Ошибка при получении сибы:", error);
-        return null;
-      }
-
-      setMySiba(data[0]);
-    }
-  };
-
-  // при входе на главную получаем юзера и весь список сибиков
   useEffect(() => {
-    if (authUser) {
-      getUserByEmail();
-      getSibaIns();
-    }
-  }, [authUser]);
+    if (userQuery.data) setUser(userQuery.data);
+  }, [userQuery.data, setUser]);
 
-  // при получении текущего юзера делаем запрос на его сибу
   useEffect(() => {
-    if (authUser && user?.user_id) {
-      getMySiba();
-    }
-  }, [authUser, user]);
+    if (sibasQuery.data) setSibaIns(sibasQuery.data);
+  }, [sibasQuery.data, setSibaIns]);
 
-  return authUser ? <GeneralMap /> : <Tour />;
+  useEffect(() => {
+    if (mySibaQuery.data !== undefined) setMySiba(mySibaQuery.data);
+  }, [mySibaQuery.data, setMySiba]);
+
+  const isPageDataLoading =
+    Boolean(authUserId) &&
+    (userQuery.isLoading || sibasQuery.isLoading || mySibaQuery.isLoading);
+
+  if (isAuthLoading || isPageDataLoading) {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: "#74736E" }}>
+        Загружаем данные карты...
+      </div>
+    );
+  }
+  if (!authUserId) return <Tour />;
+
+  return <GeneralMap />;
 };

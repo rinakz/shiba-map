@@ -3,7 +3,7 @@ import { Box, Step, Stepper } from "@mui/material";
 import { useState } from "react";
 import stls from "./auth.module.sass";
 import { IconCrown } from "../../shared/icons/IconCrown";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import colors from "../../styles/config/Color.module.sass";
 import { PATH } from "../../shared/constants/path";
 import type { AuthFormType } from "./types";
@@ -16,14 +16,18 @@ import {
 } from "../../feature/auth";
 
 export const AuthPage = () => {
+  const location = useLocation();
+  const methodParam = new URLSearchParams(location.search).get("method");
+  const authMethod = methodParam === "telegram" ? "telegram" : "email";
+
   const { control, watch } = useForm<AuthFormType>({
     mode: "onSubmit",
     defaultValues: {
       nickname: "",
       password: "",
+      inviteCode: "",
       tgname: "",
       isShowTgName: false,
-      chat: "",
       sibaname: "",
       icon: "default",
       location: "",
@@ -86,6 +90,7 @@ export const AuthPage = () => {
                   control={control}
                   setActiveStep={setActiveStep}
                   formData={formData}
+                  authMethod={authMethod}
                 />
               )}
               {activeStep === 3 && (
@@ -96,7 +101,11 @@ export const AuthPage = () => {
                 />
               )}
               {activeStep === 4 && (
-                <FourthStep setActiveStep={setActiveStep} formData={formData} />
+                <FourthStep
+                  setActiveStep={setActiveStep}
+                  formData={formData}
+                  authMethod={authMethod}
+                />
               )}
             </form>
           </div>{" "}

@@ -9,7 +9,18 @@ declare module '*.png';
 
 declare module '*.pdf';
 
-// declare interface Window {
-//   hasUnsavedChanges: boolean;
-//   isReadOnly: boolean;
-// }
+type TelegramWebApp = {
+  initData?: string;
+};
+
+type TelegramGlobal = {
+  WebApp?: TelegramWebApp;
+};
+
+declare global {
+  interface Window {
+    Telegram?: TelegramGlobal;
+  }
+}
+
+export {};

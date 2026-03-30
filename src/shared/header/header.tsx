@@ -2,29 +2,24 @@ import AppBar from "@mui/material/AppBar";
 import { Toolbar } from "@mui/material";
 import stls from "./Header.module.sass";
 import { useNavigate } from "react-router";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { IconSibkaHeader } from "../../shared/icons/IconSibkaHeader";
-import { PATH } from "../constants/path";
 import { useLocation } from "react-router-dom";
-import { USER_LOCALSTORAGE } from "../constants/constants";
-
-const isNotOpenHeaderPaths: string[] = [PATH.Login, PATH.Tour, PATH.Auth];
+import { AppContext } from "../context/app-context";
+import { isNotOpenHeaderPaths } from "../constants";
+import { PATH } from "../constants/path";
 
 export function Header() {
   const navigate = useNavigate();
-  const [isOpenHeader, setIsOpenHeader] = useState(false);
   const { pathname } = useLocation();
-  const authUser = localStorage.getItem(USER_LOCALSTORAGE);
-
-  useEffect(() => {
-    if (!isNotOpenHeaderPaths.includes(pathname)) {
-      setIsOpenHeader(true);
-    } else {
-      setIsOpenHeader(false);
-    }
-  }, [pathname]);
+  const { authUserId } = useContext(AppContext);
 
   const [scroll, setScroll] = useState(0);
+
+  const isOpenHeader = useMemo(
+    () => !isNotOpenHeaderPaths.includes(pathname),
+    [pathname],
+  );
 
   const handleScroll = () => {
     setScroll(window.scrollY);
@@ -37,29 +32,32 @@ export function Header() {
   }, []);
 
   return (
-    <>
-      {isOpenHeader && authUser && (
-        <div className={stls.header}>
-          <AppBar
-            className={scroll ? stls.appbarScroll : stls.appbar}
-            component="nav"
+    isOpenHeader &&
+    authUserId && (
+      <div className={stls.header}>
+        <AppBar
+          className={scroll ? stls.appbarScroll : stls.appbar}
+          component="nav"
+          sx={{
+            height: { xs: 64, md: 72 },
+            minHeight: { xs: 64, md: 72 },
+            backgroundColor: scroll ? "rgba(238, 234, 222, 0.7)" : "transparent",
+          }}
+        >
+          <Toolbar
+            className={stls.toolbar}
+            sx={{
+              minHeight: { xs: 56, sm: 64, md: 72 },
+              px: { xs: 1.5, sm: 2.5, md: 4 },
+            }}
           >
-            <Toolbar className={stls.toolbar}>
-              <div
-                onClick={() => navigate(PATH.Home)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  cursor: "pointer",
-                }}
-              >
-                <IconSibkaHeader />
-                <h1 style={{ fontSize: "24px" }}>SIBINATOR</h1>
-              </div>
-            </Toolbar>
-          </AppBar>
-        </div>
-      )}
-    </>
+            <div onClick={() => navigate(PATH.Home)} className={stls.logoBlock}>
+              <IconSibkaHeader />
+              <h1 className={stls.title}>SIBINATOR</h1>
+            </div>
+          </Toolbar>
+        </AppBar>
+      </div>
+    )
   );
 }

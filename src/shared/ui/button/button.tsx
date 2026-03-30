@@ -22,17 +22,18 @@ export const Button: FC<ButtonProps> = ({
   size = "medium",
   iconRight,
   innerRef,
+  disabled,
   ...props
 }) => (
   <button
-    disabled={loading}
+    disabled={loading || disabled}
     ref={innerRef}
     className={cn(className, styles.button, styles[variant], styles[size])}
     type={type}
     {...props}
   >
     {loading ? (
-      <CircularProgress />
+      <CircularProgress size="small" color="primary" />
     ) : (
       <span className={styles.iconContainer}>
         {children}

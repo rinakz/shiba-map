@@ -5,6 +5,7 @@
     align-items: center
     width: 100%
     gap: 38px
+    min-width: 300px
 
 .sibaInfoContainer
     display: flex
@@ -13,41 +14,53 @@
     align-items: center
     width: 100%
 
-.uploadedPhoto
-    width: 200px
-    height: 200px
-    border-radius: 20px
-    object-fit: cover
-    margin-bottom: 10px
-
-.customInputPhoto
+.avatarFrame
     display: flex
-    justify-content: center
     align-items: center
-    width: 200px
-    height: 200px
-    border-radius: 20px
-    background-color: rgba(255, 252, 245, 0.5)
-    margin-bottom: 10px
+    justify-content: center
+    width: 96px
+    height: 96px
+    border: 3px solid transparent
+    border-radius: 16px
+    padding: 2px
+    box-sizing: border-box
 
-.inputPhoto
-    position: absolute
-    top: 0
-    right: 0
-    width: 200
-    height: 200
-    opacity: 0
+.wantToWalk
+    border-color: #2BB26E
+
+.avatarImage
+    width: 92px
+    height: 92px
+    border-radius: 12px
+
+.sibaName
+    font-size: 64px
+    margin: 0
+
+.statsRow
+    display: flex
+    justify-content: space-around
+    width: 100%
+
+.mutedText
+    color: #74736E
 
 .ownerCard
     display: flex
+    flex-direction: column
     width: -webkit-fill-available
-    justify-content: space-between
-    background: rgba(255, 252, 245, 0.50)
+    gap: 8px
+    background: #FEAE11
     border-radius: 20px
     padding: 12px
     align-items: flex-start
     flex-wrap: wrap
     box-shadow: 0px 4px 8px 0px #67645E1A
+
+.ownerMain
+    display: flex
+    align-items: center
+    gap: 8px
 
 .ownerInfo
     display: flex
@@ -59,11 +72,17 @@
 .progressContainer
     display: flex
     gap: 8px
-    background: rgba(255, 252, 245, 0.50)
+    background: #FEAE11
     padding: 8px
     border-radius: 30px
     align-items: center
     box-shadow: 0px 4px 8px 0px #67645E1A
+
+.achievements
+    display: flex
+    flex-direction: column
+    width: 100%
+    gap: 12px
 
 .progressTitle
     display: flex

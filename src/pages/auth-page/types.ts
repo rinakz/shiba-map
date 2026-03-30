@@ -1,9 +1,9 @@
 export type AuthFormType = {
   nickname: string;
   password: string;
+  inviteCode: string;
   tgname: string;
   isShowTgName: boolean;
-  chat: string;
   sibaname: string;
   icon: string;
   location: string;

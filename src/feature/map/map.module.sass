@@ -17,3 +17,54 @@
     width: 100%
     button
         margin: 56px 20px
+
+.mapWrapper
+    position: relative
+
+.mapBlocked
+    filter: blur(6px)
+    pointer-events: none
+
+.verifyOverlay
+    position: absolute
+    inset: 0
+    display: flex
+    align-items: center
+    justify-content: center
+    z-index: 2
+    pointer-events: none
+
+.verifyCard
+    pointer-events: all
+    max-width: 420px
+    display: flex
+    flex-direction: column
+    gap: 10px
+    background: rgba(255, 252, 245, 0.94)
+    border-radius: 20px
+    padding: 20px
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.12)
+    margin: 0 20px
+
+.verifyError
+    color: #E95B47
+    font-size: 12px
+
+.hiddenFileInput
+    display: none
+
+.mapLoadingOverlay
+    position: absolute
+    inset: 0
+    display: flex
+    align-items: center
+    justify-content: center
+    z-index: 2
+    background: rgba(255, 252, 245, 0.55)
+
+.mapLoadingCard
+    background: rgba(255, 252, 245, 0.95)
+    border-radius: 16px
+    padding: 12px 16px
+    color: #74736E
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.12)
