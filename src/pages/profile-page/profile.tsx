@@ -8,6 +8,7 @@ import {
 import cn from "classnames";
 import { useQuery } from "@tanstack/react-query";
 import { Checkbox, Drawer, Switch } from "@mui/material";
+import Skeleton from "@mui/material/Skeleton";
 import { AppContext } from "../../shared/context/app-context";
 import stls from "./profile.module.sass";
 import { Button, IconButton, Input, LayoutPage } from "../../shared/ui";
@@ -15,6 +16,7 @@ import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import {
   IconAvatar,
+  IconEdit,
   IconFemale,
   IconMale,
   IconPeople,
@@ -25,10 +27,16 @@ import {
   IconTg,
 } from "../../shared/icons";
 import { ProfileAchievements } from "./profile-achievements";
+import { ShibaAcademy } from "./shiba-academy";
+import { HealthSection } from "./health-section";
+import { getShibaRank } from "./shiba-academy.data";
 import {
   buildEditDrafts,
   deleteAccount,
   fetchMySibaByUserId,
+  fetchSibaAcademyProgress,
+  fetchSubscribersCount,
+  fetchSubscriptionsCount,
   fetchUserById,
   openFilePicker,
   performSignOut,
@@ -67,13 +75,49 @@ export const ProfilePage = () => {
     queryKey: authUserId ? profileQueryKeys.user(authUserId) : ["user", "guest"],
     queryFn: () => fetchUserById(authUserId as string),
     enabled: Boolean(authUserId),
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const mySibaQuery = useQuery({
     queryKey: authUserId ? profileQueryKeys.mySiba(authUserId) : ["mySiba", "guest"],
     queryFn: () => fetchMySibaByUserId(authUserId as string),
     enabled: Boolean(authUserId),
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
+
+  const subscriptionsCountQuery = useQuery<number>({
+    queryKey: ["user-friends-counts", "subscriptions", authUserId],
+    enabled: Boolean(authUserId),
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    queryFn: () => fetchSubscriptionsCount(authUserId as string),
+  });
+
+  const subscribersCountQuery = useQuery<number>({
+    queryKey: ["user-friends-counts", "subscribers", authUserId],
+    enabled: Boolean(authUserId),
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    queryFn: () => fetchSubscribersCount(authUserId as string),
+  });
+
+  const academyProgressQuery = useQuery<{ learned_skill_ids: string[] | null } | null>({
+    queryKey: ["siba-academy", mySiba?.id ?? "none"],
+    enabled: Boolean(mySiba?.id),
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    queryFn: () => fetchSibaAcademyProgress(mySiba!.id),
+  });
+
+  const completedCommandsCount = academyProgressQuery.data?.learned_skill_ids?.length ?? 0;
+  const academyRank = getShibaRank(completedCommandsCount).rank;
 
   useEffect(() => {
     if (userQuery.data) setUser(userQuery.data);
@@ -188,12 +232,31 @@ export const ProfilePage = () => {
     }
   };
 
+  const isProfileLoading =
+    userQuery.isLoading ||
+    mySibaQuery.isLoading ||
+    subscriptionsCountQuery.isLoading ||
+    subscribersCountQuery.isLoading;
+
+  if (isProfileLoading && !mySiba) {
+    return (
+      <LayoutPage>
+        <div className={stls.profileContainer}>
+          <Skeleton variant="rounded" width={200} height={200} />
+          <Skeleton variant="text" width={220} height={56} />
+          <Skeleton variant="rounded" width="100%" height={92} />
+          <Skeleton variant="rounded" width="100%" height={180} />
+        </div>
+      </LayoutPage>
+    );
+  }
+
   return (
     <LayoutPage>
       <div className={stls.profileContainer}>
         <div className={stls.sibaInfoContainer}>
           {!isEdit && (
-            <div className={stls.centerRow} style={{ justifyContent: "flex-start" }}>
+            <div className={stls.topActionsRow}>
               <IconButton
                 size="medium"
                 variant="secondary"
@@ -204,6 +267,25 @@ export const ProfilePage = () => {
                 }
                 onClick={() => navigate(PATH.Home)}
               />
+              <IconButton
+                size="medium"
+                variant="secondary"
+                icon={<IconEdit />}
+                onClick={handleStartEdit}
+              />
+            </div>
+          )}
+          {!isEdit && mySiba && (
+            <div className={stls.walkToggleTop}>
+              <label className={stls.walkToggle}>
+                <Switch
+                  checked={Boolean(mySiba.want_to_walk)}
+                  onChange={handleToggleWantToWalk}
+                  color="success"
+                  disabled={isWantToWalkLoading}
+                />
+                Хочу гулять
+              </label>
             </div>
           )}
           {isEdit ? (
@@ -249,31 +331,19 @@ export const ProfilePage = () => {
               alt="Сиба"
             />
           )}
-          {!isEdit && (
-            <div className={stls.centerRow}>
-              <Button
-                size="medium"
-                variant="secondary"
-                onClick={handleStartEdit}
-              >
-                Редактировать профиль
-              </Button>
+          <div className={stls.titleRow}>
+            <div className={stls.nameBlock}>
+              <h1 className={stls.sibaName}>{mySiba?.siba_name}</h1>
+            </div>
+          </div>
+          {!isEdit && academyRank && (
+            <div className={stls.rankContainer}>
+              <div className={stls.academyRankUnderName}>
+                {academyRank.icon} {academyRank.rank}
+              </div>
+              <div className={stls.academyQuoteUnderName}>{academyRank.bossQuote}</div>
             </div>
           )}
-          <div className={stls.titleRow}>
-            <h1 className={stls.sibaName}>{mySiba?.siba_name}</h1>
-            {!isEdit && mySiba && (
-              <label className={stls.walkToggle}>
-                <Switch
-                  checked={Boolean(mySiba.want_to_walk)}
-                  onChange={handleToggleWantToWalk}
-                  color="success"
-                  disabled={isWantToWalkLoading}
-                />
-                Хочу гулять
-              </label>
-            )}
-          </div>
           <div className={stls.statsRow}>
             <span className={stls.mutedText}>
               {mySiba?.siba_gender === "male" ? "Мальчик" : "Девочка"}
@@ -283,8 +353,8 @@ export const ProfilePage = () => {
             </span>
           </div>
           <div className={stls.statsRow}>
-            <span>Подписки: {mySiba?.followers ?? 0}</span>{" "}
-            <span>Подписчики: {mySiba?.followings ?? 0}</span>
+            <span>Подписки: {subscriptionsCountQuery.data ?? 0}</span>{" "}
+            <span>Подписчики: {subscribersCountQuery.data ?? 0}</span>
           </div>
         </div>
         <div className={stls.ownerCard}>
@@ -387,6 +457,8 @@ export const ProfilePage = () => {
           </div>
         )}
         <ProfileAchievements mySiba={mySiba} />
+        <ShibaAcademy sibaId={mySiba?.id} />
+        <HealthSection sibaId={mySiba?.id} />
         {error && (
           <span className={stls.errorText}>{error}</span>
         )}{" "}

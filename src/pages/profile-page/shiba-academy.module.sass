@@ -1,0 +1,163 @@
+.root
+  width: 100%
+  display: flex
+  flex-direction: column
+  gap: 12px
+
+.header
+  width: 100%
+  background: #FFFCF5
+  border-radius: 20px
+  padding: 12px
+  box-shadow: 0px 4px 8px 0px #67645E1A
+  border: 1px solid #E7E1D2
+
+.headerTop
+  display: flex
+  justify-content: space-between
+  align-items: center
+  gap: 10px
+
+.headerTitle
+  font-size: 18px
+  font-weight: 700
+  color: #333944
+
+.status
+  font-size: 14px
+  color: #74736E
+
+.statusRankUp
+  animation: rankPop 900ms ease
+
+@keyframes rankPop
+  0%
+    transform: scale(1)
+    text-shadow: none
+  25%
+    transform: scale(1.08)
+    text-shadow: 0 0 10px rgba(233, 91, 71, 0.35)
+  55%
+    transform: scale(1.02)
+  100%
+    transform: scale(1)
+    text-shadow: none
+
+.progressTrack
+  margin-top: 10px
+  width: 100%
+  height: 10px
+  border-radius: 999px
+  background: #E7E1D2
+  overflow: hidden
+
+.progressFill
+  height: 100%
+  border-radius: 999px
+  background: linear-gradient(90deg, #E95B47 0%, #FF9A55 100%)
+  transition: width 260ms ease
+
+.meta
+  margin-top: 8px
+  font-size: 13px
+  color: #74736E
+
+.rankQuote
+  margin-top: 8px
+  font-size: 13px
+  color: #65635E
+  line-height: 1.35
+
+.tabs
+  display: grid
+  grid-template-columns: repeat(5, minmax(0, 1fr))
+  gap: 8px
+
+.tab
+  border: 1px solid #E7E1D2
+  background: #FFFCF5
+  border-radius: 14px
+  padding: 10px
+  color: #74736E
+  font-size: 14px
+  transition: all 180ms ease
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.tabActive
+  color: #333944
+  border-color: #E95B47
+  background: #FFF3EE
+
+.grid
+  display: grid
+  grid-template-columns: repeat(2, minmax(0, 1fr))
+  gap: 10px
+
+.card
+  min-height: 140px
+  border-radius: 24px
+  border: 1px solid #E7E1D2
+  background: #FFFCF5
+  padding: 12px
+  display: flex
+  flex-direction: column
+  align-items: flex-start
+  justify-content: space-between
+  gap: 8px
+  text-align: left
+  transition: all 220ms ease
+
+.cardChecked
+  border-color: #E95B47
+  background: linear-gradient(180deg, #FFF3EE 0%, #FFE3CE 100%)
+  transform: translateY(-1px)
+
+.cardIcon
+  font-size: 22px
+
+.cardName
+  font-size: 16px
+  font-weight: 700
+  color: #333944
+
+.cardDesc
+  font-size: 12px
+  color: #74736E
+
+.drawerContent
+  padding: 16px
+  display: flex
+  flex-direction: column
+  gap: 12px
+  background: #FFFCF5
+
+.drawerIcon
+  font-size: 38px
+
+.drawerTitle
+  margin: 0
+  color: #333944
+
+.drawerText
+  margin: 0
+  color: #74736E
+
+.tip
+  border-radius: 14px
+  border: 1px solid #E7E1D2
+  background: #FFF8EA
+  padding: 10px
+  display: flex
+  flex-direction: column
+  gap: 6px
+
+.tipTitle
+  font-size: 13px
+  font-weight: 700
+  color: #333944
+
+.tipText
+  font-size: 13px
+  color: #74736E

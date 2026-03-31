@@ -11,6 +11,8 @@ declare module '*.pdf';
 
 type TelegramWebApp = {
   initData?: string;
+  shareToContact?: (message: string) => void;
+  openTelegramLink?: (url: string) => void;
 };
 
 type TelegramGlobal = {

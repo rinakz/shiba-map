@@ -1,5 +1,6 @@
 import { useContext, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { CircularProgress, Skeleton } from "@mui/material";
 import { AppContext } from "../../shared/context/app-context";
 import { GeneralMap } from "../../feature";
 import {
@@ -49,8 +50,22 @@ export const MainPage = () => {
 
   if (isAuthLoading || isPageDataLoading) {
     return (
-      <div style={{ padding: 24, textAlign: "center", color: "#74736E" }}>
-        Загружаем данные карты...
+      <div
+        style={{
+          minHeight: "65vh",
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+          padding: 16,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#74736E" }}>
+          <CircularProgress size={18} />
+          Загружаем карту и данные...
+        </div>
+        <Skeleton variant="rounded" width="100%" height={64} />
+        <Skeleton variant="rounded" width="100%" height={320} />
+        <Skeleton variant="rounded" width="80%" height={48} />
       </div>
     );
   }

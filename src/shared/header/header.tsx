@@ -9,7 +9,10 @@ import { AppContext } from "../context/app-context";
 import { isNotOpenHeaderPaths } from "../constants";
 import { PATH } from "../constants/path";
 import { Button } from "../ui";
-import { NewsPanel } from "./news-panel";
+import { NewsPanel } from "./news-panel/news-panel";
+import { IconCalendar } from "../icons";
+import { IconButton } from "../ui";
+import { EventCalendar } from "./event-calendar";
 
 export function Header() {
   const navigate = useNavigate();
@@ -18,6 +21,7 @@ export function Header() {
 
   const [scroll, setScroll] = useState(0);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const isOpenHeader = useMemo(
     () => !isNotOpenHeaderPaths.includes(pathname),
@@ -42,15 +46,15 @@ export function Header() {
           className={scroll ? stls.appbarScroll : stls.appbar}
           component="nav"
           sx={{
-            height: { xs: 96, md: 72 },
-            minHeight: { xs: 96, md: 72 },
+            height: { xs: 116, md: 72 },
+            minHeight: { xs: 116, md: 72 },
             backgroundColor: scroll ? "rgba(238, 234, 222, 0.7)" : "transparent",
           }}
         >
           <Toolbar
             className={stls.toolbar}
             sx={{
-              minHeight: { xs: 84, sm: 64, md: 72 },
+              minHeight: { xs: 104, sm: 64, md: 72 },
               px: { xs: 2.5, sm: 2.5, md: 4 },
             }}
           >
@@ -59,6 +63,11 @@ export function Header() {
               <h1 className={stls.title}>SIBINATOR</h1>
             </div>
             <div className={stls.actions}>
+              <IconButton
+                size="small"
+                icon={<IconCalendar />}
+                onClick={() => setIsCalendarOpen(true)}
+              />
               <Button size="small" onClick={() => setIsNewsOpen(true)}>
                 News
               </Button>
@@ -69,6 +78,13 @@ export function Header() {
               authUserId={authUserId}
               open={isNewsOpen}
               onClose={() => setIsNewsOpen(false)}
+            />
+          )}
+          {authUserId && (
+            <EventCalendar
+              authUserId={authUserId}
+              open={isCalendarOpen}
+              onClose={() => setIsCalendarOpen(false)}
             />
           )}
         </AppBar>

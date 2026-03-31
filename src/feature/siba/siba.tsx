@@ -9,6 +9,12 @@ import { LayoutPage, ProgressBar } from "../../shared/ui";
 import { IconCafe, IconGroomer, IconPark, IconPeople, IconTg, IconRight } from "../../shared/icons";
 import { Button } from "../../shared/ui";
 import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
+import Skeleton from "@mui/material/Skeleton";
+import {
+  getAchievementPercent,
+  getShibaRank,
+  shibaSkills,
+} from "../../pages/profile-page/shiba-academy.data";
 
 type SibaProps = {
   id: string;
@@ -21,7 +27,7 @@ export const Siba = ({ id }: SibaProps) => {
 
   const siba = sibaIns.find((el: ShibaType) => el.id == id);
 
-  const { data: sibaUser } = useQuery<ShibaUser | undefined>({
+  const { data: sibaUser, isLoading: isSibaUserLoading } = useQuery<ShibaUser | undefined>({
     queryKey: ["public-profile", siba?.siba_user_id ?? "unknown"],
     enabled: Boolean(siba?.siba_user_id),
     queryFn: async () => {
@@ -134,6 +140,26 @@ export const Siba = ({ id }: SibaProps) => {
       ? (followingsListQuery.data ?? [])
       : [];
 
+  const academyProgressQuery = useQuery<{ learned_skill_ids: string[] | null } | null>({
+    queryKey: ["siba-academy", siba?.id ?? "none"],
+    enabled: Boolean(siba?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("siba_academy_progress")
+        .select("learned_skill_ids")
+        .eq("siba_id", siba!.id)
+        .maybeSingle();
+      if (error) return null;
+      return (data as { learned_skill_ids: string[] | null } | null) ?? null;
+    },
+  });
+  const learnedSkillIds = academyProgressQuery.data?.learned_skill_ids ?? [];
+  const academyRank = getShibaRank(learnedSkillIds.length).rank;
+  const knownCommands = learnedSkillIds
+    .map((skillId) => shibaSkills.find((skill) => skill.id === skillId))
+    .filter((skill): skill is (typeof shibaSkills)[number] => Boolean(skill))
+    .slice(0, 8);
+
   const handleSubscribe = async () => {
     if (!authUserId || !siba?.siba_user_id) return;
     if (isSubscribing) return;
@@ -163,6 +189,26 @@ export const Siba = ({ id }: SibaProps) => {
     }
   };
 
+  const isSibaLoading =
+    !siba ||
+    isSibaUserLoading ||
+    academyProgressQuery.isLoading ||
+    followersCountQuery.isLoading ||
+    followingsCountQuery.isLoading;
+
+  if (isSibaLoading) {
+    return (
+      <LayoutPage>
+        <div className={stls.profileContainer}>
+          <Skeleton variant="rounded" width={96} height={96} />
+          <Skeleton variant="text" width={180} height={48} />
+          <Skeleton variant="rounded" width="100%" height={96} />
+          <Skeleton variant="rounded" width="100%" height={180} />
+        </div>
+      </LayoutPage>
+    );
+  }
+
   return (
     <LayoutPage>
       <>
@@ -180,6 +226,14 @@ export const Siba = ({ id }: SibaProps) => {
             />
           </div>
           <h1 className={stls.sibaName}>{siba?.siba_name}</h1>
+          {academyRank && (
+            <>
+              <div className={stls.rankUnderAvatar}>
+                {academyRank.icon} {academyRank.rank}
+              </div>
+              <div className={stls.rankQuoteUnderAvatar}>{academyRank.bossQuote}</div>
+            </>
+          )}
           <div className={stls.statsRow}>
             <span className={stls.mutedText}>
               {siba?.siba_gender === "male" ? "Мальчик" : "Девочка"}
@@ -222,14 +276,27 @@ export const Siba = ({ id }: SibaProps) => {
           )}
         </div>
         <div className={stls.achievements}>
-          Достижения
+          {knownCommands.length > 0 && (
+            <div className={stls.commandsSection}>
+              <div className={stls.sectionTitle}>Знает команды</div>
+              <div className={stls.commandsGrid}>
+                {knownCommands.map((skill) => (
+                  <div key={skill.id} className={stls.commandCard}>
+                    <span className={stls.commandIcon}>{skill.icon}</span>
+                    <span className={stls.commandName}>{skill.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className={stls.sectionTitle}>Достижения</div>
           <div className={stls.progressContainer}>
             <div className={stls.progressTitle}>
               <IconCafe />
               <p>Кафе</p>
             </div>
             <ProgressBar value={siba?.cafe ?? 0} color="#7A7B7B" />
-            <span>{((siba?.cafe ?? 0) / 20) * 100}%</span>
+            <span>{getAchievementPercent(siba?.cafe ?? 0)}%</span>
           </div>
           <div className={stls.progressContainer}>
             <div className={stls.progressTitle}>
@@ -237,7 +304,7 @@ export const Siba = ({ id }: SibaProps) => {
               <p>Парки </p>
             </div>{" "}
             <ProgressBar value={siba?.park ?? 0} color="#2BB26E" />
-            <span>{((siba?.park ?? 0) / 20) * 100}%</span>
+            <span>{getAchievementPercent(siba?.park ?? 0)}%</span>
           </div>
           <div className={stls.progressContainer}>
             <div className={stls.progressTitle}>
@@ -245,7 +312,7 @@ export const Siba = ({ id }: SibaProps) => {
               <p>Грумер </p>
             </div>
             <ProgressBar value={siba?.groomer ?? 0} color="#333944" />
-            <span>{((siba?.groomer ?? 0) / 20) * 100}%</span>
+            <span>{getAchievementPercent(siba?.groomer ?? 0)}%</span>
           </div>
         </div>
       </div>

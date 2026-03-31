@@ -15,5 +15,10 @@ export * from "./IconSibkaBlack";
 export * from "./IconRight";
 export * from "./IconTg";
 export * from "./IconPawButton";
+export * from "./IconCalendar";
+export * from "./IconVaccine";
+export * from "./IconParasite";
+export * from "./IconTraining";
+export * from "./IconEdit";
 
 

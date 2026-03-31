@@ -1,73 +1,101 @@
-# React + TypeScript + Vite
+# Shiba Map
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Социальная карта для владельцев сиба-ину: где гуляют, какие места посещают, кто с кем дружит, какие команды выучены, какие совместные прогулки планируются.
 
-Currently, two official plugins are available:
+Проект ориентирован на мобильный сценарий (в том числе Telegram WebApp), но работает и на десктопе.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Зачем это приложение
 
-## React Compiler
+Владельцы собак обычно используют 3-5 разных инструментов: чат, карту, заметки по здоровью, календарь встреч.  
+`Shiba Map` объединяет это в одном месте:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- видеть рядом других сиб и dog-friendly места;
+- договариваться о прогулках и подписываться друг на друга;
+- фиксировать визиты, прогресс в тренировках и здоровье;
+- быстро ориентироваться в активности друзей через ленту событий.
 
-## Expanding the ESLint configuration
+## Какие проблемы решает
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Разрозненность данных**: карта, профиль, здоровье, тренировки и события в одной системе.
+- **Сложно найти "своих"**: карта показывает других сиб и места с контекстом.
+- **Нет мотивации заниматься с собакой**: академия команд + ранги + прогресс.
+- **Слабая вовлеченность сообщества**: подписки, новости, совместные события.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Ключевой функционал
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **Авторизация**
+  - email/password;
+  - Telegram WebApp (initData), deep link fallback.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **Профиль владельца и сибы**
+  - редактирование имени, пола, иконки, фото;
+  - переключатель "Хочу гулять";
+  - промокод (блюр + копирование по клику);
+  - удаление аккаунта.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- **Карта**
+  - маркеры сиб с кластеризацией;
+  - маркеры мест: кафе, парки, грумеры;
+  - просмотр всех объектов внутри кластера;
+  - мобильные drawer-предпросмотры и desktop-диалоги.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **Места (POI)**
+  - создание места через форму и карту;
+  - привязка координат и обратное геокодирование адреса;
+  - фото места, описание, история посещений.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **Подписки и social**
+  - взаимные подписки;
+  - списки подписок/подписчиков;
+  - `News`-лента: посещения, добавления мест, подписки, выученные команды.
+
+- **Календарь прогулок**
+  - события по датам;
+  - отметки дней с событиями;
+  - участие "Я пойду";
+  - список участников.
+
+- **Shiba Academy**
+  - команды по уровням;
+  - сохранение прогресса;
+  - ранги, цитаты, анимация апгрейда.
+
+- **Health & Care**
+  - вакцинация (контроль срока);
+  - паразиты (препарат, дата, прогресс до следующей обработки).
+
+## Технологии
+
+- `React 18` + `TypeScript` + `Vite`
+- `@tanstack/react-query` (кэш и синхронизация данных)
+- `Supabase` (Auth + Postgres + RLS + Storage)
+- `@pbe/react-yandex-maps` (карта, геопоиск, геокодирование)
+- `MUI` + `SASS`
+
+## Архитектура (кратко)
+
+- `src/pages` — страницы (auth/login/main/profile)
+- `src/feature` — feature-модули (map, siba, auth, tour)
+- `src/shared` — API, context, ui-kit, header/footer, icons
+- `supabase/sql` — SQL миграции и RLS-политики
+
+## UX/состояния загрузки
+
+Во всех основных query-экранах добавлены loading-state:
+
+- skeleton/спиннеры на странице профиля,
+- карточка сибы,
+- news,
+- календарь,
+- академия,
+- health section,
+- детали места.
+
+## Статус проекта
+
+Проект находится в активной фазе развития.  
+Ближайшие фокусы:
+
+- расширение аналитики событий;
+- улучшение перформанса карты;
+- усиление модерации/валидации контента.

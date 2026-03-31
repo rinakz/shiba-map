@@ -3,30 +3,16 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchPlaceVisits } from "./general-map.utils";
 import type { Place, PlaceKind, PlaceVisit } from "./place-types";
 import { Button } from "../../shared/ui";
-import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
+import { Dialog, Skeleton, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import { Siba } from "../siba/siba";
+import {
+  geocodeAddressFromCoords,
+  type YMapGeocodeApi,
+} from "../../shared/api/ymaps-geocode";
 
 type PlaceDetailProps = {
   kind: PlaceKind;
   place: Place;
-};
-
-type GeoObjectLike = {
-  getAddressLine?: () => string;
-  properties?: {
-    getAll?: () => Record<string, unknown>;
-  };
-};
-
-type GeocodeResultLike = {
-  geoObjects?: {
-    get?: (idx: number) => GeoObjectLike | null;
-    toArray?: () => GeoObjectLike[];
-  };
-};
-
-type YMapsLike = {
-  geocode?: (coords: [number, number]) => Promise<GeocodeResultLike>;
 };
 
 export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
@@ -58,16 +44,8 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
     }
   };
 
-  const extractAddressFromGeoObject = (geoObject: GeoObjectLike | null): string | null => {
-    if (!geoObject) return null;
-    const line = geoObject?.getAddressLine?.();
-    if (typeof line === "string" && line.trim()) return line.trim();
-    const props = geoObject?.properties?.getAll?.() ?? {};
-    const propsText =
-      typeof props?.text === "string" ? props.text.trim() : undefined;
-    if (propsText) return propsText;
-    return null;
-  };
+  const formatCoords = (coords: [number, number]) =>
+    `${coords[0].toFixed(5)}, ${coords[1].toFixed(5)}`;
 
   const addressCoords = useMemo(() => tryParseCoordsFromAddress(place.address), [place.address]);
 
@@ -78,21 +56,19 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
         setResolvedAddress(place.address);
         return;
       }
-      const ymaps = (window as Window & { ymaps?: YMapsLike }).ymaps;
-      if (!ymaps?.geocode) {
-        setResolvedAddress(place.address);
+      const ymaps = (window as unknown as { ymaps?: YMapGeocodeApi }).ymaps;
+      if (!ymaps) {
+        setResolvedAddress(formatCoords(addressCoords));
         return;
       }
       setIsResolvingAddress(true);
       try {
-        const res = await ymaps.geocode(addressCoords);
-        const geoObjects = res?.geoObjects;
-        const firstObj =
-          geoObjects?.get?.(0) ?? geoObjects?.toArray?.()?.[0] ?? null;
-        const addr = extractAddressFromGeoObject(firstObj);
-        if (!cancelled) setResolvedAddress(addr ?? "Адрес не определен");
+        const backwardAddr = await geocodeAddressFromCoords(ymaps, addressCoords);
+        if (!cancelled) {
+          setResolvedAddress(backwardAddr ?? formatCoords(addressCoords));
+        }
       } catch {
-        if (!cancelled) setResolvedAddress("Адрес не определен");
+        if (!cancelled) setResolvedAddress(formatCoords(addressCoords));
       } finally {
         if (!cancelled) setIsResolvingAddress(false);
       }
@@ -143,7 +119,16 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
           </div>
         </div>
       ) : (
-        <div style={{ marginTop: 8, color: "#74736E" }}>Пока никто не отметился</div>
+        <div style={{ marginTop: 8, color: "#74736E" }}>
+          {visitsQuery.isLoading ? (
+            <>
+              <Skeleton variant="rounded" height={28} sx={{ mb: 1 }} />
+              <Skeleton variant="rounded" height={28} />
+            </>
+          ) : (
+            "Пока никто не отметился"
+          )}
+        </div>
       )}
       {visits.length > 1 && !showAll && (
         <div style={{ marginTop: 8 }}>

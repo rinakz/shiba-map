@@ -1,0 +1,95 @@
+.root
+  width: 100%
+  display: flex
+  flex-direction: column
+  gap: 10px
+
+.header
+  width: 100%
+  border: 1px solid #E7E1D2
+  border-radius: 16px
+  padding: 12px
+  background: #FFFCF5
+  display: flex
+  align-items: center
+  gap: 10px
+  cursor: pointer
+  box-shadow: 0px 4px 8px 0px #67645E1A
+
+.leftIconPlaceholder
+  width: 20px
+  height: 20px
+  border-radius: 10px
+  flex: 0 0 auto
+  display: flex
+  align-items: center
+  justify-content: center
+
+.title
+  font-size: 16px
+  font-weight: 700
+  color: #333944
+  flex: 1 1 auto
+  text-align: left
+
+.rightPencilPlaceholder
+  width: 20px
+  height: 20px
+  border-radius: 6px
+  flex: 0 0 auto
+  display: flex
+  align-items: center
+  justify-content: center
+
+.body
+  overflow: hidden
+  transition: max-height 260ms ease, opacity 220ms ease, transform 220ms ease
+  transform-origin: top center
+
+.bodyOpen
+  max-height: 900px
+  opacity: 1
+  transform: translateY(0)
+
+.bodyClosed
+  max-height: 0
+  opacity: 0
+  transform: translateY(-4px)
+
+.bodyInner
+  border: 1px solid #E7E1D2
+  border-radius: 16px
+  background: #FFFCF5
+  box-shadow: 0px 4px 8px 0px #67645E1A
+  padding: 12px
+  display: flex
+  flex-direction: column
+  gap: 12px
+
+.block
+  display: flex
+  flex-direction: column
+  gap: 8px
+
+.rowTitle
+  font-size: 14px
+  color: #333944
+  font-weight: 600
+
+.expired
+  color: #E95B47
+  font-size: 13px
+  font-weight: 700
+
+.metaText
+  font-size: 13px
+  color: #74736E
+
+.select
+  width: 100%
+  border: 1px solid #E7E1D2
+  border-radius: 14px
+  padding: 10px 12px
+  font-size: 14px
+  color: #333944
+  background: #FFFCF5

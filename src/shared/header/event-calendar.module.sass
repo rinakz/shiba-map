@@ -1,0 +1,159 @@
+.wrap
+  padding: 12px
+
+.top
+  display: flex
+  align-items: center
+  justify-content: space-between
+  margin-bottom: 8px
+
+.monthTitle
+  font-size: 20px
+  font-weight: 700
+
+.monthNav
+  display: flex
+  gap: 8px
+
+.calendarGrid
+  display: grid
+  grid-template-columns: repeat(7, 1fr)
+  gap: 6px
+  margin-top: 10px
+  margin-bottom: 14px
+
+.weekday
+  font-size: 12px
+  color: #74736E
+  text-align: center
+
+.dayCell
+  min-height: 54px
+  border-radius: 12px
+  border: 1px solid #E7E1D2
+  background: #FFFCF5
+  cursor: pointer
+  padding: 4px
+  display: flex
+  flex-direction: column
+  align-items: center
+  justify-content: flex-start
+
+.dayMuted
+  opacity: 0.45
+
+.daySelected
+  border-color: #A3A19E
+  box-shadow: 0 0 0 1px #A3A19E inset
+
+.dayHasEvents
+  border-color: #E95B47
+  background: #FFF3EE
+
+.dayNum
+  font-size: 13px
+
+.paw
+  transform: scale(.72)
+  margin-top: 2px
+  display: inline-flex
+
+  svg path
+    fill: #E95B47
+
+.eventsTitle
+  font-weight: 700
+  margin-bottom: 8px
+
+.eventCard
+  border-radius: 14px
+  padding: 10px
+  background: #FFFCF5
+  border: 1px solid #E7E1D2
+  display: flex
+  flex-direction: column
+  gap: 6px
+  margin-bottom: 8px
+
+.eventTop
+  display: flex
+  gap: 8px
+  align-items: center
+
+.avatar
+  width: 32px
+  height: 32px
+  border-radius: 16px
+  object-fit: cover
+
+.eventName
+  font-weight: 700
+
+.eventMeta
+  color: #74736E
+  font-size: 13px
+
+.participantsRow
+  display: flex
+  align-items: center
+  gap: 8px
+  cursor: pointer
+  margin-top: 2px
+
+.participantItem
+  display: flex
+  align-items: center
+  gap: 8px
+  color: #333944
+  font-size: 13px
+
+.participantAvatar
+  width: 24px
+  height: 24px
+  border-radius: 12px
+  object-fit: cover
+
+.avatarsStack
+  display: flex
+  align-items: center
+  padding-left: 6px
+
+.stackAvatar
+  width: 24px
+  height: 24px
+  border-radius: 12px
+  object-fit: cover
+  border: 2px solid #FFFCF5
+  margin-left: -6px
+  background: #FFFCF5
+
+.stackMore
+  margin-left: 4px
+  font-size: 12px
+  color: #74736E
+
+.participantsTitle
+  margin: 0 0 10px 0
+
+.empty
+  color: #74736E
+  font-size: 14px
+  margin-bottom: 12px
+
+.fab
+  position: sticky
+  bottom: 0
+  display: flex
+  justify-content: flex-end
+  padding-top: 8px
+
+.form
+  display: flex
+  flex-direction: column
+  gap: 8px
+  margin-top: 10px
+
+.miniMap
+  border-radius: 14px
+  overflow: hidden
+  border: 1px solid #E7E1D2

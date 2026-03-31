@@ -66,6 +66,34 @@ export const fetchMySibaByUserId = async (authUserId: string) => {
   return data ?? undefined;
 };
 
+export const fetchSubscriptionsCount = async (authUserId: string) => {
+  const { count, error } = await supabase
+    .from("user_friends")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", authUserId);
+  if (error) throw error;
+  return count ?? 0;
+};
+
+export const fetchSubscribersCount = async (authUserId: string) => {
+  const { count, error } = await supabase
+    .from("user_friends")
+    .select("*", { count: "exact", head: true })
+    .eq("friend_user_id", authUserId);
+  if (error) throw error;
+  return count ?? 0;
+};
+
+export const fetchSibaAcademyProgress = async (sibaId: string) => {
+  const { data, error } = await supabase
+    .from("siba_academy_progress")
+    .select("learned_skill_ids")
+    .eq("siba_id", sibaId)
+    .maybeSingle();
+  if (error) return null;
+  return (data as { learned_skill_ids: string[] | null } | null) ?? null;
+};
+
 export const fetchAllSibas = async () => {
   // Prefer safer public view with computed verification (photo OR promo).
   const { data: viewData, error: viewError } = await supabase

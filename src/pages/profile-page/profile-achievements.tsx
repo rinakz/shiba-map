@@ -1,6 +1,7 @@
 import { IconCafe, IconGroomer, IconPark } from "../../shared/icons";
 import { ProgressBar } from "../../shared/ui/progress-bar";
 import type { ShibaType } from "../../shared/types";
+import { getAchievementPercent } from "./shiba-academy.data";
 import stls from "./profile.module.sass";
 
 type ProfileAchievementsProps = {
@@ -24,7 +25,7 @@ export const ProfileAchievements = ({ mySiba }: ProfileAchievementsProps) => {
           <p>Кафе</p>
         </div>
         <ProgressBar value={mySiba?.cafe ?? 0} color="#7A7B7B" />
-        <span>{((mySiba?.cafe ?? 0) / 20) * 100}%</span>
+        <span>{getAchievementPercent(mySiba?.cafe ?? 0)}%</span>
       </div>
       <div className={stls.progressContainer}>
         <div className={stls.progressTitle}>
@@ -32,7 +33,7 @@ export const ProfileAchievements = ({ mySiba }: ProfileAchievementsProps) => {
           <p>Парки </p>
         </div>{" "}
         <ProgressBar value={mySiba?.park ?? 0} color="#2BB26E" />
-        <span>{((mySiba?.park ?? 0) / 20) * 100}%</span>
+        <span>{getAchievementPercent(mySiba?.park ?? 0)}%</span>
       </div>
       <div className={stls.progressContainer}>
         <div className={stls.progressTitle}>
@@ -40,7 +41,7 @@ export const ProfileAchievements = ({ mySiba }: ProfileAchievementsProps) => {
           <p>Грумер </p>
         </div>
         <ProgressBar value={mySiba?.groomer ?? 0} color="#333944" />
-        <span>{((mySiba?.groomer ?? 0) / 20) * 100}%</span>
+        <span>{getAchievementPercent(mySiba?.groomer ?? 0)}%</span>
       </div>
     </div>
   );
