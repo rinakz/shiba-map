@@ -23,6 +23,10 @@ import { Dialog, Modal, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import { Siba } from "..";
 import { IconMap } from "../../shared/icons/IconMap";
 import { IconUser } from "../../shared/icons/IconUser";
+import { IconFox } from "../../shared/icons/IconFox";
+import { IconLayers } from "../../shared/icons/IconLayers";
+import { IconCalendar as IconFillCalendar } from "../../shared/icons/IconFillCalendar";
+import { EventCalendar } from "../../shared/header/event-calendar";
 import { IconCafe } from "../../shared/icons/IconCafe";
 import { IconPark } from "../../shared/icons/IconPark";
 import { IconGroomer } from "../../shared/icons/IconGroomer";
@@ -81,6 +85,7 @@ export const GeneralMap = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isPlaceFormOpen, setIsPlaceFormOpen] = useState<null | "cafe" | "park" | "groomer">(null);
   const [selectedPlace, setSelectedPlace] = useState<{ kind: "cafe" | "park" | "groomer"; place: Place } | null>(null);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const clusterEventsAttachedRef = useRef(false);
 
@@ -118,6 +123,13 @@ export const GeneralMap = () => {
     setIsOpenSiba(true);
   }, [location.search]);
 
+  useEffect(() => {
+    const search = new URLSearchParams(location.search);
+    const add = search.get("add");
+    if (add === "1") {
+      setIsFilterOpen(true);
+    }
+  }, [location.search]);
   const cafesQuery = useQuery({
     queryKey: ["places", "cafe"],
     queryFn: () => fetchPlaces("cafe"),
@@ -186,15 +198,26 @@ export const GeneralMap = () => {
       ) : (
         <div className={stls.coordinateButton}>
           <IconButton
-            onClick={() => navigate(PATH.Profile)}
+            onClick={() => navigate(PATH.Home)}
             size="large"
-            icon={<IconUser />}
-          ></IconButton>
+            icon={<IconFox />}
+          />
+          <IconButton
+            onClick={() => navigate(PATH.Map)}
+            size="large"
+            icon={<IconMap />}
+          />
           <IconButton
             onClick={() => setIsFilterOpen(true)}
             size="large"
-            icon={<IconMap />}
-          ></IconButton>
+            icon={<IconLayers />}
+          />
+          <IconButton onClick={() => setIsCalendarOpen(true)} size="large" icon={<IconFillCalendar />} />
+          <IconButton
+            onClick={() => navigate(PATH.Profile)}
+            size="large"
+            icon={<IconUser />}
+          />
         </div>
       )}
       <div
@@ -485,6 +508,12 @@ export const GeneralMap = () => {
       >
         {selectedPlace && <PlaceDetail kind={selectedPlace.kind} place={selectedPlace.place} />}
       </SwipeableDrawer>
+      {/* Event calendar modal moved from Header */}
+      <EventCalendar
+        authUserId={authUserId as string}
+        open={isCalendarOpen}
+        onClose={() => setIsCalendarOpen(false)}
+      />
     </div>
   );
 };

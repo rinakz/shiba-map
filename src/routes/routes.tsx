@@ -9,6 +9,7 @@ import { useContext, type FC } from "react";
 import { Header } from "../shared/header/header";
 import { AppContext } from "../shared/context/app-context";
 import { AuthPage, LoginPage, MainPage, ProfilePage } from "../pages";
+import { NewsPage } from "../pages/news-page/news-page";
 import { ProtectedRoute } from "./protected-route";
 export const Routes: FC = () => {
   const { authUserId, isAuthLoading } = useContext(AppContext);
@@ -31,6 +32,14 @@ export const Routes: FC = () => {
 
           <Route
             path={PATH.Home}
+            element={
+              <ProtectedRoute isAuth={Boolean(authUserId)}>
+                <NewsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={PATH.Map}
             element={
               <ProtectedRoute isAuth={Boolean(authUserId)}>
                 <MainPage />

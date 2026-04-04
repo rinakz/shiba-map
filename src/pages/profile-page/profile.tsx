@@ -28,6 +28,7 @@ import {
 } from "../../shared/icons";
 import { ProfileAchievements } from "./profile-achievements";
 import { ShibaAcademy } from "./shiba-academy";
+import { KennelSection } from "./kennel-section";
 import { HealthSection } from "./health-section";
 import { getShibaRank } from "./shiba-academy.data";
 import {
@@ -458,6 +459,7 @@ export const ProfilePage = () => {
         )}
         <ProfileAchievements mySiba={mySiba} />
         <ShibaAcademy sibaId={mySiba?.id} />
+        <KennelSection siba={mySiba} authUserId={authUserId ?? undefined} />
         <HealthSection sibaId={mySiba?.id} />
         {error && (
           <span className={stls.errorText}>{error}</span>

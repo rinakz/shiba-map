@@ -166,7 +166,7 @@ export const EventCalendarActions = ({
       <div className={stls.fab}>
         <Button
           size="small"
-          iconRight={<IconCalendar />}
+          iconRight={<span className={stls.smallIcon}><IconCalendar /></span>}
           onClick={() => setIsCreateOpen(!isCreateOpen)}
           disabled={isPublishing}
         >
@@ -238,7 +238,7 @@ export const EventCalendarActions = ({
             onClick={onCreate}
             loading={isPublishing}
             disabled={isPublishing}
-            iconRight={<IconCalendar />}
+            iconRight={<span className={stls.smallIcon}><IconCalendar /></span>}
           >
             Опубликовать
           </Button>
