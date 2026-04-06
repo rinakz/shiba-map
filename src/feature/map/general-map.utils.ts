@@ -3,6 +3,11 @@ import { SIBA_PHOTOS_BUCKET } from "../../shared/constants/storage";
 import type { ShibaType } from "../../shared/types";
 import type { Place, PlaceKind, PlaceVisit } from "./place-types";
 import type { ChangeEvent } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import React from "react";
+import { IconCafe } from "../../shared/icons/IconCafe";
+import { IconPark } from "../../shared/icons/IconPark";
+import { IconGroomer } from "../../shared/icons/IconGroomer";
 
 type VisitRow = {
   id: string;
@@ -466,6 +471,64 @@ export const fetchPlaces = async (kind: PlaceKind): Promise<Place[]> => {
   const { data, error } = await supabase.from(table).select("*");
   if (error) throw error;
   return (data ?? []) as Place[];
+};
+
+export const placeIconHrefByKind = {
+  cafe: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderToStaticMarkup(React.createElement(IconCafe)))}`,
+  park: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderToStaticMarkup(React.createElement(IconPark)))}`,
+  groomer: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderToStaticMarkup(React.createElement(IconGroomer)))}`,
+} as const;
+
+// Hazards
+export type HazardKind = "reagents" | "salute" | "doghunters";
+export type Hazard = {
+  id: string;
+  kind: HazardKind;
+  lat: number;
+  lon: number;
+  created_at: string;
+  expires_at: string;
+};
+
+export const hazardEmojiByKind: Record<HazardKind, string> = {
+  doghunters: "⚠️",
+  reagents: "🧪",
+  salute: "🎆",
+};
+
+const svgEmoji = (emoji: string) =>
+  `<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'>
+    <circle cx='24' cy='24' r='22' fill='white' stroke='#E7E1D2' stroke-width='2'/>
+    <text x='50%' y='52%' dominant-baseline='middle' text-anchor='middle' font-size='28'>${emoji}</text>
+  </svg>`;
+
+export const hazardIconHrefByKind: Record<HazardKind, string> = {
+  doghunters: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgEmoji(hazardEmojiByKind.doghunters))}`,
+  reagents: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgEmoji(hazardEmojiByKind.reagents))}`,
+  salute: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgEmoji(hazardEmojiByKind.salute))}`,
+};
+
+export const fetchActiveHazards = async (): Promise<Hazard[]> => {
+  const nowIso = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("hazards")
+    .select("*")
+    .gt("expires_at", nowIso)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Hazard[];
+};
+
+export const insertHazard = async (params: { kind: HazardKind; lat: number; lon: number; ttlHours?: number }) => {
+  const { kind, lat, lon, ttlHours = 24 } = params;
+  const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("hazards")
+    .insert([{ kind, lat, lon, expires_at: expiresAt }])
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as Hazard;
 };
 
 export const fetchPlaceVisits = async (

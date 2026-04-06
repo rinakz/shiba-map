@@ -28,96 +28,6 @@ export const LoginPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const openTelegramApp = () => {
-    const appLink = import.meta.env.VITE_TELEGRAM_APP_LINK as
-      | string
-      | undefined;
-    const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME as
-      | string
-      | undefined;
-
-    if (appLink) {
-      window.location.href = appLink;
-      return true;
-    }
-
-    if (botUsername) {
-      const normalized = botUsername.replace(/^@/, "");
-      const tgSchemeUrl = `tg://resolve?domain=${normalized}`;
-      const webUrl = `https://t.me/${normalized}`;
-
-      window.location.href = tgSchemeUrl;
-
-      setTimeout(() => {
-        window.location.href = webUrl;
-      }, 900);
-
-      return true;
-    }
-
-    return false;
-  };
-
-  const handleTelegramLogin = async () => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      const initData = window?.Telegram?.WebApp?.initData;
-      if (!initData) {
-        const hasRedirect = openTelegramApp();
-        if (!hasRedirect) {
-          setError(
-            "Не удалось открыть Telegram автоматически. Укажите VITE_TELEGRAM_APP_LINK или VITE_TELEGRAM_BOT_USERNAME.",
-          );
-        }
-        return;
-      }
-
-      const { data, error: invokeError } = await supabase.functions.invoke(
-        "telegram-login",
-        {
-          body: {
-            initData,
-            redirectTo: `${window.location.origin}${PATH.Home}`,
-          },
-        },
-      );
-
-      if (invokeError) {
-        setError(invokeError.message);
-        return;
-      }
-
-      const access_token = data?.access_token;
-      const refresh_token = data?.refresh_token;
-
-      const action_link = data?.action_link ?? data?.redirect_to;
-      if (action_link) {
-        window.location.href = action_link;
-        return;
-      }
-
-      if (!access_token || !refresh_token) {
-        setError("Telegram вход не удался: токены не получены.");
-        return;
-      }
-
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token,
-        refresh_token,
-      });
-
-      if (sessionError) {
-        setError(sessionError.message);
-        return;
-      }
-
-      navigate(PATH.Home);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleLoginSubmit = async () => {
     setError(null);
     setIsLoading(true);
@@ -205,14 +115,6 @@ export const LoginPage = () => {
                   onClick={handleLoginSubmit}
                 >
                   Войти
-                </Button>
-                <Button
-                  loading={isLoading}
-                  size="large"
-                  variant="secondary"
-                  onClick={handleTelegramLogin}
-                >
-                  Войти через Telegram
                 </Button>
               </div>
             </form>

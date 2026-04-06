@@ -15,21 +15,12 @@ import {
 } from "react";
 import { AppContext } from "../../shared/context/app-context";
 import stls from "./map.module.sass";
-import { Button, IconButton } from "../../shared/ui";
 import type { ShibaType } from "../../shared/types";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PATH } from "../../shared/constants/path";
 import { Dialog, Modal, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import { Siba } from "..";
-import { IconMap } from "../../shared/icons/IconMap";
-import { IconUser } from "../../shared/icons/IconUser";
-import { IconFox } from "../../shared/icons/IconFox";
-import { IconLayers } from "../../shared/icons/IconLayers";
-import { IconCalendar as IconFillCalendar } from "../../shared/icons/IconFillCalendar";
 import { EventCalendar } from "../../shared/header/event-calendar";
-import { IconCafe } from "../../shared/icons/IconCafe";
-import { IconPark } from "../../shared/icons/IconPark";
-import { IconGroomer } from "../../shared/icons/IconGroomer";
 import { MapVerificationOverlay } from "./map-verification-overlay";
 import {
   extractClusterItems,
@@ -41,28 +32,27 @@ import {
   type MapActionTickEvent,
   type ClusterEventUnknown,
   verifyFileToSibaPhoto,
+  type HazardKind,
 } from "./general-map.utils";
 import { PlaceForm } from "./place-form";
 import { fetchPlaces } from "./general-map.utils";
 import type { Place } from "./place-types";
 import { useQuery } from "@tanstack/react-query";
 import { PlaceDetail } from "./place-detail";
-import { renderToStaticMarkup } from "react-dom/server";
+import { HazardsFeature } from "./hazards-feature";
 import { ClusterItemsOverlay } from "./cluster-items-overlay";
+import { MapBottomControls } from "./map-bottom-controls";
+import { PlaceKindPicker } from "./place-kind-picker";
+import {
+  getSibaStatus,
+  isGreenStatus,
+  SHIBA_STATUSES,
+} from "../../shared/utils/siba-status";
+import { placeIconHrefByKind } from "./general-map.utils";
 
 const ymapsApiKey = import.meta.env.VITE_YMAPS_API_KEY as string | undefined;
 
-const placeIconHrefByKind = {
-  cafe: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-    renderToStaticMarkup(<IconCafe />),
-  )}`,
-  park: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-    renderToStaticMarkup(<IconPark />),
-  )}`,
-  groomer: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-    renderToStaticMarkup(<IconGroomer />),
-  )}`,
-} as const;
+// placeIconHrefByKind is provided by utils
 
 export const GeneralMap = () => {
   const { sibaIns, mySiba, setMySiba, authUserId, user } =
@@ -83,9 +73,20 @@ export const GeneralMap = () => {
   const isVerified = Boolean(mySiba?.photos || user?.invited_by_code);
   const isMobile = useMediaQuery("(max-width:600px)");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isPlaceFormOpen, setIsPlaceFormOpen] = useState<null | "cafe" | "park" | "groomer">(null);
-  const [selectedPlace, setSelectedPlace] = useState<{ kind: "cafe" | "park" | "groomer"; place: Place } | null>(null);
+  const [isPlaceFormOpen, setIsPlaceFormOpen] = useState<
+    null | "cafe" | "park" | "groomer"
+  >(null);
+  const [selectedPlace, setSelectedPlace] = useState<{
+    kind: "cafe" | "park" | "groomer";
+    place: Place;
+  } | null>(null);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [addingHazardKind, setAddingHazardKind] = useState<HazardKind | null>(
+    null,
+  );
+  const [pendingHazardCoords, setPendingHazardCoords] = useState<
+    [number, number] | null
+  >(null);
 
   const clusterEventsAttachedRef = useRef(false);
 
@@ -130,6 +131,8 @@ export const GeneralMap = () => {
       setIsFilterOpen(true);
     }
   }, [location.search]);
+
+  // Disabled pulsing to avoid re-render flicker on the map
   const cafesQuery = useQuery({
     queryKey: ["places", "cafe"],
     queryFn: () => fetchPlaces("cafe"),
@@ -151,7 +154,9 @@ export const GeneralMap = () => {
     verifyFileInputRef.current?.click();
   };
 
-  const handleVerifyFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleVerifyFileChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
     setIsVerifyLoading(true);
     setVerifyError(null);
     try {
@@ -178,48 +183,15 @@ export const GeneralMap = () => {
 
   return (
     <div className={stls.mapContainer}>
-      {!isShowAccept ? (
-        <>
-          <div className={stls.coordinateCard}>
-            <h1 style={{ fontSize: "28px" }}>Ваша локация</h1>
-            Подтвердите ваше местоположение для быстрого поиска друзей рядом
-          </div>
-          <div className={stls.coordinateButton}>
-            <Button
-              style={{ width: "100%" }}
-              onClick={getLocation}
-              iconRight={<IconMap />}
-              size="large"
-            >
-              Подтвердить
-            </Button>
-          </div>
-        </>
-      ) : (
-        <div className={stls.coordinateButton}>
-          <IconButton
-            onClick={() => navigate(PATH.Home)}
-            size="large"
-            icon={<IconFox />}
-          />
-          <IconButton
-            onClick={() => navigate(PATH.Map)}
-            size="large"
-            icon={<IconMap />}
-          />
-          <IconButton
-            onClick={() => setIsFilterOpen(true)}
-            size="large"
-            icon={<IconLayers />}
-          />
-          <IconButton onClick={() => setIsCalendarOpen(true)} size="large" icon={<IconFillCalendar />} />
-          <IconButton
-            onClick={() => navigate(PATH.Profile)}
-            size="large"
-            icon={<IconUser />}
-          />
-        </div>
-      )}
+      <MapBottomControls
+        isShowAccept={isShowAccept}
+        onConfirmLocation={getLocation}
+        onHome={() => navigate(PATH.Home)}
+        onMap={() => navigate(PATH.Map)}
+        onOpenPlaces={() => setIsFilterOpen(true)}
+        onOpenCalendar={() => setIsCalendarOpen(true)}
+        onProfile={() => navigate(PATH.Profile)}
+      />
       <div
         className={
           isVerified ? stls.mapWrapper : `${stls.mapWrapper} ${stls.mapBlocked}`
@@ -239,17 +211,28 @@ export const GeneralMap = () => {
                 zoom: 10,
                 controls: ["zoomControl"],
               }}
+              onClick={(evt: { get: (k: "coords") => [number, number] }) => {
+                if (!addingHazardKind) return;
+                const coords = evt.get("coords");
+                setPendingHazardCoords(coords);
+              }}
             >
               <SearchControl options={{ float: "right", noPlacemark: true }} />
               {isVerified && (
-                  <Clusterer
-                    options={{ clusterDisableClickZoom: true }}
-                    instanceRef={(inst: { events?: { add: (name: string, cb: (e: unknown) => void) => void } } | null) => {
-                      if (!inst || clusterEventsAttachedRef.current) return;
-                      clusterEventsAttachedRef.current = true;
-                      inst.events?.add("click", handleClusterClick);
-                    }}
-                  >
+                <Clusterer
+                  options={{ clusterDisableClickZoom: true }}
+                  instanceRef={(
+                    inst: {
+                      events?: {
+                        add: (name: string, cb: (e: unknown) => void) => void;
+                      };
+                    } | null,
+                  ) => {
+                    if (!inst || clusterEventsAttachedRef.current) return;
+                    clusterEventsAttachedRef.current = true;
+                    inst.events?.add("click", handleClusterClick);
+                  }}
+                >
                   {sibaIns
                     // Показываем сиб на карте, если он прошёл верификацию:
                     // фото ИЛИ приглашение по промокоду (computed `is_verified` из view).
@@ -278,14 +261,17 @@ export const GeneralMap = () => {
                             iconLayout: "default#image",
                             iconImageHref: `/${el?.siba_icon}.png`,
                             // Визуально выделяем "хочу гулять" увеличенным маркером.
-                            iconImageSize: el.want_to_walk
-                              ? [52, 52]
+                            iconImageSize: isGreenStatus(getSibaStatus(el))
+                              ? [48, 48]
                               : [42, 42],
                           }}
                           properties={{
-                            hintContent: el.want_to_walk
-                              ? "Хочу гулять"
-                              : undefined,
+                            hintContent: (() => {
+                              const st = getSibaStatus(el);
+                              if (!st) return undefined;
+                              return SHIBA_STATUSES.find((x) => x.id === st)
+                                ?.label;
+                            })(),
                             siba_id: el.id,
                             item_type: "siba",
                           }}
@@ -300,13 +286,20 @@ export const GeneralMap = () => {
                       <Placemark
                         key={`cafe-${p.id}`}
                         geometry={norm}
-                      properties={{ hintContent: p.name, item_type: "place", place_kind: "cafe", place_id: p.id }}
-                      options={{
-                        iconLayout: "default#image",
-                        iconImageHref: placeIconHrefByKind.cafe,
-                        iconImageSize: [40, 40],
-                      }}
-                        onClick={() => setSelectedPlace({ kind: "cafe", place: p })}
+                        properties={{
+                          hintContent: p.name,
+                          item_type: "place",
+                          place_kind: "cafe",
+                          place_id: p.id,
+                        }}
+                        options={{
+                          iconLayout: "default#image",
+                          iconImageHref: placeIconHrefByKind.cafe,
+                          iconImageSize: [40, 40],
+                        }}
+                        onClick={() =>
+                          setSelectedPlace({ kind: "cafe", place: p })
+                        }
                       />
                     );
                   })}
@@ -317,13 +310,20 @@ export const GeneralMap = () => {
                       <Placemark
                         key={`park-${p.id}`}
                         geometry={norm}
-                        properties={{ hintContent: p.name, item_type: "place", place_kind: "park", place_id: p.id }}
+                        properties={{
+                          hintContent: p.name,
+                          item_type: "place",
+                          place_kind: "park",
+                          place_id: p.id,
+                        }}
                         options={{
                           iconLayout: "default#image",
                           iconImageHref: placeIconHrefByKind.park,
                           iconImageSize: [40, 40],
                         }}
-                        onClick={() => setSelectedPlace({ kind: "park", place: p })}
+                        onClick={() =>
+                          setSelectedPlace({ kind: "park", place: p })
+                        }
                       />
                     );
                   })}
@@ -334,17 +334,30 @@ export const GeneralMap = () => {
                       <Placemark
                         key={`groomer-${p.id}`}
                         geometry={norm}
-                        properties={{ hintContent: p.name, item_type: "place", place_kind: "groomer", place_id: p.id }}
+                        properties={{
+                          hintContent: p.name,
+                          item_type: "place",
+                          place_kind: "groomer",
+                          place_id: p.id,
+                        }}
                         options={{
                           iconLayout: "default#image",
                           iconImageHref: placeIconHrefByKind.groomer,
                           iconImageSize: [40, 40],
                         }}
-                        onClick={() => setSelectedPlace({ kind: "groomer", place: p })}
+                        onClick={() =>
+                          setSelectedPlace({ kind: "groomer", place: p })
+                        }
                       />
                     );
                   })}
-                  </Clusterer>
+                  <HazardsFeature
+                    addingKind={addingHazardKind}
+                    setAddingKind={setAddingHazardKind}
+                    pendingCoords={pendingHazardCoords}
+                    setPendingCoords={setPendingHazardCoords}
+                  />
+                </Clusterer>
               )}
             </Map>
           </YMaps>
@@ -433,41 +446,12 @@ export const GeneralMap = () => {
         </Dialog>
       )}
       <Modal open={isFilterOpen} onClose={() => setIsFilterOpen(false)}>
-        <div
-          style={{
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 74,
-            display: "flex",
-            justifyContent: "center",
-            padding: "8px 16px",
+        <PlaceKindPicker
+          onPick={(kind) => {
+            setIsFilterOpen(false);
+            setIsPlaceFormOpen(kind);
           }}
-        >
-          <div
-            style={{
-              display: "flex",
-              gap: 14,
-              background: "rgba(255, 252, 245, 0.95)",
-              borderRadius: 24,
-              padding: "8px 12px",
-              boxShadow: "0px 4px 12px rgba(0,0,0,0.12)",
-            }}
-          >
-            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#FFFCF5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-              onClick={() => { setIsFilterOpen(false); setIsPlaceFormOpen("cafe"); }}>
-              <IconCafe />
-            </div>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#FFFCF5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-              onClick={() => { setIsFilterOpen(false); setIsPlaceFormOpen("park"); }}>
-              <IconPark />
-            </div>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#FFFCF5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-              onClick={() => { setIsFilterOpen(false); setIsPlaceFormOpen("groomer"); }}>
-              <IconGroomer />
-            </div>
-          </div>
-        </div>
+        />
       </Modal>
       <SwipeableDrawer
         anchor="bottom"
@@ -506,7 +490,9 @@ export const GeneralMap = () => {
           },
         }}
       >
-        {selectedPlace && <PlaceDetail kind={selectedPlace.kind} place={selectedPlace.place} />}
+        {selectedPlace && (
+          <PlaceDetail kind={selectedPlace.kind} place={selectedPlace.place} />
+        )}
       </SwipeableDrawer>
       {/* Event calendar modal moved from Header */}
       <EventCalendar

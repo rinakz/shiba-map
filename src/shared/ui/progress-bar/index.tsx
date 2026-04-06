@@ -5,17 +5,16 @@ type CustomLinearProgressProps = {
   customColor: string;
 };
 
-const CustomLinearProgress = styled(LinearProgress)(
-  ({ customColor }: CustomLinearProgressProps) => ({
-    height: "24px",
-    borderRadius: "20px",
-    backgroundColor: "#EEEADE", // Цвет линии под ней с прозрачностью 50%
-
-    "& .MuiLinearProgress-bar": {
-      backgroundColor: customColor, // Цвет закрашенной верхней линии
-    },
-  })
-);
+const CustomLinearProgress = styled(LinearProgress, {
+  shouldForwardProp: (prop) => prop !== "customColor",
+})<CustomLinearProgressProps>(({ customColor }) => ({
+  height: "24px",
+  borderRadius: "20px",
+  backgroundColor: "#EEEADE",
+  "& .MuiLinearProgress-bar": {
+    backgroundColor: customColor,
+  },
+}));
 
 type ProgressBarType = {
   value: number;
@@ -24,14 +23,9 @@ type ProgressBarType = {
 
 export const ProgressBar = ({ value, color }: ProgressBarType) => {
   const percentage = (value / 20) * 100;
-
   return (
     <Box sx={{ width: "100%" }}>
-      <CustomLinearProgress
-        variant="determinate"
-        value={percentage}
-        customColor={color}
-      />
+      <CustomLinearProgress variant="determinate" value={percentage} customColor={color} />
     </Box>
   );
 };

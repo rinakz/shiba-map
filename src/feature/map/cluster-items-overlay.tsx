@@ -6,6 +6,11 @@ import { IconCafe } from "../../shared/icons/IconCafe";
 import { IconPark } from "../../shared/icons/IconPark";
 import { IconGroomer } from "../../shared/icons/IconGroomer";
 import stls from "./cluster-items-overlay.module.sass";
+import {
+  getSibaStatus,
+  getSibaStatusColor,
+  SHIBA_STATUSES,
+} from "../../shared/utils/siba-status";
 
 type ClusterItemsOverlayProps = {
   open: boolean;
@@ -39,6 +44,7 @@ export const ClusterItemsOverlay = ({
         if (item.type === "siba") {
           const s = sibaIns.find((x) => x.id === item.id);
           if (!s) return null;
+          const status = getSibaStatus(s);
           return (
             <div
               key={`siba-${item.id}`}
@@ -58,9 +64,12 @@ export const ClusterItemsOverlay = ({
               </div>
               <div className={stls.meta}>
                 <span className={stls.name}>{s.siba_name}</span>
-                <span className={stls.sub}>
-                  {s.want_to_walk ? "Хочу гулять" : " "}
-                </span>
+                {status && (
+                  <span className={stls.sub} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: getSibaStatusColor(status), display: "inline-block" }} />
+                    {SHIBA_STATUSES.find((x) => x.id === status)?.label}
+                  </span>
+                )}
               </div>
             </div>
           );

@@ -147,6 +147,50 @@
     display: flex
     justify-content: space-between
     align-items: center
+    gap: 8px
+
+.topActionsRight
+    display: inline-flex
+    align-items: center
+    gap: 8px
+
+.healthCardButton
+    border: 1px solid #E7E1D2
+    background: rgba(255, 252, 245, 0.9)
+    border-radius: 12px
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    padding: 0
+    width: 42px
+    height: 42px
+    color: #333944
+    cursor: pointer
+    position: relative
+
+.healthCardIcon
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    transform: scale(0.7)
+
+.healthCardSkeleton
+    border-radius: 12px
+
+.healthAlertDot
+    position: absolute
+    top: -6px
+    right: -6px
+    width: 16px
+    height: 16px
+    border-radius: 999px
+    background: #E95B47
+    color: #FFFCF5
+    font-size: 11px
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    font-weight: 700
 
 .titleRow
     display: flex
@@ -159,6 +203,7 @@
     display: flex
     flex-direction: column
     align-items: center
+    gap: 8px
 
 .rankContainer
     width: 100%
@@ -181,7 +226,83 @@
 .walkToggleTop
     width: 100%
     display: flex
-    justify-content: center
+    flex-direction: column
+    align-items: center
+    gap: 8px
+
+.statusPicker
+    display: none
+
+.statusChip
+    display: none
+
+.statusRow
+    display: flex
+    align-items: center
+    gap: 8px
+
+.statusDot
+    width: 10px
+    height: 10px
+    border-radius: 50%
+
+.statusCapsule
+    display: inline-flex
+    align-items: center
+    gap: 6px
+    background: rgba(255, 252, 245, 0.95)
+    border: 1px solid #E7E1D2
+    border-radius: 999px
+    padding: 6px 12px
+    font-size: 12px
+    color: #333944
+    cursor: pointer
+    appearance: none
+
+.statusActions
+    display: none
+
+.statusMenu
+    min-width: 220px
+    padding: 8px
+    display: flex
+    flex-direction: column
+    gap: 6px
+
+.statusMenuItem
+    border: none
+    background: rgba(255, 252, 245, 0.92)
+    border-radius: 999px
+    padding: 8px 10px
+    display: flex
+    align-items: center
+    gap: 8px
+    color: #333944
+    cursor: pointer
+    text-align: left
+
+.sibaPhotoPing
+    animation: sibaPulse 1.8s ease-in-out infinite
+
+@keyframes sibaPulse
+    0%
+        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.45)
+    70%
+        box-shadow: 0 0 0 10px rgba(74, 222, 128, 0)
+    100%
+        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0)
+
+.statusToast
+    position: fixed
+    left: 50%
+    transform: translateX(-50%)
+    bottom: 24px
+    background: rgba(51, 57, 68, 0.95)
+    color: #FFFCF5
+    border-radius: 999px
+    padding: 10px 14px
+    font-size: 12px
+    z-index: 1200
 
 .statsRow
     display: flex

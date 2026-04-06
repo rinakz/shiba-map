@@ -5,6 +5,10 @@ import { YMaps, Map, Placemark, SearchControl } from "@pbe/react-yandex-maps";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "../../shared/api/supabase-сlient";
 import type { ShibaType } from "../../shared/types";
+import { IconTree } from "../../shared/icons/IconTree";
+import { IconEdit } from "../../shared/icons";
+import { SibaToast } from "../../shared/ui";
+import stls from "./kennel-section.module.sass";
 
 type Kennel = {
   id: string;
@@ -16,38 +20,19 @@ type Kennel = {
 type Props = {
   siba: ShibaType | undefined;
   authUserId: string | undefined;
+  editable?: boolean;
 };
 
-// Типы для события
-interface ActionTickEvent {
-  get(key: "target"): Map;
-  get(key: "tick"): { globalPixelCenter: [number, number]; zoom: number };
-}
-
-// Тип для проекции
-interface Projection {
-  fromGlobalPixels(pixels: [number, number], zoom: number): Coordinate;
-}
-
-// Тип для координат
-type Coordinate = [number, number];
-
-// Тип для карты
-interface Map {
-  options: {
-    get(): Projection;
-  };
-}
-
-export const KennelSection = ({ siba, authUserId }: Props) => {
+export const KennelSection = ({ siba, authUserId, editable = true }: Props) => {
   const isMobile = useMediaQuery("(max-width:600px)");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"select" | "create">("select");
   const [nameDraft, setNameDraft] = useState("");
-  const [coords, setCoords] = useState<[number, number] | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [coords, setCoords] = useState<[number, number]>([55.75, 37.57]);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [selectedKennel, setSelectedKennel] = useState<Kennel | null>(null);
+  const [toastText, setToastText] = useState<string | null>(null);
 
   const listQuery = useQuery({
     queryKey: ["kennels", query],
@@ -83,8 +68,7 @@ export const KennelSection = ({ siba, authUserId }: Props) => {
         .eq("siba_id", siba.id)
         .maybeSingle();
       if (error) return null;
-      const k =
-        (data as unknown as { kennels: Kennel } | null)?.kennels ?? null;
+      const k = (data as unknown as { kennels: Kennel } | null)?.kennels ?? null;
       return k;
     },
   });
@@ -122,17 +106,38 @@ export const KennelSection = ({ siba, authUserId }: Props) => {
       await myKennelQuery.refetch();
       await relatedSibasQuery.refetch();
       setOpen(false);
+      setToastText("Питомник обновлен.");
+      window.setTimeout(() => setToastText(null), 2200);
+    },
+  });
+
+  const detachMutation = useMutation({
+    mutationFn: async () => {
+      if (!siba?.id) return;
+      await supabase
+        .from("siba_kennels")
+        .delete()
+        .eq("siba_id", siba.id);
+    },
+    onSuccess: async () => {
+      await myKennelQuery.refetch();
+      await relatedSibasQuery.refetch();
+      setSelectedKennel(null);
+      setOpen(false);
+      setToastText("Питомник убран из анкеты.");
+      window.setTimeout(() => setToastText(null), 2200);
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      if (!nameDraft.trim() || !coords) return;
-      setCreating(true);
+      if (!nameDraft.trim()) {
+        throw new Error("Введите название питомника.");
+      }
       const payload = {
         name: nameDraft.trim(),
         coordinates: coords,
-        address: null,
+        address: `${coords[0].toFixed(5)}, ${coords[1].toFixed(5)}`,
         created_by: authUserId ?? null,
       };
       const { data, error } = await supabase
@@ -140,81 +145,68 @@ export const KennelSection = ({ siba, authUserId }: Props) => {
         .insert([payload])
         .select("*")
         .maybeSingle();
-      setCreating(false);
-      if (error || !data) return null;
+      if (error || !data) {
+        throw new Error(error?.message ?? "Не удалось создать питомник.");
+      }
       return data as Kennel;
     },
+    onMutate: () => {
+      setCreateError(null);
+    },
     onSuccess: async (kennel) => {
-      if (!kennel?.id) return;
       await attachMutation.mutateAsync(kennel.id);
+      setNameDraft("");
+      setMode("select");
+      setToastText("Питомник создан.");
+      window.setTimeout(() => setToastText(null), 2200);
+    },
+    onError: (error) => {
+      setCreateError(error instanceof Error ? error.message : "Ошибка при создании питомника.");
     },
   });
 
   const ymapsApiKey = import.meta.env.VITE_YMAPS_API_KEY as string | undefined;
   const content = useMemo(
     () => (
-      <div style={{ padding: 12 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 8,
-          }}
-        >
-          <span style={{ fontWeight: 700 }}>Питомник</span>
-          <Button size="small" onClick={() => setOpen(true)}>
-            {myKennelQuery.data ? "Изменить" : "Добавить"}
-          </Button>
-        </div>
+      <div className={stls.section}>
         {myKennelQuery.isLoading ? (
-          <div style={{ color: "#74736E" }}>Загружаем питомник...</div>
-        ) : myKennelQuery.data ? (
-          <div
-            style={{
-              background: "#FFFCF5",
-              border: "1px solid #E7E1D2",
-              borderRadius: 14,
-              padding: 10,
-            }}
-          >
-            <div style={{ fontWeight: 700 }}>{myKennelQuery.data.name}</div>
-            {relatedSibasQuery.data?.length ? (
+          <div className={stls.muted}>Загружаем питомник...</div>
+        ) : (
+          <div className={stls.card}>
+            <div className={stls.cardTop}>
+              <div style={{ fontWeight: 700 }}>
+                {myKennelQuery.data?.name ?? "Питомник не указан"}
+              </div>
+              {editable ? (
+                <button
+                  type="button"
+                  className={stls.editIconBtn}
+                  onClick={() => {
+                    setOpen(true);
+                    setMode("select");
+                    setSelectedKennel(null);
+                    setCreateError(null);
+                  }}
+                >
+                  <IconEdit />
+                </button>
+              ) : null}
+            </div>
+            {myKennelQuery.data && relatedSibasQuery.data?.length ? (
               <div style={{ marginTop: 8 }}>
-                <div style={{ color: "#74736E", marginBottom: 6 }}>
-                  Генеалогическое древо
+                <div className={stls.treeTitle}>
+                  <IconTree />
+                  <span>Генеалогическое древо</span>
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <div className={stls.treeWrap}>
                   {relatedSibasQuery.data.map((rel) => (
-                    <div
-                      key={rel.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "6px 8px",
-                        background: "#FFF8EA",
-                        borderRadius: 12,
-                        border: "1px solid #E7E1D2",
-                        cursor: "pointer",
-                      }}
+                    <div key={rel.id} className={stls.treeChip}
                       onClick={() => {
-                        const ev = new CustomEvent("open-siba-from-kennel", {
-                          detail: { sibaId: rel.id },
-                        });
+                        const ev = new CustomEvent("open-siba-from-kennel", { detail: { sibaId: rel.id } });
                         window.dispatchEvent(ev);
                       }}
                     >
-                      <img
-                        src={rel.photos ?? `/${rel.siba_icon}.png`}
-                        alt={rel.siba_name}
-                        style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: 11,
-                          objectFit: "cover",
-                        }}
-                      />
+                      <img src={rel.photos ?? `/${rel.siba_icon}.png`} alt={rel.siba_name} className={stls.treeAvatar} />
                       <span style={{ fontSize: 13 }}>{rel.siba_name}</span>
                     </div>
                   ))}
@@ -222,45 +214,24 @@ export const KennelSection = ({ siba, authUserId }: Props) => {
               </div>
             ) : null}
           </div>
-        ) : (
-          <div style={{ color: "#74736E" }}>Питомник не указан</div>
         )}
       </div>
     ),
-    [myKennelQuery.data, myKennelQuery.isLoading, relatedSibasQuery.data],
+    [myKennelQuery.data, myKennelQuery.isLoading, relatedSibasQuery.data, editable],
   );
 
   const selector = (
-    <div style={{ padding: 12 }}>
-      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Найти питомник"
-        />
-        <Button
-          size="small"
-          variant="secondary"
-          onClick={() => {
-            setMode("create");
-            setSelectedKennel(null);
-          }}
-        >
+    <div className={stls.drawerContent}>
+      <div className={stls.row}>
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Найти питомник" />
+        <Button size="small" variant="secondary" onClick={() => { setMode("create"); setSelectedKennel(null); setCreateError(null); }}>
           Создать
         </Button>
       </div>
       {mode === "select" ? (
         <div>
           {(listQuery.data ?? []).map((k) => (
-            <div
-              key={k.id}
-              style={{
-                padding: "6px 0",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
+            <div key={k.id} className={stls.listItem}
               onClick={() => setSelectedKennel(k)}
             >
               <span style={{ fontWeight: 600 }}>{k.name}</span>
@@ -268,90 +239,67 @@ export const KennelSection = ({ siba, authUserId }: Props) => {
           ))}
           {selectedKennel && (
             <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-              <Button
-                size="small"
-                onClick={() => attachMutation.mutate(selectedKennel.id)}
-                loading={attachMutation.isPending}
-              >
+              <Button size="small" onClick={() => attachMutation.mutate(selectedKennel.id)} loading={attachMutation.isPending}>
                 Выбрать
               </Button>
+              <Button size="small" variant="secondary" onClick={() => setSelectedKennel(null)}>
+                Отмена
+              </Button>
+            </div>
+          )}
+          {myKennelQuery.data && (
+            <div style={{ marginTop: 10 }}>
               <Button
                 size="small"
                 variant="secondary"
-                onClick={() => setSelectedKennel(null)}
+                onClick={() => detachMutation.mutate()}
+                loading={detachMutation.isPending}
               >
-                Отмена
+                Удалить у себя
               </Button>
             </div>
           )}
         </div>
       ) : (
         <div>
-          <Input
-            value={nameDraft}
-            onChange={(e) => setNameDraft(e.target.value)}
-            placeholder="Название питомника"
-          />
+          <Input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} placeholder="Название питомника" />
           {ymapsApiKey ? (
-            <div
-              style={{
-                marginTop: 10,
-                border: "1px solid #E7E1D2",
-                borderRadius: 14,
-                overflow: "hidden",
-              }}
-            >
+            <div style={{ marginTop: 10, border: "1px solid #E7E1D2", borderRadius: 14, overflow: "hidden" }}>
               <YMaps query={{ apikey: ymapsApiKey }}>
                 <Map
                   width="100%"
                   height={180}
-                  defaultState={{ center: coords ?? [55.75, 37.57], zoom: 10 }}
-                  onActionTickComplete={(evt: ActionTickEvent) => {
-                    const projection = (
-                      evt.get("target") as Map
-                    ).options.get() as Projection;
-                    const tick = evt.get("tick") as {
-                      globalPixelCenter: [number, number];
-                      zoom: number;
-                    };
-                    const next = projection.fromGlobalPixels(
-                      tick.globalPixelCenter,
-                      tick.zoom,
-                    ) as Coordinate;
-                    setCoords(next);
+                  defaultState={{ center: coords, zoom: 10 }}
+                  onActionTickComplete={(evt: unknown) => {
+                    type YActionTickEvent = { get: (key: string) => unknown };
+                    try {
+                      const e = evt as YActionTickEvent;
+                      const target = e?.get?.("target") as { options?: { get?: () => { fromGlobalPixels: (coords: [number, number], zoom: number) => [number, number] } } } | undefined;
+                      const projection = target?.options?.get?.();
+                      const tick = e?.get?.("tick") as { globalPixelCenter?: [number, number]; zoom?: number } | undefined;
+                      if (projection?.fromGlobalPixels && tick?.globalPixelCenter && typeof tick.zoom === "number") {
+                        const next = projection.fromGlobalPixels(tick.globalPixelCenter, tick.zoom);
+                        setCoords(next);
+                      }
+                    } catch {
+                      // noop
+                    }
                   }}
                 >
-                  <SearchControl
-                    options={{ float: "right", noPlacemark: true }}
-                  />
-                  {coords && (
-                    <Placemark
-                      geometry={coords}
-                      options={{ preset: "islands#redIcon" }}
-                    />
-                  )}
+                  <SearchControl options={{ float: "right", noPlacemark: true }} />
+                  <Placemark geometry={coords} options={{ preset: "islands#redIcon" }} />
                 </Map>
               </YMaps>
             </div>
           ) : (
-            <div style={{ color: "#74736E", marginTop: 8 }}>
-              Карта недоступна
-            </div>
+            <div style={{ color: "#74736E", marginTop: 8 }}>Карта недоступна</div>
           )}
+          {createError && <div className={stls.error}>{createError}</div>}
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            <Button
-              size="small"
-              onClick={() => createMutation.mutate()}
-              loading={creating || createMutation.isPending}
-              disabled={!nameDraft.trim() || !coords}
-            >
+            <Button size="small" onClick={() => createMutation.mutate()} loading={createMutation.isPending} disabled={!nameDraft.trim()}>
               Создать и привязать
             </Button>
-            <Button
-              size="small"
-              variant="secondary"
-              onClick={() => setMode("select")}
-            >
+            <Button size="small" variant="secondary" onClick={() => setMode("select")}>
               Назад
             </Button>
           </div>
@@ -366,7 +314,7 @@ export const KennelSection = ({ siba, authUserId }: Props) => {
       {isMobile ? (
         <SwipeableDrawer
           anchor="bottom"
-          open={open}
+          open={open && editable}
           onOpen={() => {}}
           onClose={() => setOpen(false)}
           PaperProps={{
@@ -381,16 +329,12 @@ export const KennelSection = ({ siba, authUserId }: Props) => {
           {selector}
         </SwipeableDrawer>
       ) : (
-        <Dialog
-          open={open}
-          onClose={() => setOpen(false)}
-          fullWidth
-          maxWidth="sm"
-          PaperProps={{ sx: { borderRadius: 2 } }}
-        >
+        <Dialog open={open && editable} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 2 } }}>
           {selector}
         </Dialog>
       )}
+      <SibaToast text={toastText} />
     </>
   );
 };
+

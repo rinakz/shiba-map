@@ -8,6 +8,8 @@ import { useLocation } from "react-router-dom";
 import { AppContext } from "../context/app-context";
 import { isNotOpenHeaderPaths } from "../constants";
 import { PATH } from "../constants/path";
+import { IconButton } from "../ui";
+import { IconGraduation } from "../icons";
 
 export function Header() {
   const navigate = useNavigate();
@@ -55,7 +57,16 @@ export function Header() {
               <IconSibkaHeader />
               <h1 className={stls.title}>SIBINATOR</h1>
             </div>
-            <div className={stls.actions}></div>
+            <div className={stls.actions}>
+              <IconButton
+                className={stls.knowledgeCta}
+                size="small"
+                variant="secondary"
+                icon={<IconGraduation color="#E95B47" size={36} />}
+                onClick={() => navigate(PATH.Knowledge)}
+              />
+              <span className={stls.knowledgeBadge}>Wiki</span>
+            </div>
           </Toolbar>
         </AppBar>
       </div>

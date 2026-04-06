@@ -23,6 +23,10 @@ export const DAYS_BY_DRUG: Record<Exclude<DrugOption, "Свой вариант">
   Milbemax: 30,
 };
 
+export const isDrugOption = (value: string): value is DrugOption => {
+  return (DRUG_OPTIONS as readonly string[]).includes(value);
+};
+
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export const parseDate = (value: string): Date | null => {

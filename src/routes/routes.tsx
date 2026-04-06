@@ -10,6 +10,8 @@ import { Header } from "../shared/header/header";
 import { AppContext } from "../shared/context/app-context";
 import { AuthPage, LoginPage, MainPage, ProfilePage } from "../pages";
 import { NewsPage } from "../pages/news-page/news-page";
+import { KnowledgePage } from "../pages/knowledge-page/knowledge-page";
+import { HealthPassPage } from "../pages/health-pass-page/health-pass-page";
 import { ProtectedRoute } from "./protected-route";
 export const Routes: FC = () => {
   const { authUserId, isAuthLoading } = useContext(AppContext);
@@ -51,6 +53,22 @@ export const Routes: FC = () => {
             element={
               <ProtectedRoute isAuth={Boolean(authUserId)}>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={PATH.Knowledge}
+            element={
+              <ProtectedRoute isAuth={Boolean(authUserId)}>
+                <KnowledgePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={PATH.HealthPass}
+            element={
+              <ProtectedRoute isAuth={Boolean(authUserId)}>
+                <HealthPassPage />
               </ProtectedRoute>
             }
           />

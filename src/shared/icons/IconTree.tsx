@@ -1,4 +1,4 @@
-export const IconUser = () => {
+export const IconTree = () => {
   return (
     <svg
       width="32"

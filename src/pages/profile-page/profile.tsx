@@ -7,7 +7,7 @@ import {
 } from "react";
 import cn from "classnames";
 import { useQuery } from "@tanstack/react-query";
-import { Checkbox, Drawer, Switch } from "@mui/material";
+import { Checkbox, Drawer } from "@mui/material";
 import Skeleton from "@mui/material/Skeleton";
 import { AppContext } from "../../shared/context/app-context";
 import stls from "./profile.module.sass";
@@ -18,6 +18,7 @@ import {
   IconAvatar,
   IconEdit,
   IconFemale,
+  IconFirstAid,
   IconMale,
   IconPeople,
   IconRight,
@@ -29,11 +30,11 @@ import {
 import { ProfileAchievements } from "./profile-achievements";
 import { ShibaAcademy } from "./shiba-academy";
 import { KennelSection } from "./kennel-section";
-import { HealthSection } from "./health-section";
 import { getShibaRank } from "./shiba-academy.data";
 import {
   buildEditDrafts,
   deleteAccount,
+  fetchHealthAlert,
   fetchMySibaByUserId,
   fetchSibaAcademyProgress,
   fetchSubscribersCount,
@@ -44,14 +45,19 @@ import {
   profileQueryKeys,
   processProfileFileChange,
   submitProfile,
-  toggleWantToWalk,
 } from "./profile.utils";
 import { PATH } from "../../shared/constants/path";
+import {
+  getSibaStatus,
+  getSibaStatusColor,
+  isGreenStatus,
+} from "../../shared/utils/siba-status";
+import { ProfileStatusControl } from "./profile-status-control";
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { authUserId, user, mySiba, setUser, setMySiba } =
+  const { authUserId, user, mySiba, setUser, setMySiba, setSibaIns } =
     useContext(AppContext);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -67,7 +73,6 @@ export const ProfilePage = () => {
   const [sibaIconDraft, setSibaIconDraft] = useState("default");
   const [isDeleteDrawerOpen, setIsDeleteDrawerOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [isWantToWalkLoading, setIsWantToWalkLoading] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isPromoRevealed, setIsPromoRevealed] = useState(false);
@@ -115,6 +120,11 @@ export const ProfilePage = () => {
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
     queryFn: () => fetchSibaAcademyProgress(mySiba!.id),
+  });
+  const healthAlertQuery = useQuery({
+    queryKey: ["health-alert", mySiba?.id],
+    enabled: Boolean(mySiba?.id),
+    queryFn: () => fetchHealthAlert(mySiba!.id),
   });
 
   const completedCommandsCount = academyProgressQuery.data?.learned_skill_ids?.length ?? 0;
@@ -190,16 +200,7 @@ export const ProfilePage = () => {
     }
   };
 
-  const handleToggleWantToWalk = async () => {
-    if (!mySiba?.id || isWantToWalkLoading) return;
-    setIsWantToWalkLoading(true);
-
-    try {
-      await toggleWantToWalk(mySiba, setError, setMySiba);
-    } finally {
-      setIsWantToWalkLoading(false);
-    }
-  };
+  const currentStatus = mySiba ? getSibaStatus(mySiba) : null;
 
   const handleDeleteAccount = async () => {
     if (!authUserId) return;
@@ -268,25 +269,34 @@ export const ProfilePage = () => {
                 }
                 onClick={() => navigate(PATH.Home)}
               />
-              <IconButton
-                size="medium"
-                variant="secondary"
-                icon={<IconEdit />}
-                onClick={handleStartEdit}
-              />
-            </div>
-          )}
-          {!isEdit && mySiba && (
-            <div className={stls.walkToggleTop}>
-              <label className={stls.walkToggle}>
-                <Switch
-                  checked={Boolean(mySiba.want_to_walk)}
-                  onChange={handleToggleWantToWalk}
-                  color="success"
-                  disabled={isWantToWalkLoading}
+              <div className={stls.topActionsRight}>
+                <IconButton
+                  size="medium"
+                  variant="secondary"
+                  icon={<IconEdit />}
+                  onClick={handleStartEdit}
                 />
-                Хочу гулять
-              </label>
+                {healthAlertQuery.isLoading ? (
+                  <Skeleton
+                    variant="rounded"
+                    width={42}
+                    height={42}
+                    className={stls.healthCardSkeleton}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className={stls.healthCardButton}
+                    onClick={() => navigate(PATH.HealthPass)}
+                    title="Медкнижка"
+                  >
+                    <span className={stls.healthCardIcon}>
+                      <IconFirstAid color="#E95B47" />
+                    </span>
+                    {healthAlertQuery.data && <span className={stls.healthAlertDot}>!</span>}
+                  </button>
+                )}
+              </div>
             </div>
           )}
           {isEdit ? (
@@ -326,8 +336,12 @@ export const ProfilePage = () => {
           ) : (
             <img
               className={cn(stls.sibaPhoto, {
-                [stls.wantToWalk]: mySiba?.want_to_walk,
+                [stls.wantToWalk]: isGreenStatus(currentStatus),
+                [stls.sibaPhotoPing]: isGreenStatus(currentStatus),
               })}
+              style={{
+                borderColor: currentStatus ? getSibaStatusColor(currentStatus) : "transparent",
+              }}
               src={mySiba?.photos ?? `/${mySiba?.siba_icon}.png`}
               alt="Сиба"
             />
@@ -335,6 +349,14 @@ export const ProfilePage = () => {
           <div className={stls.titleRow}>
             <div className={stls.nameBlock}>
               <h1 className={stls.sibaName}>{mySiba?.siba_name}</h1>
+              <ProfileStatusControl
+                mySiba={mySiba}
+                authUserId={authUserId}
+                isEdit={isEdit}
+                setError={setError}
+                setMySiba={setMySiba}
+                setSibaIns={setSibaIns}
+              />
             </div>
           </div>
           {!isEdit && academyRank && (
@@ -460,7 +482,6 @@ export const ProfilePage = () => {
         <ProfileAchievements mySiba={mySiba} />
         <ShibaAcademy sibaId={mySiba?.id} />
         <KennelSection siba={mySiba} authUserId={authUserId ?? undefined} />
-        <HealthSection sibaId={mySiba?.id} />
         {error && (
           <span className={stls.errorText}>{error}</span>
         )}{" "}

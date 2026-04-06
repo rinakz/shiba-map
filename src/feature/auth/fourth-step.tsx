@@ -107,14 +107,7 @@ export const FourthStep: FC<FourthStep> = ({
         const promoCode = generatePromoCode();
 
         if (authMethod === "email") {
-          const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME as
-            | string
-            | undefined;
-          const normalizedBot = botUsername ? botUsername.replace(/^@/, "") : "";
-          const telegramWebRedirect =
-            normalizedBot !== ""
-              ? `https://t.me/${normalizedBot}`
-              : `${window.location.origin}${PATH.Login}`;
+          const emailRedirectUrl = `http://shiba-inu.moscow${PATH.Login}`;
 
           const { data, error } = await supabase.auth.signUp({
             email: formData.email,
@@ -133,7 +126,7 @@ export const FourthStep: FC<FourthStep> = ({
               },
               // Redirect after email verification (doesn't affect verification itself,
               // but fixes UX: no more localhost redirects).
-              emailRedirectTo: telegramWebRedirect,
+              emailRedirectTo: emailRedirectUrl,
             },
           });
 

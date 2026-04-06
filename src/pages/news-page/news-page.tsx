@@ -5,7 +5,7 @@ import Skeleton from "@mui/material/Skeleton";
 import { fetchNewsFeed } from "../../shared/header/news-panel/news-panel.utils";
 import type { FeedItem } from "../../shared/header/news-panel/news-panel.types";
 import stls from "../../feature/map/map.module.sass";
-import { IconButton } from "../../shared/ui";
+import { IconButton, SibaToast } from "../../shared/ui";
 import { IconFox } from "../../shared/icons/IconFox";
 import { IconMap } from "../../shared/icons/IconMap";
 import { IconLayers } from "../../shared/icons/IconLayers";
@@ -29,6 +29,7 @@ export const NewsPage = () => {
   const isMobile = useMediaQuery("(max-width:600px)");
   const [selectedSibaId, setSelectedSibaId] = useState<string | null>(null);
   const [likesOpenItemId, setLikesOpenItemId] = useState<string | null>(null);
+  const [newsToast, setNewsToast] = useState<string | null>(null);
 
   const newsQuery = useQuery<FeedItem[]>({
     queryKey: ["news-feed", authUserId],
@@ -85,6 +86,7 @@ export const NewsPage = () => {
     },
     onMutate: async (itemId: string) => {
       await queryClient.cancelQueries({ queryKey: ["news-likes"] });
+      const wasLiked = myLikesSet.has(itemId);
       const prev = queryClient.getQueryData<{ item_id: string; user_id: string }[] | undefined>([
         "news-likes",
         (newsQuery.data ?? []).map((i) => i.id).join(","),
@@ -103,12 +105,16 @@ export const NewsPage = () => {
         next.push({ item_id: itemId, user_id: authUserId as string });
       }
       queryClient.setQueryData(["news-likes", (newsQuery.data ?? []).map((i) => i.id).join(",")], next);
-      return { prev };
+      return { prev, wasLiked };
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) {
         queryClient.setQueryData(["news-likes", (newsQuery.data ?? []).map((i) => i.id).join(",")], ctx.prev);
       }
+    },
+    onSuccess: (_data, _vars, ctx) => {
+      setNewsToast(ctx?.wasLiked ? "Лайк убран." : "Добавили лайк.");
+      window.setTimeout(() => setNewsToast(null), 1800);
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["news-likes"] });
@@ -296,6 +302,7 @@ export const NewsPage = () => {
           </div>
         </Dialog>
       )}
+      <SibaToast text={newsToast} />
       {isMobile ? (
         <SwipeableDrawer
           anchor="bottom"

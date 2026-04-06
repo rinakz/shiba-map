@@ -1,6 +1,7 @@
 export * from "./IconAvatar";
 export * from "./IconCafe";
 export * from "./IconChat";
+export * from "./IconChatDot";
 export * from "./IconCrown";
 export * from "./IconGroomer";
 export * from "./IconMale";
@@ -20,5 +21,8 @@ export * from "./IconVaccine";
 export * from "./IconParasite";
 export * from "./IconTraining";
 export * from "./IconEdit";
+export * from "./IconGraduation";
+export * from "./IconFirstAid";
+export * from "./IconPDF";
 
 

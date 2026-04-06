@@ -2,7 +2,7 @@ import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { supabase } from "../../shared/api/supabase-сlient";
 import { SIBA_PHOTOS_BUCKET } from "../../shared/constants/storage";
 import { PATH } from "../../shared/constants/path";
-import type { ShibaType, ShibaUser } from "../../shared/types";
+import type { SibaStatus, ShibaType, ShibaUser } from "../../shared/types";
 
 type SetUser = Dispatch<SetStateAction<Partial<ShibaUser> | undefined>>;
 type SetMySiba = Dispatch<SetStateAction<ShibaType | undefined>>;
@@ -92,6 +92,44 @@ export const fetchSibaAcademyProgress = async (sibaId: string) => {
     .maybeSingle();
   if (error) return null;
   return (data as { learned_skill_ids: string[] | null } | null) ?? null;
+};
+
+export const fetchHealthAlert = async (sibaId: string) => {
+  const [vacc, treat] = await Promise.all([
+    supabase
+      .from("siba_health_vaccination")
+      .select("rabies_last_shot,complex_last_shot")
+      .eq("siba_id", sibaId)
+      .maybeSingle(),
+    supabase
+      .from("siba_health_treatments")
+      .select("ticks_last_treatment,worms_last_treatment")
+      .eq("siba_id", sibaId)
+      .maybeSingle(),
+  ]);
+
+  const now = Date.now();
+  const leftDays = (date: string | null | undefined, days: number) => {
+    if (!date) return -1;
+    return Math.ceil(
+      (new Date(`${date}T00:00:00`).getTime() + days * 86400000 - now) / 86400000,
+    );
+  };
+
+  return [
+    leftDays(vacc.data?.rabies_last_shot, 365),
+    leftDays(vacc.data?.complex_last_shot, 365),
+    leftDays(
+      (treat.data as { ticks_last_treatment?: string | null } | null)
+        ?.ticks_last_treatment,
+      30,
+    ),
+    leftDays(
+      (treat.data as { worms_last_treatment?: string | null } | null)
+        ?.worms_last_treatment,
+      90,
+    ),
+  ].some((x) => x <= 14);
 };
 
 export const fetchAllSibas = async () => {
@@ -267,15 +305,16 @@ export const submitProfile = async (params: SubmitProfileParams) => {
   });
 };
 
-export const toggleWantToWalk = async (
+export const setSibaStatus = async (
   mySiba: ShibaType,
+  nextStatus: SibaStatus | null,
   setError: (value: string | null) => void,
   setMySiba: SetMySiba
 ) => {
-  const nextValue = !mySiba.want_to_walk;
+  const nextValue = nextStatus === "walk";
   const { error: updateError } = await supabase
     .from("sibains")
-    .update({ want_to_walk: nextValue })
+    .update({ want_to_walk: nextValue, status: nextStatus })
     .eq("id", mySiba.id);
 
   if (updateError) {
@@ -284,7 +323,7 @@ export const toggleWantToWalk = async (
   }
 
   setError(null);
-  setMySiba({ ...mySiba, want_to_walk: nextValue });
+  setMySiba({ ...mySiba, want_to_walk: nextValue, status: nextStatus });
 };
 
 export const deleteAccount = async (

@@ -52,36 +52,36 @@ export const SecondStep: FC<SecondStep> = ({
         />
         {authMethod === "email" && (
           <>
-            <Controller
-              control={control}
-              name="email"
-              render={({ field }) => (
-                <Input
-                  label="Ваш e-mail"
-                  onChange={(e) => field.onChange(e)}
-                  value={field.value}
-                  placeholder="Введите ваш e-mail"
-                />
-              )}
+        <Controller
+          control={control}
+          name="email"
+          render={({ field }) => (
+            <Input
+              label="Ваш e-mail"
+              onChange={(e) => field.onChange(e)}
+              value={field.value}
+              placeholder="Введите ваш e-mail"
             />
-            <Controller
-              control={control}
-              name="password"
-              render={({ field }) => (
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  label="Пароль"
-                  placeholder="Введите пароль"
-                  value={field.value}
-                  onChange={(e) => field.onChange(e)}
-                  icon={
-                    <div
-                      className={stls.eyeIcon}
-                      onClick={() => setShowPassword((prev) => !prev)}
-                    >
-                      {showPassword ? <IconEyeOpen /> : <IconEyeClose />}
-                    </div>
-                  }
+          )}
+        />
+        <Controller
+          control={control}
+          name="password"
+          render={({ field }) => (
+            <Input
+              type={showPassword ? "text" : "password"}
+              label="Пароль"
+              placeholder="Введите пароль"
+              value={field.value}
+              onChange={(e) => field.onChange(e)}
+              icon={
+                <div
+                  className={stls.eyeIcon}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? <IconEyeOpen /> : <IconEyeClose />}
+                </div>
+              }
                 />
               )}
             />

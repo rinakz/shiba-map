@@ -1,0 +1,125 @@
+.page
+  margin-top: 112px
+  padding: 12px
+  background: #F7F6F2
+  min-height: calc(100vh - 112px)
+  display: flex
+  flex-direction: column
+  gap: 10px
+
+.header
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 8px
+
+.title
+  margin: 0
+  color: #333944
+  font-size: 22px
+
+.downloadBtn
+  white-space: nowrap
+
+.loadingOverlay
+  position: fixed
+  inset: 0
+  background: rgba(51, 57, 68, 0.46)
+  display: flex
+  align-items: center
+  justify-content: center
+  color: #FFFCF5
+  z-index: 2000
+
+.loadingCard
+  background: rgba(51, 57, 68, 0.92)
+  border-radius: 16px
+  border: 1px solid rgba(255,255,255,0.12)
+  padding: 14px 16px
+
+.card
+  background: #FFFCF5
+  border: 1px solid #E7E1D2
+  border-radius: 18px
+  padding: 12px
+  box-shadow: 0px 4px 8px 0px #67645E1A
+
+.row
+  display: flex
+  gap: 8px
+  align-items: center
+  flex-wrap: wrap
+
+.select
+  border: 1px solid #E7E1D2
+  border-radius: 12px
+  background: #FFFCF5
+  height: 40px
+  padding: 0 10px
+
+.grid
+  display: grid
+  grid-template-columns: 1fr 1fr
+  gap: 8px
+
+.meta
+  font-size: 12px
+  color: #74736E
+
+.warn
+  color: #B45309
+
+.danger
+  color: #B91C1C
+
+.chart
+  width: 100%
+  height: 150px
+  margin-top: 8px
+  border-radius: 14px
+  background: #FFF8EA
+  border: 1px solid #E7E1D2
+
+.checkItem
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 8px
+  flex-wrap: wrap
+  border-bottom: 1px dashed #E7E1D2
+  padding: 8px 0
+
+.tagRow
+  display: flex
+  flex-wrap: wrap
+  gap: 8px
+
+.tag
+  border-radius: 999px
+  border: 1px solid #E7E1D2
+  background: #FFF8EA
+  padding: 6px 10px
+  cursor: pointer
+  font-size: 12px
+
+.tagActive
+  background: #FFE8CA
+  border-color: #F2BE6A
+
+@media (max-width: 900px)
+  .grid
+    grid-template-columns: 1fr
+
+@media (max-width: 680px)
+  .header
+    flex-wrap: wrap
+    justify-content: flex-start
+  .title
+    font-size: 18px
+    width: 100%
+    order: 2
+  .downloadBtn
+    order: 3
+  .row > *
+    flex: 1 1 100%
+

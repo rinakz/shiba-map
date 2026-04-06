@@ -15,6 +15,8 @@ import {
   getShibaRank,
   shibaSkills,
 } from "../../pages/profile-page/shiba-academy.data";
+import { KennelSection } from "../../pages/profile-page/kennel-section";
+import { getSibaStatus, getSibaStatusColor, isGreenStatus, SHIBA_STATUSES } from "../../shared/utils/siba-status";
 
 type SibaProps = {
   id: string;
@@ -26,6 +28,7 @@ export const Siba = ({ id }: SibaProps) => {
   const isMobile = useMediaQuery("(max-width:600px)");
 
   const siba = sibaIns.find((el: ShibaType) => el.id == id);
+  const status = siba ? getSibaStatus(siba) : null;
 
   const { data: sibaUser, isLoading: isSibaUserLoading } = useQuery<ShibaUser | undefined>({
     queryKey: ["public-profile", siba?.siba_user_id ?? "unknown"],
@@ -216,8 +219,12 @@ export const Siba = ({ id }: SibaProps) => {
           <div className={stls.sibaInfoContainer}>
           <div
             className={cn(stls.avatarFrame, {
-              [stls.wantToWalk]: siba?.want_to_walk,
+              [stls.wantToWalk]: isGreenStatus(status),
+              [stls.avatarPulse]: isGreenStatus(status),
             })}
+            style={{
+              borderColor: status ? getSibaStatusColor(status) : "transparent",
+            }}
           >
             <img
               className={stls.avatarImage}
@@ -226,6 +233,18 @@ export const Siba = ({ id }: SibaProps) => {
             />
           </div>
           <h1 className={stls.sibaName}>{siba?.siba_name}</h1>
+          {status && (
+            <span
+              className={stls.statusCapsule}
+              style={{ borderColor: getSibaStatusColor(status) }}
+            >
+              <span
+                className={stls.statusDot}
+                style={{ backgroundColor: getSibaStatusColor(status) }}
+              />
+              {SHIBA_STATUSES.find((s) => s.id === status)?.label}
+            </span>
+          )}
           {academyRank && (
             <>
               <div className={stls.rankUnderAvatar}>
@@ -275,6 +294,7 @@ export const Siba = ({ id }: SibaProps) => {
             </Button>
           )}
         </div>
+        <KennelSection siba={siba} authUserId={authUserId ?? undefined} editable={false} />
         <div className={stls.achievements}>
           {knownCommands.length > 0 && (
             <div className={stls.commandsSection}>
