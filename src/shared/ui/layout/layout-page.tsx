@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import stls from "./layoutPage.module.sass";
 import useWindowSize from "../../hooks/use-window-size";
 
@@ -15,12 +15,7 @@ export const LayoutPage = ({
   style,
 }: TypeLayoutPageProps) => {
   const { width } = useWindowSize();
-
-  const [laptop, setLaptop] = useState(false);
-
-  useEffect(() => {
-    setLaptop(width < 900);
-  }, [width]);
+  const laptop = typeof width === "number" && width < 900;
 
   return (
     <div
