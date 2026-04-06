@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Skeleton from "@mui/material/Skeleton";
 import { Button, IconButton, Input, LayoutPage, SibaToast } from "../../shared/ui";
-import { IconFirstAid, IconRight } from "../../shared/icons";
+import { IconPDF, IconRight } from "../../shared/icons";
 import { useNavigate } from "react-router-dom";
 import { PATH } from "../../shared/constants/path";
 import { AppContext } from "../../shared/context/app-context";
@@ -29,6 +29,11 @@ export const HealthPassPage = () => {
   const [drug, setDrug] = useState<DrugOption>((parasite.drug_name as DrugOption) ?? "Simparica");
   const [customDrug, setCustomDrug] = useState(parasite.custom_drug_name ?? "");
   const [cycleDaysDraft, setCycleDaysDraft] = useState(String(parasite.cycle_days ?? 30));
+  useEffect(() => {
+    setDrug((parasite.drug_name as DrugOption) ?? "Simparica");
+    setCustomDrug(parasite.custom_drug_name ?? "");
+    setCycleDaysDraft(String(parasite.cycle_days ?? 30));
+  }, [parasite.cycle_days, parasite.custom_drug_name, parasite.drug_name]);
 
   const aid = health.aidQuery.data ?? {
     enterosgel: false, chlorhexidine: false, antihistamine: false, bandage: false, self_fixing_patch: false,
@@ -58,6 +63,11 @@ export const HealthPassPage = () => {
     const score = [hasWeight, hasVaccA, hasVaccB, hasTreat, hasAid, hasMedical].filter(Boolean).length;
     return Math.round((score / 6) * 100);
   }, [aid, tags, health.weightQuery.data, health.vaccQuery.data, health.treatmentsQuery.data, health.medicalIdQuery.data]);
+  const currentCycleDays = getCycleDays(drug, cycleDaysDraft);
+  const isParasiteDirty =
+    drug !== ((parasite.drug_name as DrugOption) ?? "Simparica") ||
+    (drug === "Свой вариант" && customDrug.trim() !== (parasite.custom_drug_name ?? "")) ||
+    currentCycleDays !== (parasite.cycle_days ?? 30);
 
   if (health.isLoading && !health.weightQuery.data) {
     return (
@@ -79,7 +89,7 @@ export const HealthPassPage = () => {
           <Button
             size="small"
             className={stls.downloadBtn}
-            iconRight={<span style={{ display: "flex", alignItems: "center" }}><IconFirstAid /></span>}
+            iconRight={<IconPDF size={16} color="#FFFCF5" />}
             loading={isPdfLoading}
             disabled={!mySiba?.id}
             onClick={async () => {
@@ -176,22 +186,23 @@ export const HealthPassPage = () => {
                 <Input type="number" value={cycleDaysDraft} onChange={(e) => setCycleDaysDraft(e.target.value)} placeholder="Цикл (дней)" />
               </>
             )}
-            <Button
-              size="small"
-              loading={health.setParasiteSettings.isPending}
-              disabled={health.setParasiteSettings.isPending}
-              onClick={() => {
-                const days = getCycleDays(drug, cycleDaysDraft);
-                health.setParasiteSettings.mutate({
-                  drug_name: drug,
-                  custom_drug_name: drug === "Свой вариант" ? (customDrug || null) : null,
-                  taken_at: parasite.taken_at ?? null,
-                  cycle_days: days,
-                });
-              }}
-            >
-              Сохранить препарат
-            </Button>
+            {isParasiteDirty && (
+              <Button
+                size="small"
+                loading={health.setParasiteSettings.isPending}
+                disabled={health.setParasiteSettings.isPending}
+                onClick={() => {
+                  health.setParasiteSettings.mutate({
+                    drug_name: drug,
+                    custom_drug_name: drug === "Свой вариант" ? (customDrug || null) : null,
+                    taken_at: parasite.taken_at ?? null,
+                    cycle_days: currentCycleDays,
+                  });
+                }}
+              >
+                Сохранить препарат
+              </Button>
+            )}
           </div>
           <div className={stls.grid}>
             {[
@@ -251,9 +262,6 @@ export const HealthPassPage = () => {
                   />
                   {(savingField === item.id || health.setVaccDate.isPending || health.setTreatmentDate.isPending) && (
                     <div className={stls.meta}>Сохраняем...</div>
-                  )}
-                  {completionPercent >= 80 && (health.vaccQuery.data?.rabies_last_shot || health.vaccQuery.data?.complex_last_shot) && (
-                    <div className={stls.meta}>Медкнижка почти заполнена — скачайте PDF-паспорт.</div>
                   )}
                   <Button size="small" variant="secondary" disabled>Напомнить в Telegram</Button>
                 </div>
