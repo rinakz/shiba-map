@@ -4,12 +4,11 @@ import { hazardEmojiByKind, type HazardKind } from "./general-map.utils";
 type Props = {
   isMenuOpen: boolean;
   addingKind: HazardKind | null;
-  onOpenMenu: () => void;
   onCloseMenu: () => void;
   onPickKind: (kind: HazardKind) => void;
 };
 
-export const HazardControls = ({ isMenuOpen, addingKind, onOpenMenu, onCloseMenu, onPickKind }: Props) => {
+export const HazardControls = ({ isMenuOpen, addingKind, onCloseMenu, onPickKind }: Props) => {
   return (
     <div className={stls.hazardFabWrapper}>
       {addingKind && <div className={stls.hazardHint}>Нажми на карту, чтобы поставить метку опасности</div>}
