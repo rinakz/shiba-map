@@ -1,3 +1,6 @@
+import { supabase } from "../api/supabase-сlient";
+import type { SibaMini } from "./event-calendar.types";
+
 export const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 
 export const monthEnd = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
@@ -49,4 +52,21 @@ export const parseCoordsFromAddress = (
   } catch {
     return null;
   }
+};
+
+export const fetchSibaByUserMap = async (userIds: string[]) => {
+  if (!userIds.length) return new globalThis.Map<string, SibaMini>();
+
+  const { data, error } = await supabase
+    .from("siba_map_markers")
+    .select(
+      "siba_user_id,siba_name,siba_icon,photos,community_title,community_avatar_url,community_tg_link",
+    )
+    .in("siba_user_id", userIds);
+
+  if (error) return new globalThis.Map<string, SibaMini>();
+
+  return new globalThis.Map<string, SibaMini>(
+    ((data ?? []) as SibaMini[]).map((siba) => [siba.siba_user_id, siba]),
+  );
 };

@@ -38,8 +38,8 @@ export const fetchNewsFeed = async (authUserId: string) => {
   if (!followerIds.length) return [] as FeedItem[];
 
   const { data: sibas, error: sibasErr } = await supabase
-    .from("sibains")
-    .select("id,siba_user_id,siba_name,siba_icon,photos")
+    .from("siba_map_markers")
+    .select("id,siba_user_id,siba_name,siba_icon,photos,community_title,community_avatar_url,community_tg_link")
     .in("siba_user_id", followerIds);
   if (sibasErr) throw sibasErr;
   const typedSibas = (sibas ?? []) as SibaNewsRow[];
@@ -97,6 +97,9 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: siba.id,
         actorSibaName: siba.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(siba.photos, siba.siba_icon),
+        actorCommunityTitle: siba.community_title,
+        actorCommunityAvatarUrl: siba.community_avatar_url,
+        actorCommunityTgLink: siba.community_tg_link,
         verb: "сегодня посетил",
         place,
       });
@@ -113,6 +116,9 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: siba.id,
         actorSibaName: siba.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(siba.photos, siba.siba_icon),
+        actorCommunityTitle: siba.community_title,
+        actorCommunityAvatarUrl: siba.community_avatar_url,
+        actorCommunityTgLink: siba.community_tg_link,
         verb: "сегодня посетил",
         place,
       });
@@ -129,6 +135,9 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: siba.id,
         actorSibaName: siba.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(siba.photos, siba.siba_icon),
+        actorCommunityTitle: siba.community_title,
+        actorCommunityAvatarUrl: siba.community_avatar_url,
+        actorCommunityTgLink: siba.community_tg_link,
         verb: "сегодня посетил",
         place,
       });
@@ -170,6 +179,9 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: s.id,
         actorSibaName: s.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(s.photos, s.siba_icon),
+        actorCommunityTitle: s.community_title,
+        actorCommunityAvatarUrl: s.community_avatar_url,
+        actorCommunityTgLink: s.community_tg_link,
         verb: "добавил кафе",
         place: { kind: "cafe", place: p },
       });
@@ -185,6 +197,9 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: s.id,
         actorSibaName: s.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(s.photos, s.siba_icon),
+        actorCommunityTitle: s.community_title,
+        actorCommunityAvatarUrl: s.community_avatar_url,
+        actorCommunityTgLink: s.community_tg_link,
         verb: "добавил парк",
         place: { kind: "park", place: p },
       });
@@ -200,6 +215,9 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: s.id,
         actorSibaName: s.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(s.photos, s.siba_icon),
+        actorCommunityTitle: s.community_title,
+        actorCommunityAvatarUrl: s.community_avatar_url,
+        actorCommunityTgLink: s.community_tg_link,
         verb: "добавил грумера",
         place: { kind: "groomer", place: p },
       });
@@ -244,8 +262,8 @@ export const fetchNewsFeed = async (authUserId: string) => {
     new Set(friendshipRows.flatMap((r) => [r.user_id, r.friend_user_id])),
   );
   const { data: allSubsSibas, error: allSubsSibasErr } = await supabase
-    .from("sibains")
-    .select("id,siba_user_id,siba_name,siba_icon,photos")
+    .from("siba_map_markers")
+    .select("id,siba_user_id,siba_name,siba_icon,photos,community_title,community_avatar_url,community_tg_link")
     .in("siba_user_id", usersForSubs);
   if (allSubsSibasErr) throw allSubsSibasErr;
   const subByUser = new Map<string, SibaNewsRow>(
@@ -263,6 +281,9 @@ export const fetchNewsFeed = async (authUserId: string) => {
       actorSibaId: from.id,
       actorSibaName: from.siba_name,
       actorSibaAvatar: buildSafeAvatarSrc(from.photos, from.siba_icon),
+      actorCommunityTitle: from.community_title,
+      actorCommunityAvatarUrl: from.community_avatar_url,
+      actorCommunityTgLink: from.community_tg_link,
       verb: "подписался на",
       targetSiba: {
         id: to.id,
@@ -295,6 +316,9 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: siba.id,
         actorSibaName: siba.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(siba.photos, siba.siba_icon),
+        actorCommunityTitle: siba.community_title,
+        actorCommunityAvatarUrl: siba.community_avatar_url,
+        actorCommunityTgLink: siba.community_tg_link,
         verb: "выучил команду",
         commandName,
       });

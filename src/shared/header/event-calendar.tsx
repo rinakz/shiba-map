@@ -4,6 +4,7 @@ import Skeleton from "@mui/material/Skeleton";
 import stls from "./event-calendar.module.sass";
 import { supabase } from "../api/supabase-сlient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CommunityBadge } from "../ui";
 import {
   geocodeAddressFromCoords,
   type YMapGeocodeApi,
@@ -17,6 +18,7 @@ import type {
 import {
   dayKey,
   dayStart,
+  fetchSibaByUserMap,
   isSameDay,
   monthEnd,
   monthStart,
@@ -90,15 +92,7 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
           ...(participantsQuery.data ?? []).map((p) => p.user_id),
         ]),
       );
-      if (!userIds.length) return new globalThis.Map<string, SibaMini>();
-      const { data, error } = await supabase
-        .from("sibains")
-        .select("siba_user_id,siba_name,siba_icon,photos")
-        .in("siba_user_id", userIds);
-      if (error) return new globalThis.Map<string, SibaMini>();
-      return new globalThis.Map<string, SibaMini>(
-        ((data ?? []) as SibaMini[]).map((s) => [s.siba_user_id, s]),
-      );
+      return fetchSibaByUserMap(userIds);
     },
   });
 
@@ -310,7 +304,14 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
               src={s.photos ?? `/${s.siba_icon}.png`}
               alt={s.siba_name}
             />
-            <span>{s.siba_name}</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span>{s.siba_name}</span>
+              <CommunityBadge
+                title={s.community_title}
+                avatarUrl={s.community_avatar_url}
+                tgLink={s.community_tg_link}
+              />
+            </div>
           </div>
         ))
       ) : (

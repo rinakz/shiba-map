@@ -1,8 +1,9 @@
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { supabase } from "../../shared/api/supabase-сlient";
-import { SIBA_PHOTOS_BUCKET } from "../../shared/constants/storage";
+import { saveUserCommunity } from "../../shared/api/communities";
+import { COMMUNITIES_BUCKET, SIBA_PHOTOS_BUCKET } from "../../shared/constants/storage";
 import { PATH } from "../../shared/constants/path";
-import type { SibaStatus, ShibaType, ShibaUser } from "../../shared/types";
+import type { Community, SibaStatus, ShibaType, ShibaUser } from "../../shared/types";
 
 type SetUser = Dispatch<SetStateAction<Partial<ShibaUser> | undefined>>;
 type SetMySiba = Dispatch<SetStateAction<ShibaType | undefined>>;
@@ -183,6 +184,31 @@ export const processProfileFileChange = (
   setPhotoPreviewUrl(URL.createObjectURL(file));
 };
 
+export const processCommunityAvatarChange = (
+  event: ChangeEvent<HTMLInputElement>,
+  setError: (value: string | null) => void,
+  setCommunityAvatarFile: (value: File | null) => void,
+  setCommunityAvatarPreviewUrl: (value: string | null) => void
+) => {
+  setError(null);
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    setError("Можно загрузить только изображение сообщества.");
+    return;
+  }
+
+  const maxSizeMb = 10;
+  if (file.size > maxSizeMb * 1024 * 1024) {
+    setError(`Файл слишком большой. Максимум ${maxSizeMb} МБ.`);
+    return;
+  }
+
+  setCommunityAvatarFile(file);
+  setCommunityAvatarPreviewUrl(URL.createObjectURL(file));
+};
+
 type SubmitProfileParams = {
   authUserId: string;
   mySiba: ShibaType;
@@ -193,6 +219,10 @@ type SubmitProfileParams = {
   sibaNameDraft: string;
   sibaGenderDraft: string;
   sibaIconDraft: string;
+  communityTitleDraft: string;
+  communityLinkDraft: string;
+  communityAvatarDraft: string;
+  communityAvatarFile: File | null;
   photoFile: File | null;
   setError: (value: string | null) => void;
   setUser: SetUser;
@@ -200,6 +230,9 @@ type SubmitProfileParams = {
   setIsEdit: (value: boolean) => void;
   setPhotoFile: (value: File | null) => void;
   setPhotoPreviewUrl: (value: string | null) => void;
+  setCommunity: (value: Community | null) => void;
+  setCommunityAvatarFile: (value: File | null) => void;
+  setCommunityAvatarPreviewUrl: (value: string | null) => void;
 };
 
 export const submitProfile = async (params: SubmitProfileParams) => {
@@ -213,6 +246,10 @@ export const submitProfile = async (params: SubmitProfileParams) => {
     sibaNameDraft,
     sibaGenderDraft,
     sibaIconDraft,
+    communityTitleDraft,
+    communityLinkDraft,
+    communityAvatarDraft,
+    communityAvatarFile,
     photoFile,
     setError,
     setUser,
@@ -220,9 +257,13 @@ export const submitProfile = async (params: SubmitProfileParams) => {
     setIsEdit,
     setPhotoFile,
     setPhotoPreviewUrl,
+    setCommunity,
+    setCommunityAvatarFile,
+    setCommunityAvatarPreviewUrl,
   } = params;
 
   let uploadedPhotoUrl: string | undefined;
+  let uploadedCommunityAvatarUrl: string | undefined;
   if (photoFile) {
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(SIBA_PHOTOS_BUCKET)
@@ -257,6 +298,35 @@ export const submitProfile = async (params: SubmitProfileParams) => {
     uploadedPhotoUrl = data.publicUrl;
   }
 
+  if (communityAvatarFile) {
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(COMMUNITIES_BUCKET)
+      .upload(
+        `avatars/${authUserId}_${Date.now()}_${communityAvatarFile.name}`,
+        communityAvatarFile,
+        {
+          contentType: communityAvatarFile.type ?? "image/png",
+          upsert: true,
+        }
+      );
+    if (uploadError) {
+      setError(uploadError.message);
+      return;
+    }
+    if (!uploadData?.path) {
+      setError("Не удалось получить путь загруженного аватара сообщества.");
+      return;
+    }
+    const { data } = supabase.storage
+      .from(COMMUNITIES_BUCKET)
+      .getPublicUrl(uploadData.path);
+    if (!data?.publicUrl) {
+      setError("Ошибка получения публичного URL аватара сообщества.");
+      return;
+    }
+    uploadedCommunityAvatarUrl = data.publicUrl;
+  }
+
   const { error: updateUserError } = await supabase
     .from("users")
     .update({
@@ -286,23 +356,41 @@ export const submitProfile = async (params: SubmitProfileParams) => {
     return;
   }
 
+  const savedCommunity = await saveUserCommunity({
+    authUserId,
+    title: communityTitleDraft,
+    tgLink: communityLinkDraft,
+    avatarUrl: uploadedCommunityAvatarUrl ?? communityAvatarDraft,
+  });
+
   setIsEdit(false);
   setPhotoFile(null);
   setPhotoPreviewUrl(null);
+  setCommunityAvatarFile(null);
+  setCommunityAvatarPreviewUrl(null);
   setError(null);
   setUser({
     ...user,
     nickname: nicknameDraft,
     tgname: tgNameDraft,
     is_show_tgname: isShowTgNameDraft,
+    community_id: savedCommunity?.id ?? null,
+    community_title: savedCommunity?.title ?? null,
+    community_avatar_url: savedCommunity?.avatar_url ?? null,
+    community_tg_link: savedCommunity?.tg_link ?? null,
   });
   setMySiba({
     ...mySiba,
     siba_name: sibaNameDraft,
     siba_gender: sibaGenderDraft,
     siba_icon: sibaIconDraft,
+    community_id: savedCommunity?.id ?? null,
+    community_title: savedCommunity?.title ?? null,
+    community_avatar_url: savedCommunity?.avatar_url ?? null,
+    community_tg_link: savedCommunity?.tg_link ?? null,
     ...(uploadedPhotoUrl ? { photos: uploadedPhotoUrl } : {}),
   });
+  setCommunity(savedCommunity);
 };
 
 export const setSibaStatus = async (

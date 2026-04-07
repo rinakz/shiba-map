@@ -58,9 +58,7 @@ export const HazardControls = ({ isMenuOpen, addingKind, onOpenMenu, onCloseMenu
             <span className={stls.hazardMenuLabel}>Закрыть</span>
           </button>
         </div>
-      ) : (
-        <button type="button" className={stls.fabAdd} onClick={onOpenMenu} aria-label="Добавить опасность">+</button>
-      )}
+      ) : null}
     </div>
   );
 };

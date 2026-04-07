@@ -8,7 +8,7 @@ import { PATH } from "../shared/constants/path";
 import { useContext, type FC } from "react";
 import { Header } from "../shared/header/header";
 import { AppContext } from "../shared/context/app-context";
-import { AuthPage, LoginPage, MainPage, ProfilePage } from "../pages";
+import { AuthPage, LeaderboardPage, LoginPage, MainPage, ProfilePage } from "../pages";
 import { NewsPage } from "../pages/news-page/news-page";
 import { KnowledgePage } from "../pages/knowledge-page/knowledge-page";
 import { HealthPassPage } from "../pages/health-pass-page/health-pass-page";
@@ -53,6 +53,14 @@ export const Routes: FC = () => {
             element={
               <ProtectedRoute isAuth={Boolean(authUserId)}>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={PATH.Leaderboard}
+            element={
+              <ProtectedRoute isAuth={Boolean(authUserId)}>
+                <LeaderboardPage />
               </ProtectedRoute>
             }
           />

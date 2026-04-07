@@ -24,5 +24,4 @@ export * from "./IconEdit";
 export * from "./IconGraduation";
 export * from "./IconFirstAid";
 export * from "./IconPDF";
-
-
+export * from "./IconGlobe";

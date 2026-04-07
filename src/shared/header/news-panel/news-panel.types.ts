@@ -12,6 +12,9 @@ export type FeedItem = {
   actorSibaId: string;
   actorSibaName: string;
   actorSibaAvatar: string;
+  actorCommunityTitle?: string | null;
+  actorCommunityAvatarUrl?: string | null;
+  actorCommunityTgLink?: string | null;
   verb: string;
   targetSiba?: { id: string; name: string };
   place?: { kind: PlaceKind; place: Place };
@@ -24,4 +27,7 @@ export type SibaNewsRow = {
   siba_name: string;
   siba_icon: string;
   photos: string | null;
+  community_title?: string | null;
+  community_avatar_url?: string | null;
+  community_tg_link?: string | null;
 };

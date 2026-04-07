@@ -1,0 +1,220 @@
+.page
+    min-height: calc(100vh - 112px)
+    padding: 120px 12px 110px
+    background: radial-gradient(circle at top, rgba(254, 174, 17, 0.12) 0%, rgba(255, 252, 245, 0) 38%), linear-gradient(180deg, rgba(255, 252, 245, 0.98) 0%, rgba(238, 234, 222, 0.72) 100%)
+
+.headerRow
+    display: flex
+    align-items: center
+    gap: 12px
+    margin-bottom: 12px
+    padding: 12px
+    border: 1px solid rgba(231, 225, 210, 0.9)
+    border-radius: 22px
+    background: rgba(255, 252, 245, 0.82)
+    backdrop-filter: blur(12px)
+
+.titleWrap
+    display: flex
+    align-items: center
+    gap: 8px
+
+.title
+    margin: 0
+    font-size: 24px
+    color: #333944
+
+.subtle
+    color: #74736E
+    font-size: 12px
+
+.tabs
+    display: flex
+    gap: 8px
+    margin-bottom: 14px
+    padding: 6px
+    border: 1px solid rgba(231, 225, 210, 0.9)
+    border-radius: 999px
+    background: rgba(255, 252, 245, 0.82)
+    backdrop-filter: blur(10px)
+
+.tab
+    display: inline-flex
+    align-items: center
+    gap: 8px
+    border: 1px solid #E7E1D2
+    border-radius: 999px
+    background: rgba(255, 252, 245, 0.96)
+    padding: 10px 14px
+    cursor: pointer
+    color: #5C5B55
+    transition: transform 160ms ease, box-shadow 160ms ease
+    svg
+        width: 20px
+        height: 20px
+    &:hover
+        transform: translateY(-1px)
+
+.tabActive
+    background: #E95B47
+    border-color: #E95B47
+    color: #FFFCF5
+
+.list
+    display: flex
+    flex-direction: column
+    gap: 12px
+
+.card
+    position: relative
+    display: flex
+    align-items: center
+    gap: 12px
+    border: 1px solid #E7E1D2
+    border-radius: 20px
+    background: rgba(255, 252, 245, 0.92)
+    padding: 12px
+    cursor: pointer
+    box-shadow: 0 12px 24px rgba(103, 100, 94, 0.08)
+    backdrop-filter: blur(8px)
+    transition: transform 180ms ease, box-shadow 180ms ease
+    &:hover
+        transform: translateY(-1px)
+        box-shadow: 0 16px 28px rgba(103, 100, 94, 0.12)
+
+.cardTop
+    padding: 16px
+    transform: scale(1.01)
+    box-shadow: 0 0 0 1px rgba(254, 174, 17, 0.2), 0 16px 34px rgba(254, 174, 17, 0.14)
+
+.cardTop1
+    box-shadow: 0 0 0 1px rgba(254, 174, 17, 0.35), 0 12px 28px rgba(254, 174, 17, 0.18)
+
+.cardTop2
+    box-shadow: 0 0 0 1px rgba(196, 202, 212, 0.45), 0 12px 24px rgba(196, 202, 212, 0.18)
+
+.cardTop3
+    box-shadow: 0 0 0 1px rgba(205, 127, 50, 0.35), 0 12px 24px rgba(205, 127, 50, 0.16)
+
+.place
+    width: 36px
+    min-width: 36px
+    text-align: center
+    font-size: 18px
+    font-weight: 800
+    color: #333944
+
+.avatarWrap
+    position: relative
+    width: 52px
+    height: 52px
+    min-width: 52px
+    border-radius: 50%
+    border: 2px solid #E7E1D2
+    overflow: hidden
+    background: linear-gradient(180deg, #FFF4DE 0%, #FFE8BF 100%)
+
+.avatar
+    width: 100%
+    height: 100%
+    object-fit: cover
+
+.content
+    min-width: 0
+    flex: 1
+
+.nameRow
+    display: flex
+    align-items: center
+    gap: 6px
+
+.name
+    font-size: 15px
+    font-weight: 800
+    color: #333944
+    white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
+
+.status
+    font-size: 12px
+    color: #74736E
+    margin-top: 6px
+
+.points
+    text-align: right
+    min-width: 78px
+
+.pointsValue
+    font-size: 18px
+    font-weight: 800
+    color: #E95B47
+
+.pointsLabel
+    font-size: 11px
+    color: #74736E
+
+.crownCorner
+    position: absolute
+    top: 10px
+    right: 10px
+
+.myPlaceBar
+    position: fixed
+    left: 12px
+    right: 12px
+    bottom: calc(88px + env(safe-area-inset-bottom))
+    z-index: 9
+    display: flex
+    align-items: center
+    justify-content: space-between
+    gap: 10px
+    border: 1px solid #E7E1D2
+    border-radius: 18px
+    background: rgba(255, 252, 245, 0.98)
+    padding: 12px
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1)
+
+.myPlaceText
+    font-size: 12px
+    color: #74736E
+
+.myPlaceValue
+    font-size: 15px
+    font-weight: 800
+    color: #333944
+
+.chatMeta
+    font-size: 12px
+    color: #74736E
+    margin-top: 4px
+
+.energyBar
+    margin-top: 8px
+    height: 8px
+    border-radius: 999px
+    background: #F3EEE3
+    overflow: hidden
+
+.energyFill
+    height: 100%
+    background: linear-gradient(90deg, #FEAE11 0%, #E95B47 100%)
+
+.chatAction
+    border: 1px solid #E7E1D2
+    border-radius: 999px
+    background: #FFFCF5
+    padding: 8px 12px
+    cursor: pointer
+    font-weight: 700
+    color: #333944
+    text-decoration: none
+
+.leaderBadge
+    display: inline-flex
+    align-items: center
+    gap: 6px
+    margin-top: 6px
+    font-size: 11px
+    color: #E95B47
+    font-weight: 700

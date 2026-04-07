@@ -2,5 +2,7 @@ export { Button } from "./button/button";
 export { Input } from "./input/base-input";
 export { IconButton } from "./icon-button/icon-button";
 export { LayoutPage } from "./layout/layout-page";
+export { MainTabBar } from "./main-tab-bar";
 export { ProgressBar } from "./progress-bar";
 export { SibaToast } from "./siba-toast";
+export { CommunityBadge } from "./community-badge";

@@ -5,28 +5,15 @@ import {
   useState,
   type ChangeEvent,
 } from "react";
-import cn from "classnames";
 import { useQuery } from "@tanstack/react-query";
-import { Checkbox, Drawer } from "@mui/material";
 import Skeleton from "@mui/material/Skeleton";
+import { clearUserCommunity, fetchUserCommunity } from "../../shared/api/communities";
 import { AppContext } from "../../shared/context/app-context";
 import stls from "./profile.module.sass";
-import { Button, IconButton, Input, LayoutPage } from "../../shared/ui";
+import { Button, LayoutPage } from "../../shared/ui";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-import {
-  IconAvatar,
-  IconEdit,
-  IconFemale,
-  IconFirstAid,
-  IconMale,
-  IconPeople,
-  IconRight,
-  IconSibka,
-  IconSibkaBlack,
-  IconSibkaWhite,
-  IconTg,
-} from "../../shared/icons";
+import { IconRight } from "../../shared/icons";
 import { ProfileAchievements } from "./profile-achievements";
 import { ShibaAcademy } from "./shiba-academy";
 import { KennelSection } from "./kennel-section";
@@ -43,16 +30,17 @@ import {
   openFilePicker,
   performSignOut,
   profileQueryKeys,
+  processCommunityAvatarChange,
   processProfileFileChange,
   submitProfile,
 } from "./profile.utils";
 import { PATH } from "../../shared/constants/path";
-import {
-  getSibaStatus,
-  getSibaStatusColor,
-  isGreenStatus,
-} from "../../shared/utils/siba-status";
-import { ProfileStatusControl } from "./profile-status-control";
+import { getSibaStatus } from "../../shared/utils/siba-status";
+import { ProfileHeaderCard } from "./profile-header-card";
+import { ProfileOwnerCard } from "./profile-owner-card";
+import { ProfileCommunityPreview } from "./profile-community-preview";
+import { ProfileEditForm } from "./profile-edit-form";
+import { ProfileDeleteDrawer } from "./profile-delete-drawer";
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
@@ -60,6 +48,7 @@ export const ProfilePage = () => {
   const { authUserId, user, mySiba, setUser, setMySiba, setSibaIns } =
     useContext(AppContext);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const communityAvatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
@@ -76,6 +65,12 @@ export const ProfilePage = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isPromoRevealed, setIsPromoRevealed] = useState(false);
+  const [communityTitleDraft, setCommunityTitleDraft] = useState("");
+  const [communityLinkDraft, setCommunityLinkDraft] = useState("");
+  const [communityAvatarDraft, setCommunityAvatarDraft] = useState("");
+  const [communityAvatarFile, setCommunityAvatarFile] = useState<File | null>(null);
+  const [communityAvatarPreviewUrl, setCommunityAvatarPreviewUrl] = useState<string | null>(null);
+  const [community, setCommunity] = useState<import("../../shared/types").Community | null>(null);
 
   const userQuery = useQuery({
     queryKey: authUserId ? profileQueryKeys.user(authUserId) : ["user", "guest"],
@@ -126,6 +121,11 @@ export const ProfilePage = () => {
     enabled: Boolean(mySiba?.id),
     queryFn: () => fetchHealthAlert(mySiba!.id),
   });
+  const communityQuery = useQuery({
+    queryKey: ["user-community", authUserId],
+    enabled: Boolean(authUserId),
+    queryFn: () => fetchUserCommunity(authUserId as string),
+  });
 
   const completedCommandsCount = academyProgressQuery.data?.learned_skill_ids?.length ?? 0;
   const academyRank = getShibaRank(completedCommandsCount).rank;
@@ -143,6 +143,15 @@ export const ProfilePage = () => {
     setTgNameDraft(user?.tgname ?? "");
     setIsShowTgNameDraft(Boolean(user?.is_show_tgname));
   }, [user]);
+
+  useEffect(() => {
+    setCommunity(communityQuery.data ?? null);
+    setCommunityTitleDraft(communityQuery.data?.title ?? "");
+    setCommunityLinkDraft(communityQuery.data?.tg_link ?? "");
+    setCommunityAvatarDraft(communityQuery.data?.avatar_url ?? "");
+    setCommunityAvatarPreviewUrl(null);
+    setCommunityAvatarFile(null);
+  }, [communityQuery.data]);
 
   useEffect(() => {
     setSibaNameDraft(mySiba?.siba_name ?? "");
@@ -187,6 +196,10 @@ export const ProfilePage = () => {
         sibaNameDraft,
         sibaGenderDraft,
         sibaIconDraft,
+        communityTitleDraft,
+        communityLinkDraft,
+        communityAvatarDraft,
+        communityAvatarFile,
         photoFile,
         setError,
         setUser,
@@ -194,6 +207,9 @@ export const ProfilePage = () => {
         setIsEdit,
         setPhotoFile,
         setPhotoPreviewUrl,
+        setCommunity,
+        setCommunityAvatarFile,
+        setCommunityAvatarPreviewUrl,
       });
     } finally {
       setIsSavingProfile(false);
@@ -221,6 +237,11 @@ export const ProfilePage = () => {
     setSibaNameDraft(drafts.sibaName);
     setSibaGenderDraft(drafts.sibaGender);
     setSibaIconDraft(drafts.sibaIcon);
+    setCommunityTitleDraft(community?.title ?? "");
+    setCommunityLinkDraft(community?.tg_link ?? "");
+    setCommunityAvatarDraft(community?.avatar_url ?? "");
+    setCommunityAvatarFile(null);
+    setCommunityAvatarPreviewUrl(null);
     setIsEdit(true);
   };
 
@@ -232,6 +253,33 @@ export const ProfilePage = () => {
     } finally {
       setIsSigningOut(false);
     }
+  };
+
+  const handlePromoClick = async () => {
+    const code = user?.promo_code ?? "—";
+    try {
+      await navigator.clipboard.writeText(code);
+      setError("Промокод скопирован");
+      setIsPromoRevealed(true);
+      window.setTimeout(() => {
+        setIsPromoRevealed(false);
+      }, 2000);
+      setTimeout(() => setError(null), 1200);
+    } catch {
+      setError("Не удалось скопировать промокод");
+      setTimeout(() => setError(null), 1200);
+    }
+  };
+
+  const handleClearCommunity = async () => {
+    if (!authUserId) return;
+    await clearUserCommunity(authUserId);
+    setCommunity(null);
+    setCommunityTitleDraft("");
+    setCommunityLinkDraft("");
+    setCommunityAvatarDraft("");
+    setCommunityAvatarFile(null);
+    setCommunityAvatarPreviewUrl(null);
   };
 
   const isProfileLoading =
@@ -256,228 +304,69 @@ export const ProfilePage = () => {
   return (
     <LayoutPage>
       <div className={stls.profileContainer}>
-        <div className={stls.sibaInfoContainer}>
-          {!isEdit && (
-            <div className={stls.topActionsRow}>
-              <IconButton
-                size="medium"
-                variant="secondary"
-                icon={
-                  <span style={{ display: "flex", transform: "rotate(-180deg)" }}>
-                    <IconRight />
-                  </span>
-                }
-                onClick={() => navigate(PATH.Home)}
-              />
-              <div className={stls.topActionsRight}>
-                <IconButton
-                  size="medium"
-                  variant="secondary"
-                  icon={<IconEdit />}
-                  onClick={handleStartEdit}
-                />
-                {healthAlertQuery.isLoading ? (
-                  <Skeleton
-                    variant="rounded"
-                    width={42}
-                    height={42}
-                    className={stls.healthCardSkeleton}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    className={stls.healthCardButton}
-                    onClick={() => navigate(PATH.HealthPass)}
-                    title="Медкнижка"
-                  >
-                    <span className={stls.healthCardIcon}>
-                      <IconFirstAid color="#E95B47" />
-                    </span>
-                    {healthAlertQuery.data && <span className={stls.healthAlertDot}>!</span>}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          {isEdit ? (
-            <div
-              className={stls.photoWrapper}
-              onClick={() => openFilePicker(fileInputRef)}
-            >
-              {photoPreviewUrl ? (
-                <img
-                  className={cn(stls.uploadedPhoto, {
-                    [stls.wantToWalk]: mySiba?.want_to_walk,
-                  })}
-                  src={photoPreviewUrl}
-                  alt="Фото"
-                />
-              ) : mySiba?.photos ? (
-                <img
-                  className={cn(stls.sibaPhoto, {
-                    [stls.wantToWalk]: mySiba?.want_to_walk,
-                  })}
-                  src={mySiba?.photos}
-                  alt="Фото"
-                />
-              ) : (
-                <div className={stls.customInputPhoto}>
-                  <IconAvatar />
-                </div>
-              )}
-              <input
-                ref={fileInputRef}
-                className={stls.inputPhoto}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-              />
-            </div>
-          ) : (
-            <img
-              className={cn(stls.sibaPhoto, {
-                [stls.wantToWalk]: isGreenStatus(currentStatus),
-                [stls.sibaPhotoPing]: isGreenStatus(currentStatus),
-              })}
-              style={{
-                borderColor: currentStatus ? getSibaStatusColor(currentStatus) : "transparent",
-              }}
-              src={mySiba?.photos ?? `/${mySiba?.siba_icon}.png`}
-              alt="Сиба"
-            />
-          )}
-          <div className={stls.titleRow}>
-            <div className={stls.nameBlock}>
-              <h1 className={stls.sibaName}>{mySiba?.siba_name}</h1>
-              <ProfileStatusControl
-                mySiba={mySiba}
-                authUserId={authUserId}
-                isEdit={isEdit}
-                setError={setError}
-                setMySiba={setMySiba}
-                setSibaIns={setSibaIns}
-              />
-            </div>
-          </div>
-          {!isEdit && academyRank && (
-            <div className={stls.rankContainer}>
-              <div className={stls.academyRankUnderName}>
-                {academyRank.icon} {academyRank.rank}
-              </div>
-              <div className={stls.academyQuoteUnderName}>{academyRank.bossQuote}</div>
-            </div>
-          )}
-          <div className={stls.statsRow}>
-            <span className={stls.mutedText}>
-              {mySiba?.siba_gender === "male" ? "Мальчик" : "Девочка"}
-            </span>
-            <span className={stls.mutedText}>
-              level: {mySiba?.level ?? 0}
-            </span>
-          </div>
-          <div className={stls.statsRow}>
-            <span>Подписки: {subscriptionsCountQuery.data ?? 0}</span>{" "}
-            <span>Подписчики: {subscribersCountQuery.data ?? 0}</span>
-          </div>
-        </div>
-        <div className={stls.ownerCard}>
-          <div className={stls.ownerMain}>
-            <IconPeople /> {user?.nickname}
-          </div>
-          <div className={stls.ownerInfo}>
-            <IconTg />
-            {user?.is_show_tgname ? user?.tgname : "Информация скрыта"}
-          </div>
-          <div className={stls.promoRow}>
-            Мой промокод:
-            <span
-              className={cn(stls.promoValue, { [stls.promoBlur]: !isPromoRevealed })}
-              onClick={async () => {
-                const code = user?.promo_code ?? "—";
-                try {
-                  await navigator.clipboard.writeText(code);
-                  setError("Промокод скопирован");
-                  setIsPromoRevealed(true);
-                  window.setTimeout(() => {
-                    setIsPromoRevealed(false);
-                  }, 2000);
-                  setTimeout(() => setError(null), 1200);
-                } catch {
-                  setError("Не удалось скопировать промокод");
-                  setTimeout(() => setError(null), 1200);
-                }
-              }}
-              title="Скопировать"
-            >
-              {user?.promo_code ?? "—"}
-            </span>
-          </div>
-        </div>
+        <ProfileHeaderCard
+          authUserId={authUserId}
+          mySiba={mySiba}
+          community={community}
+          isEdit={isEdit}
+          photoPreviewUrl={photoPreviewUrl}
+          currentStatus={currentStatus}
+          academyRank={academyRank}
+          subscriptionsCount={subscriptionsCountQuery.data ?? 0}
+          subscribersCount={subscribersCountQuery.data ?? 0}
+          isHealthLoading={healthAlertQuery.isLoading}
+          hasHealthAlert={Boolean(healthAlertQuery.data)}
+          fileInputRef={fileInputRef}
+          onBack={() => navigate(PATH.Home)}
+          onStartEdit={handleStartEdit}
+          onOpenHealth={() => navigate(PATH.HealthPass)}
+          onOpenFilePicker={() => openFilePicker(fileInputRef)}
+          onPhotoChange={handleFileChange}
+          setError={setError}
+          setMySiba={setMySiba}
+          setSibaIns={setSibaIns}
+        />
+        <ProfileOwnerCard
+          user={user}
+          isPromoRevealed={isPromoRevealed}
+          onPromoClick={handlePromoClick}
+        />
+        {!isEdit && (
+          <ProfileCommunityPreview community={community} mySiba={mySiba} />
+        )}
         {isEdit && (
-          <div className={stls.editForm}>
-            <Input
-              label="Никнейм владельца"
-              value={nicknameDraft}
-              onChange={(e) => setNicknameDraft(e.target.value)}
-            />
-            <Input
-              label="Telegram username"
-              value={tgNameDraft}
-              onChange={(e) => setTgNameDraft(e.target.value)}
-            />
-            <label className={stls.checkRow}>
-              <Checkbox
-                checked={isShowTgNameDraft}
-                onChange={(e) => setIsShowTgNameDraft(e.target.checked)}
-              />
-              Показывать telegram-имя
-            </label>
-            <Input
-              label="Кличка сибы"
-              value={sibaNameDraft}
-              onChange={(e) => setSibaNameDraft(e.target.value)}
-            />
-            <div className={stls.fieldGroup}>
-              Пол сибы
-              <div className={stls.iconRow}>
-                <IconButton
-                  variant={sibaGenderDraft === "male" ? "pressed" : "primary"}
-                  onClick={() => setSibaGenderDraft("male")}
-                  size="large"
-                  icon={<IconMale />}
-                />
-                <IconButton
-                  variant={sibaGenderDraft === "female" ? "pressed" : "primary"}
-                  onClick={() => setSibaGenderDraft("female")}
-                  size="large"
-                  icon={<IconFemale />}
-                />
-              </div>
-            </div>
-            <div className={stls.fieldGroup}>
-              Цвет сибы
-              <div className={cn(stls.iconRow, stls.iconRowClickable)}>
-                <IconButton
-                  size="large"
-                  variant={sibaIconDraft === "default" ? "pressed" : "primary"}
-                  onClick={() => setSibaIconDraft("default")}
-                  icon={<IconSibka />}
-                />
-                <IconButton
-                  size="large"
-                  variant={sibaIconDraft === "white" ? "pressed" : "primary"}
-                  onClick={() => setSibaIconDraft("white")}
-                  icon={<IconSibkaWhite />}
-                />
-                <IconButton
-                  size="large"
-                  variant={sibaIconDraft === "black" ? "pressed" : "primary"}
-                  onClick={() => setSibaIconDraft("black")}
-                  icon={<IconSibkaBlack />}
-                />
-              </div>
-            </div>
-          </div>
+          <ProfileEditForm
+            authUserId={authUserId}
+            communityAvatarInputRef={communityAvatarInputRef}
+            nicknameDraft={nicknameDraft}
+            tgNameDraft={tgNameDraft}
+            isShowTgNameDraft={isShowTgNameDraft}
+            sibaNameDraft={sibaNameDraft}
+            sibaGenderDraft={sibaGenderDraft}
+            sibaIconDraft={sibaIconDraft}
+            communityTitleDraft={communityTitleDraft}
+            communityLinkDraft={communityLinkDraft}
+            communityAvatarDraft={communityAvatarDraft}
+            communityAvatarPreviewUrl={communityAvatarPreviewUrl}
+            onNicknameChange={setNicknameDraft}
+            onTgNameChange={setTgNameDraft}
+            onShowTgNameChange={setIsShowTgNameDraft}
+            onSibaNameChange={setSibaNameDraft}
+            onSibaGenderChange={setSibaGenderDraft}
+            onSibaIconChange={setSibaIconDraft}
+            onCommunityTitleChange={setCommunityTitleDraft}
+            onCommunityLinkChange={setCommunityLinkDraft}
+            onOpenCommunityAvatarPicker={() => openFilePicker(communityAvatarInputRef)}
+            onCommunityAvatarChange={(event) =>
+              processCommunityAvatarChange(
+                event,
+                setError,
+                setCommunityAvatarFile,
+                setCommunityAvatarPreviewUrl,
+              )
+            }
+            onClearCommunity={handleClearCommunity}
+          />
         )}
         <ProfileAchievements mySiba={mySiba} />
         <ShibaAcademy sibaId={mySiba?.id} />
@@ -533,39 +422,12 @@ export const ProfilePage = () => {
             </Button>
           )}
         </div>
-        <Drawer
-          anchor="bottom"
+        <ProfileDeleteDrawer
           open={isDeleteDrawerOpen}
+          isDeletingAccount={isDeletingAccount}
           onClose={() => setIsDeleteDrawerOpen(false)}
-        >
-          <div className={stls.deleteDrawer}>
-            <div className={stls.deleteCard}>
-              <h3>Удалить аккаунт?</h3>
-              <p>
-                Это действие необратимо. Будут удалены данные пользователя и
-                сибы.
-              </p>
-              <div className={stls.deleteActions}>
-                <Button
-                  size="large"
-                  variant="secondary"
-                  className={stls.fullWidth}
-                  onClick={() => setIsDeleteDrawerOpen(false)}
-                >
-                  Отмена
-                </Button>
-                <Button
-                  size="large"
-                  className={stls.fullWidth}
-                  loading={isDeletingAccount}
-                  onClick={handleDeleteAccount}
-                >
-                  Удалить аккаунт
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Drawer>
+          onDelete={handleDeleteAccount}
+        />
       </div>
     </LayoutPage>
   );

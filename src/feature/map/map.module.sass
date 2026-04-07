@@ -28,6 +28,27 @@
     align-items: center
     gap: 12px
 
+.mapLocateButton
+    position: fixed
+    right: 16px
+    bottom: calc(106px + env(safe-area-inset-bottom))
+    z-index: 11
+
+.mapLocateInner
+    width: 48px
+    height: 48px
+    border-radius: 50%
+    border: 1px solid #E7E1D2
+    background: rgba(255, 252, 245, 0.96)
+    display: flex
+    align-items: center
+    justify-content: center
+    cursor: pointer
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12)
+    svg
+        path
+            fill: #5C5B55
+
 .mapWrapper
     position: relative
 
@@ -92,7 +113,7 @@
 .hazardFabWrapper
     position: fixed
     right: 16px
-    bottom: 96px
+    bottom: 160px
     z-index: 20
     display: flex
     flex-direction: column
@@ -180,6 +201,70 @@
     text-align: center
     cursor: pointer
 
+.mapAddMenuWrapper
+    position: fixed
+    right: 16px
+    bottom: 160px
+    z-index: 21
+    display: flex
+    flex-direction: column
+    align-items: flex-end
+
+.mapAddMenu
+    display: flex
+    flex-direction: column
+    gap: 8px
+    background: rgba(255, 252, 245, 0.96)
+    border: 1px solid #E7E1D2
+    border-radius: 18px
+    padding: 10px
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12)
+
+.mapAddMenuItem
+    display: flex
+    align-items: center
+    gap: 10px
+    min-width: 220px
+    padding: 8px 10px
+    border: none
+    border-radius: 12px
+    background: transparent
+    text-align: left
+    cursor: pointer
+
+.mapAddMenuIcon
+    width: 36px
+    height: 36px
+    border-radius: 10px
+    background: #FFF4DE
+    display: flex
+    align-items: center
+    justify-content: center
+
+.mapAddMenuEmoji
+    width: 36px
+    height: 36px
+    border-radius: 10px
+    background: #FEE2E2
+    display: flex
+    align-items: center
+    justify-content: center
+    font-size: 20px
+
+.mapAddMenuText
+    color: #333944
+    font-size: 13px
+    font-weight: 700
+
+.mapAddMenuClose
+    width: 36px
+    height: 36px
+    align-self: flex-end
+    border-radius: 50%
+    border: 1px solid #E7E1D2
+    background: #FFFCF5
+    cursor: pointer
+
 .hazardConfirm
     position: fixed
     left: 50%
@@ -220,10 +305,26 @@
 .placePickerCard
     display: flex
     gap: 14px
-    background: rgba(255, 252, 245, 0.95)
+    justify-content: center
+    background: #FFFCF5
     border-radius: 24px
-    padding: 8px 12px
+    padding: 12px 16px
     box-shadow: 0px 4px 12px rgba(0,0,0,0.12)
+
+.placePickerItem
+    display: flex
+    flex-direction: column
+    align-items: center
+    gap: 6px
+    background: transparent
+    border: none
+    cursor: pointer
+
+.placePickerLabel
+    font-size: 11px
+    line-height: 1.2
+    color: #5C5B55
+    text-align: center
 
 .placePickerButton
     width: 44px
@@ -235,3 +336,10 @@
     justify-content: center
     cursor: pointer
     border: none
+
+.hazardDrawer
+    display: flex
+    align-items: flex-start
+    justify-content: center
+    gap: 14px
+    padding: 4px 0

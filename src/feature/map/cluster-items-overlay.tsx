@@ -5,6 +5,7 @@ import type { ClusterItem } from "./general-map.utils";
 import { IconCafe } from "../../shared/icons/IconCafe";
 import { IconPark } from "../../shared/icons/IconPark";
 import { IconGroomer } from "../../shared/icons/IconGroomer";
+import { CommunityBadge } from "../../shared/ui";
 import stls from "./cluster-items-overlay.module.sass";
 import {
   getSibaStatus,
@@ -64,6 +65,11 @@ export const ClusterItemsOverlay = ({
               </div>
               <div className={stls.meta}>
                 <span className={stls.name}>{s.siba_name}</span>
+                <CommunityBadge
+                  title={s.community_title}
+                  avatarUrl={s.community_avatar_url}
+                  tgLink={s.community_tg_link}
+                />
                 {status && (
                   <span className={stls.sub} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: getSibaStatusColor(status), display: "inline-block" }} />

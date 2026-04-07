@@ -1,7 +1,6 @@
 import { Placemark } from "@pbe/react-yandex-maps";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { HazardMarkers } from "./hazard-markers";
-import { HazardControls } from "./hazard-controls";
 import {
   fetchActiveHazards,
   insertHazard,
@@ -9,7 +8,6 @@ import {
   hazardIconHrefByKind,
 } from "./general-map.utils";
 import stls from "./map.module.sass";
-import { useState } from "react";
 
 type Props = {
   addingKind: HazardKind | null;
@@ -18,8 +16,12 @@ type Props = {
   setPendingCoords: (c: [number, number] | null) => void;
 };
 
-export const HazardsFeature = ({ addingKind, setAddingKind, pendingCoords, setPendingCoords }: Props) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+export const HazardsFeature = ({
+  addingKind,
+  setAddingKind,
+  pendingCoords,
+  setPendingCoords,
+}: Props) => {
   const queryClient = useQueryClient();
 
   const hazardsQuery = useQuery({
@@ -56,7 +58,6 @@ export const HazardsFeature = ({ addingKind, setAddingKind, pendingCoords, setPe
               })
                 .then(() => {
                   setAddingKind(null);
-                  setIsMenuOpen(false);
                   setPendingCoords(null);
                   queryClient.invalidateQueries({ queryKey: ["hazards", "active"] });
                 })
@@ -78,18 +79,6 @@ export const HazardsFeature = ({ addingKind, setAddingKind, pendingCoords, setPe
           </button>
         </div>
       )}
-      <HazardControls
-        isMenuOpen={isMenuOpen}
-        addingKind={addingKind}
-        onOpenMenu={() => setIsMenuOpen(true)}
-        onCloseMenu={() => {
-          setIsMenuOpen(false);
-          setAddingKind(null);
-        }}
-        onPickKind={(k) => {
-          setAddingKind(k);
-        }}
-      />
     </>
   );
 };

@@ -5,21 +5,19 @@ import Skeleton from "@mui/material/Skeleton";
 import { fetchNewsFeed } from "../../shared/header/news-panel/news-panel.utils";
 import type { FeedItem } from "../../shared/header/news-panel/news-panel.types";
 import stls from "../../feature/map/map.module.sass";
-import { IconButton, SibaToast } from "../../shared/ui";
-import { IconFox } from "../../shared/icons/IconFox";
-import { IconMap } from "../../shared/icons/IconMap";
-import { IconLayers } from "../../shared/icons/IconLayers";
-import { IconUser } from "../../shared/icons/IconUser";
+import pageStls from "./news-page.module.sass";
+import { CommunityBadge, IconButton, MainTabBar, SibaToast } from "../../shared/ui";
 import { IconCalendar as IconFillCalendar } from "../../shared/icons/IconFillCalendar";
 import { IconLike } from "../../shared/icons/IconLike";
-import { useNavigate } from "react-router-dom";
-import { PATH } from "../../shared/constants/path";
+import { IconCrown } from "../../shared/icons/IconCrown";
 import { EventCalendar } from "../../shared/header/event-calendar";
 import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import { Siba } from "../../feature/siba/siba";
 import { useEffect } from "react";
 import { fetchAllSibas, profileQueryKeys } from "../profile-page/profile.utils";
 import { supabase } from "../../shared/api/supabase-сlient";
+import { useNavigate } from "react-router-dom";
+import { PATH } from "../../shared/constants/path";
 
 export const NewsPage = () => {
   const { authUserId, setSibaIns } = useContext(AppContext);
@@ -125,7 +123,17 @@ export const NewsPage = () => {
     queryKey: ["news-likes-list", likesOpenItemId],
     enabled: Boolean(likesOpenItemId),
     queryFn: async () => {
-      if (!likesOpenItemId) return [] as Array<{ siba_user_id: string; siba_name: string; siba_icon: string; photos: string | null }>;
+      if (!likesOpenItemId) {
+        return [] as Array<{
+          siba_user_id: string;
+          siba_name: string;
+          siba_icon: string;
+          photos: string | null;
+          community_title?: string | null;
+          community_avatar_url?: string | null;
+          community_tg_link?: string | null;
+        }>;
+      }
       const { data, error } = await supabase
         .from("news_likes")
         .select("user_id")
@@ -135,7 +143,9 @@ export const NewsPage = () => {
       if (!userIds.length) return [];
       const { data: sibas, error: sibErr } = await supabase
         .from("sibains")
-        .select("siba_user_id,siba_name,siba_icon,photos")
+        .select(
+          "siba_user_id,siba_name,siba_icon,photos,community_title,community_avatar_url,community_tg_link",
+        )
         .in("siba_user_id", userIds);
       if (sibErr) return [];
       return (sibas ?? []) as Array<{
@@ -143,14 +153,36 @@ export const NewsPage = () => {
         siba_name: string;
         siba_icon: string;
         photos: string | null;
+        community_title?: string | null;
+        community_avatar_url?: string | null;
+        community_tg_link?: string | null;
       }>;
     },
   });
   const likesList = likesListQuery.data ?? [];
-
   const content = useMemo(
     () => (
-      <div style={{ padding: 12 }}>
+      <div className={pageStls.content}>
+        <div className={pageStls.topRow}>
+          <button
+            type="button"
+            onClick={() => navigate(PATH.Leaderboard)}
+            className={pageStls.leaderboardButton}
+          >
+            <IconCrown />
+            <div>
+              <div className={pageStls.leaderboardTitle}>Лидеры Сиба-мира</div>
+              <div className={pageStls.leaderboardSubtitle}>
+                Весь мир и Битва Чатов
+              </div>
+            </div>
+          </button>
+          <IconButton
+            onClick={() => setIsCalendarOpen(true)}
+            size="large"
+            icon={<IconFillCalendar />}
+          />
+        </div>
         {newsQuery.isLoading && (
           <>
             <Skeleton variant="rounded" height={52} sx={{ mb: 1 }} />
@@ -159,62 +191,62 @@ export const NewsPage = () => {
           </>
         )}
         {!newsQuery.isLoading && !(newsQuery.data ?? []).length && (
-          <div style={{ color: "#74736E" }}>Пока нет новостей</div>
+          <div className={pageStls.mutedText}>Пока нет новостей</div>
         )}
         {(newsQuery.data ?? []).map((item) => {
           const count = likesByItemCount.get(item.id) ?? 0;
           return (
-            <div key={item.id} style={{ padding: "8px 0" }}>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div key={item.id} className={pageStls.feedItem}>
+              <div className={pageStls.feedItemRow}>
                 <img
                   src={item.actorSibaAvatar}
                   alt={item.actorSibaName}
-                  style={{ width: 32, height: 32, borderRadius: 16, cursor: "pointer" }}
+                  className={pageStls.feedAvatar}
                   onClick={() => setSelectedSibaId(item.actorSibaId)}
                 />
-                <div style={{ color: "#333944", lineHeight: 1.3 }}>
+                <div className={pageStls.feedText}>
                   <span
-                    style={{ fontWeight: 600, cursor: "pointer" }}
+                    className={pageStls.feedActor}
                     onClick={() => setSelectedSibaId(item.actorSibaId)}
                   >
                     {item.actorSibaName}
                   </span>{" "}
+                  <div className={pageStls.feedCommunity}>
+                    <CommunityBadge
+                      title={item.actorCommunityTitle}
+                      avatarUrl={item.actorCommunityAvatarUrl}
+                      tgLink={item.actorCommunityTgLink}
+                    />
+                  </div>
                   <span>{item.verb}</span>{" "}
                   {item.targetSiba && (
                     <span
-                      style={{ fontWeight: 600, cursor: "pointer" }}
+                      className={pageStls.feedTarget}
                       onClick={() => setSelectedSibaId(item.targetSiba!.id)}
                     >
                       {item.targetSiba.name}
                     </span>
                   )}{" "}
                   {item.place && (
-                    <span style={{ textDecoration: "underline" }}>{item.place.place.name}</span>
+                    <span className={pageStls.feedPlace}>{item.place.place.name}</span>
                   )}
-                  {item.commandName && <span style={{ fontWeight: 600 }}>{item.commandName}</span>}
-                  <div style={{ color: "#74736E", fontSize: 12 }}>
+                  {item.commandName && <span className={pageStls.feedCommand}>{item.commandName}</span>}
+                  <div className={pageStls.feedDate}>
                     {new Date(item.date).toLocaleString()}
                   </div>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 40, marginTop: 6 }}>
+              <div className={pageStls.feedActions}>
                 <span
                   onClick={() => toggleLikeMutation.mutate(item.id)}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 20,
-                    height: 20,
-                    cursor: "pointer",
-                  }}
+                  className={pageStls.likeButton}
                   title={myLikesSet.has(item.id) ? "Убрать лайк" : "Нравится"}
                 >
                   <IconLike color={myLikesSet.has(item.id) ? "#E95B47" : "#74736E"} size={18} />
                 </span>
                 {count > 0 && (
                   <span
-                    style={{ color: "#74736E", fontSize: 12, cursor: "pointer" }}
+                    className={pageStls.likesCount}
                     onClick={() => setLikesOpenItemId(item.id)}
                     title="Кто лайкнул"
                   >
@@ -227,22 +259,23 @@ export const NewsPage = () => {
         })}
       </div>
     ),
-    [newsQuery.data, newsQuery.isLoading, likesByItemCount, myLikesSet, toggleLikeMutation],
+    [
+      navigate,
+      newsQuery.data,
+      newsQuery.isLoading,
+      likesByItemCount,
+      myLikesSet,
+      toggleLikeMutation,
+    ],
   );
 
   if (!authUserId) return null;
   return (
-    <div className={stls.mapContainer} style={{ minHeight: "calc(100vh - 112px)" }}>
-      <div className={stls.mapWrapper} style={{ paddingTop: 8, minHeight: "calc(100vh - 112px)" }}>
+    <div className={`${stls.mapContainer} ${pageStls.page}`}>
+      <div className={`${stls.mapWrapper} ${pageStls.pageInner}`}>
         {content}
       </div>
-      <div className={stls.coordinateButton}>
-        <IconButton onClick={() => navigate(PATH.Home)} size="large" icon={<IconFox />} />
-        <IconButton onClick={() => navigate(PATH.Map)} size="large" icon={<IconMap />} />
-        <IconButton onClick={() => navigate(`${PATH.Map}?add=1`)} size="large" icon={<IconLayers />} />
-        <IconButton onClick={() => setIsCalendarOpen(true)} size="large" icon={<IconFillCalendar />} />
-        <IconButton onClick={() => navigate(PATH.Profile)} size="large" icon={<IconUser />} />
-      </div>
+      <MainTabBar active="news" />
       <EventCalendar
         authUserId={authUserId as string}
         open={isCalendarOpen}
@@ -263,19 +296,26 @@ export const NewsPage = () => {
             },
           }}
         >
-          <div style={{ padding: 12 }}>
-            <h3 style={{ marginTop: 0 }}>Лайкнули</h3>
+          <div className={pageStls.likesSheetContent}>
+            <h3 className={pageStls.likesSheetTitle}>Лайкнули</h3>
             {likesList.map((s) => (
-              <div key={s.siba_user_id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0" }}>
+              <div key={s.siba_user_id} className={pageStls.likesRow}>
                 <img
                   src={s.photos ?? `/${s.siba_icon}.png`}
                   alt={s.siba_name}
-                  style={{ width: 28, height: 28, borderRadius: 14, objectFit: "cover" }}
+                  className={pageStls.likesAvatar}
                 />
-                <span>{s.siba_name}</span>
+                <div className={pageStls.likesMeta}>
+                  <span>{s.siba_name}</span>
+                  <CommunityBadge
+                    title={s.community_title}
+                    avatarUrl={s.community_avatar_url}
+                    tgLink={s.community_tg_link}
+                  />
+                </div>
               </div>
             ))}
-            {!likesList.length && <div style={{ color: "#74736E" }}>Пока нет лайков</div>}
+            {!likesList.length && <div className={pageStls.mutedText}>Пока нет лайков</div>}
           </div>
         </SwipeableDrawer>
       ) : (
@@ -286,19 +326,26 @@ export const NewsPage = () => {
           maxWidth="xs"
           PaperProps={{ sx: { borderRadius: 2 } }}
         >
-          <div style={{ padding: 12 }}>
-            <h3 style={{ marginTop: 0 }}>Лайкнули</h3>
+          <div className={pageStls.likesSheetContent}>
+            <h3 className={pageStls.likesSheetTitle}>Лайкнули</h3>
             {likesList.map((s) => (
-              <div key={s.siba_user_id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0" }}>
+              <div key={s.siba_user_id} className={pageStls.likesRow}>
                 <img
                   src={s.photos ?? `/${s.siba_icon}.png`}
                   alt={s.siba_name}
-                  style={{ width: 28, height: 28, borderRadius: 14, objectFit: "cover" }}
+                  className={pageStls.likesAvatar}
                 />
-                <span>{s.siba_name}</span>
+                <div className={pageStls.likesMeta}>
+                  <span>{s.siba_name}</span>
+                  <CommunityBadge
+                    title={s.community_title}
+                    avatarUrl={s.community_avatar_url}
+                    tgLink={s.community_tg_link}
+                  />
+                </div>
               </div>
             ))}
-            {!likesList.length && <div style={{ color: "#74736E" }}>Пока нет лайков</div>}
+            {!likesList.length && <div className={pageStls.mutedText}>Пока нет лайков</div>}
           </div>
         </Dialog>
       )}

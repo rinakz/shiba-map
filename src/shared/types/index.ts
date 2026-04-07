@@ -23,8 +23,24 @@ export type ShibaType = {
   followers?: number | null;
   followings?: number | null;
   level?: number | null;
+  community_id?: string | null;
+  community_title?: string | null;
+  community_avatar_url?: string | null;
+  community_tg_link?: string | null;
   // Computed on the server in `public.siba_map_markers` (photo OR invited_by_code).
   is_verified?: boolean | null;
+};
+
+export type Community = {
+  id: string;
+  title: string;
+  tg_link: string;
+  avatar_url?: string | null;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  member_count?: number;
+  energy?: number;
 };
 
 export type ShibaUser = {
@@ -35,4 +51,8 @@ export type ShibaUser = {
   is_show_tgname: boolean;
   promo_code?: string;
   invited_by_code?: string | null;
+  community_id?: string | null;
+  community_title?: string | null;
+  community_avatar_url?: string | null;
+  community_tg_link?: string | null;
 };

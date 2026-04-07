@@ -11,16 +11,13 @@ import {
   useRef,
   useState,
   type ChangeEvent,
-  type FormEvent,
 } from "react";
 import { AppContext } from "../../shared/context/app-context";
 import stls from "./map.module.sass";
 import type { ShibaType } from "../../shared/types";
-import { useLocation, useNavigate } from "react-router-dom";
-import { PATH } from "../../shared/constants/path";
-import { Dialog, Modal, SwipeableDrawer, useMediaQuery } from "@mui/material";
+import { useLocation } from "react-router-dom";
+import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import { Siba } from "..";
-import { EventCalendar } from "../../shared/header/event-calendar";
 import { MapVerificationOverlay } from "./map-verification-overlay";
 import {
   extractClusterItems,
@@ -28,6 +25,7 @@ import {
   normalizeCoords,
   onMapActionTickComplete,
   requestBrowserLocation,
+  getSibaMarkerHref,
   type ClusterItem,
   type MapActionTickEvent,
   type ClusterEventUnknown,
@@ -43,6 +41,7 @@ import { HazardsFeature } from "./hazards-feature";
 import { ClusterItemsOverlay } from "./cluster-items-overlay";
 import { MapBottomControls } from "./map-bottom-controls";
 import { PlaceKindPicker } from "./place-kind-picker";
+import { MapAddMenu } from "./map-add-menu";
 import {
   getSibaStatus,
   isGreenStatus,
@@ -60,7 +59,6 @@ export const GeneralMap = () => {
   const mapRef = useRef<ymaps.Map | undefined>(undefined);
   const verifyFileInputRef = useRef<HTMLInputElement | null>(null);
   const [clusterItems, setClusterItems] = useState<ClusterItem[] | null>(null);
-  const navigate = useNavigate();
   const location = useLocation();
 
   const [coordinates, setCoordinates] = useState([55.75, 37.57]); // Начальные координаты
@@ -72,21 +70,22 @@ export const GeneralMap = () => {
   const [isMapLoading, setIsMapLoading] = useState(true);
   const isVerified = Boolean(mySiba?.photos || user?.invited_by_code);
   const isMobile = useMediaQuery("(max-width:600px)");
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isPlaceFormOpen, setIsPlaceFormOpen] = useState<
     null | "cafe" | "park" | "groomer"
   >(null);
+  const [isPlacePickerOpen, setIsPlacePickerOpen] = useState(false);
+  const [isHazardPickerOpen, setIsHazardPickerOpen] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<{
     kind: "cafe" | "park" | "groomer";
     place: Place;
   } | null>(null);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [addingHazardKind, setAddingHazardKind] = useState<HazardKind | null>(
     null,
   );
   const [pendingHazardCoords, setPendingHazardCoords] = useState<
     [number, number] | null
   >(null);
+  const [isMapActionMenuOpen, setIsMapActionMenuOpen] = useState(false);
 
   const clusterEventsAttachedRef = useRef(false);
 
@@ -99,11 +98,6 @@ export const GeneralMap = () => {
       groomers: groomersQuery.data ?? [],
     });
     if (items.length) setClusterItems(items);
-  };
-
-  const getLocation = (event: FormEvent<HTMLElement>) => {
-    event.preventDefault();
-    requestBrowserLocation({ mapRef, setIsShowAccept, setCoordinates });
   };
 
   const onActionTickComplete = (e: MapActionTickEvent) =>
@@ -128,7 +122,7 @@ export const GeneralMap = () => {
     const search = new URLSearchParams(location.search);
     const add = search.get("add");
     if (add === "1") {
-      setIsFilterOpen(true);
+      setIsPlacePickerOpen(true);
     }
   }, [location.search]);
 
@@ -185,12 +179,9 @@ export const GeneralMap = () => {
     <div className={stls.mapContainer}>
       <MapBottomControls
         isShowAccept={isShowAccept}
-        onConfirmLocation={getLocation}
-        onHome={() => navigate(PATH.Home)}
-        onMap={() => navigate(PATH.Map)}
-        onOpenPlaces={() => setIsFilterOpen(true)}
-        onOpenCalendar={() => setIsCalendarOpen(true)}
-        onProfile={() => navigate(PATH.Profile)}
+        onLocateUser={() =>
+          requestBrowserLocation({ mapRef, setIsShowAccept, setCoordinates })
+        }
       />
       <div
         className={
@@ -199,25 +190,25 @@ export const GeneralMap = () => {
       >
         {ymapsApiKey ? (
           <YMaps query={{ apikey: ymapsApiKey }}>
-            <Map
-              height="88vh"
-              width="100%"
-              instanceRef={mapRef}
+        <Map
+          height="88vh"
+          width="100%"
+          instanceRef={mapRef}
               onLoad={() => setIsMapLoading(false)}
-              onActionTickComplete={onActionTickComplete}
-              modules={["control.ZoomControl"]}
-              defaultState={{
-                center: coordinates,
-                zoom: 10,
-                controls: ["zoomControl"],
-              }}
+          onActionTickComplete={onActionTickComplete}
+          modules={["control.ZoomControl"]}
+          defaultState={{
+            center: coordinates,
+            zoom: 10,
+            controls: ["zoomControl"],
+          }}
               onClick={(evt: { get: (k: "coords") => [number, number] }) => {
                 if (!addingHazardKind) return;
                 const coords = evt.get("coords");
                 setPendingHazardCoords(coords);
               }}
-            >
-              <SearchControl options={{ float: "right", noPlacemark: true }} />
+        >
+          <SearchControl options={{ float: "right", noPlacemark: true }} />
               {isVerified && (
                 <Clusterer
                   options={{ clusterDisableClickZoom: true }}
@@ -233,7 +224,7 @@ export const GeneralMap = () => {
                     inst.events?.add("click", handleClusterClick);
                   }}
                 >
-                  {sibaIns
+            {sibaIns
                     // Показываем сиб на карте, если он прошёл верификацию:
                     // фото ИЛИ приглашение по промокоду (computed `is_verified` из view).
                     .filter((el: ShibaType) => {
@@ -243,6 +234,8 @@ export const GeneralMap = () => {
                     .map((el: ShibaType) => {
                       const normalized = normalizeCoords(el.coordinates);
                       if (!normalized) return null;
+                      const status = getSibaStatus(el);
+                      const isWalkStatus = status === "walk";
 
                       const displayCoords = jitterCoords(
                         normalized,
@@ -251,25 +244,29 @@ export const GeneralMap = () => {
                       );
 
                       return (
-                        <Placemark
-                          onClick={() => {
-                            setIsOpenSiba(true);
-                            setSelectedSibaId(el.id);
-                          }}
-                          key={el.id}
-                          options={{
-                            iconLayout: "default#image",
-                            iconImageHref: `/${el?.siba_icon}.png`,
+                <Placemark
+                  onClick={() => {
+                    setIsOpenSiba(true);
+                    setSelectedSibaId(el.id);
+                  }}
+                  key={el.id}
+                  options={{
+                    iconLayout: "default#image",
+                            iconImageHref: getSibaMarkerHref(
+                              el?.siba_icon,
+                              isWalkStatus,
+                            ),
                             // Визуально выделяем "хочу гулять" увеличенным маркером.
-                            iconImageSize: isGreenStatus(getSibaStatus(el))
-                              ? [48, 48]
-                              : [42, 42],
+                            iconImageSize: isWalkStatus
+                              ? [64, 64]
+                              : isGreenStatus(status)
+                                ? [48, 48]
+                                : [42, 42],
                           }}
                           properties={{
                             hintContent: (() => {
-                              const st = getSibaStatus(el);
-                              if (!st) return undefined;
-                              return SHIBA_STATUSES.find((x) => x.id === st)
+                              if (!status) return undefined;
+                              return SHIBA_STATUSES.find((x) => x.id === status)
                                 ?.label;
                             })(),
                             siba_id: el.id,
@@ -357,10 +354,10 @@ export const GeneralMap = () => {
                     pendingCoords={pendingHazardCoords}
                     setPendingCoords={setPendingHazardCoords}
                   />
-                </Clusterer>
+          </Clusterer>
               )}
-            </Map>
-          </YMaps>
+        </Map>
+      </YMaps>
         ) : (
           <div className={stls.verifyOverlay}>
             <div className={stls.verifyCard}>
@@ -381,6 +378,24 @@ export const GeneralMap = () => {
           verifyFileInputRef={verifyFileInputRef}
           onVerifyClick={handleVerifyClick}
           onVerifyFileChange={handleVerifyFileChange}
+        />
+      )}
+      {isVerified && (
+        <MapAddMenu
+          isOpen={isMapActionMenuOpen}
+          onOpen={() => setIsMapActionMenuOpen(true)}
+          onClose={() => {
+            setIsMapActionMenuOpen(false);
+            setAddingHazardKind(null);
+          }}
+          onAddPlace={() => {
+            setIsMapActionMenuOpen(false);
+            setIsPlacePickerOpen(true);
+          }}
+          onAddHazard={() => {
+            setIsMapActionMenuOpen(false);
+            setIsHazardPickerOpen(true);
+          }}
         />
       )}
       <ClusterItemsOverlay
@@ -427,11 +442,11 @@ export const GeneralMap = () => {
         </SwipeableDrawer>
       ) : (
         <Dialog
-          open={isOpenSiba}
-          onClose={() => {
-            setIsOpenSiba(false);
-            setSelectedSibaId(null);
-          }}
+        open={isOpenSiba}
+        onClose={() => {
+          setIsOpenSiba(false);
+          setSelectedSibaId(null);
+        }}
           fullWidth
           maxWidth="xs"
           PaperProps={{
@@ -445,14 +460,84 @@ export const GeneralMap = () => {
           </div>
         </Dialog>
       )}
-      <Modal open={isFilterOpen} onClose={() => setIsFilterOpen(false)}>
+      <SwipeableDrawer
+        anchor="bottom"
+        open={isPlacePickerOpen}
+        onOpen={() => {}}
+        onClose={() => setIsPlacePickerOpen(false)}
+        PaperProps={{
+          sx: {
+            height: "auto",
+            maxHeight: "85vh",
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            p: 2,
+            background: "#FFFCF5",
+          },
+        }}
+      >
         <PlaceKindPicker
           onPick={(kind) => {
-            setIsFilterOpen(false);
+            setIsPlacePickerOpen(false);
             setIsPlaceFormOpen(kind);
           }}
         />
-      </Modal>
+      </SwipeableDrawer>
+      <SwipeableDrawer
+        anchor="bottom"
+        open={isHazardPickerOpen}
+        onOpen={() => {}}
+        onClose={() => setIsHazardPickerOpen(false)}
+        PaperProps={{
+          sx: {
+            height: "auto",
+            maxHeight: "85vh",
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            p: 2,
+            background: "#FFFCF5",
+          },
+        }}
+      >
+        <div className={stls.hazardDrawer}>
+          <button
+            type="button"
+            className={stls.hazardMenuItem}
+            onClick={() => {
+              setAddingHazardKind("doghunters");
+              setPendingHazardCoords(null);
+              setIsHazardPickerOpen(false);
+            }}
+          >
+            <span className={`${stls.hazardBtn} ${stls.hazardBtnRed}`}>⚠️</span>
+            <span className={stls.hazardMenuLabel}>Догхантеры</span>
+          </button>
+          <button
+            type="button"
+            className={stls.hazardMenuItem}
+            onClick={() => {
+              setAddingHazardKind("reagents");
+              setPendingHazardCoords(null);
+              setIsHazardPickerOpen(false);
+            }}
+          >
+            <span className={`${stls.hazardBtn} ${stls.hazardBtnBlue}`}>🧪</span>
+            <span className={stls.hazardMenuLabel}>Реагенты</span>
+          </button>
+          <button
+            type="button"
+            className={stls.hazardMenuItem}
+            onClick={() => {
+              setAddingHazardKind("salute");
+              setPendingHazardCoords(null);
+              setIsHazardPickerOpen(false);
+            }}
+          >
+            <span className={`${stls.hazardBtn} ${stls.hazardBtnOrange}`}>🎆</span>
+            <span className={stls.hazardMenuLabel}>Салют</span>
+          </button>
+        </div>
+      </SwipeableDrawer>
       <SwipeableDrawer
         anchor="bottom"
         open={Boolean(isPlaceFormOpen)}
@@ -465,7 +550,7 @@ export const GeneralMap = () => {
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
             p: 2,
-            background: "rgba(255, 252, 245, 0.95)",
+            background: "#FFFCF5",
           },
         }}
       >
@@ -494,12 +579,6 @@ export const GeneralMap = () => {
           <PlaceDetail kind={selectedPlace.kind} place={selectedPlace.place} />
         )}
       </SwipeableDrawer>
-      {/* Event calendar modal moved from Header */}
-      <EventCalendar
-        authUserId={authUserId as string}
-        open={isCalendarOpen}
-        onClose={() => setIsCalendarOpen(false)}
-      />
     </div>
   );
 };

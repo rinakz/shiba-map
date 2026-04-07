@@ -479,6 +479,38 @@ export const placeIconHrefByKind = {
   groomer: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderToStaticMarkup(React.createElement(IconGroomer)))}`,
 } as const;
 
+const pulsingSibaMarkerCache = new Map<string, string>();
+
+const buildPulsingSibaIconSvg = (iconPath: string, pulseColor = "#4ADE80") => `
+  <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="18" fill="none" stroke="${pulseColor}" stroke-width="4" opacity="0.55">
+      <animate attributeName="r" values="18;30;18" dur="1.8s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.55;0;0.55" dur="1.8s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="32" cy="32" r="18" fill="none" stroke="${pulseColor}" stroke-width="3" opacity="0.35">
+      <animate attributeName="r" values="18;26;18" dur="1.8s" begin="0.45s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.35;0;0.35" dur="1.8s" begin="0.45s" repeatCount="indefinite" />
+    </circle>
+    <rect x="8" y="8" width="48" height="48" rx="16" fill="white" stroke="${pulseColor}" stroke-width="3" />
+    <image href="${iconPath}" x="8" y="8" width="48" height="48" preserveAspectRatio="xMidYMid meet" />
+  </svg>
+`;
+
+export const getSibaMarkerHref = (iconName: string | null | undefined, pulse = false) => {
+  const safeIconName = iconName || "default";
+  const iconPath = `/${safeIconName}.png`;
+  if (!pulse) return iconPath;
+
+  const cached = pulsingSibaMarkerCache.get(iconPath);
+  if (cached) return cached;
+
+  const href = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+    buildPulsingSibaIconSvg(iconPath),
+  )}`;
+  pulsingSibaMarkerCache.set(iconPath, href);
+  return href;
+};
+
 // Hazards
 export type HazardKind = "reagents" | "salute" | "doghunters";
 export type Hazard = {

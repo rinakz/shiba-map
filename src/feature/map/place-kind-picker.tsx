@@ -9,30 +9,37 @@ type Props = {
 
 export const PlaceKindPicker = ({ onPick }: Props) => {
   return (
-    <div className={stls.placePickerOverlay}>
-      <div className={stls.placePickerCard}>
-        <button
-          type="button"
-          className={stls.placePickerButton}
-          onClick={() => onPick("cafe")}
-        >
+    <div className={stls.placePickerCard}>
+      <button
+        type="button"
+        className={stls.placePickerItem}
+        onClick={() => onPick("cafe")}
+      >
+        <span className={stls.placePickerButton}>
           <IconCafe />
-        </button>
-        <button
-          type="button"
-          className={stls.placePickerButton}
-          onClick={() => onPick("park")}
-        >
+        </span>
+        <span className={stls.placePickerLabel}>Кафе</span>
+      </button>
+      <button
+        type="button"
+        className={stls.placePickerItem}
+        onClick={() => onPick("park")}
+      >
+        <span className={stls.placePickerButton}>
           <IconPark />
-        </button>
-        <button
-          type="button"
-          className={stls.placePickerButton}
-          onClick={() => onPick("groomer")}
-        >
+        </span>
+        <span className={stls.placePickerLabel}>Парк</span>
+      </button>
+      <button
+        type="button"
+        className={stls.placePickerItem}
+        onClick={() => onPick("groomer")}
+      >
+        <span className={stls.placePickerButton}>
           <IconGroomer />
-        </button>
-      </div>
+        </span>
+        <span className={stls.placePickerLabel}>Грумер</span>
+      </button>
     </div>
   );
 };

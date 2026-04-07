@@ -5,6 +5,7 @@ export const PATH = {
   Login: "/login",
   Map: "/map",
   Profile: "/profile",
+  Leaderboard: "/leaderboard",
   HealthPass: "/health-pass",
   Knowledge: "/knowledge",
   Siba: "/siba/:id",

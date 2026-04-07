@@ -1,0 +1,74 @@
+.tabBar
+    position: fixed
+    left: 50%
+    transform: translateX(-50%)
+    bottom: calc(16px + env(safe-area-inset-bottom))
+    z-index: 10
+    display: flex
+    align-items: center
+    gap: 14px
+    padding: 8px 12px
+    background: rgba(255, 252, 245, 0.96)
+    border: 1px solid #E7E1D2
+    border-radius: 999px
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12)
+
+.tabButton
+    display: inline-flex
+    flex-direction: column
+    align-items: center
+    justify-content: center
+    gap: 4px
+    min-width: 68px
+    padding: 0
+    border: none
+    background: transparent
+    color: #74736E
+    cursor: pointer
+
+.tabIconSmall
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    width: 18px
+    height: 18px
+    svg
+        width: 18px
+        height: 18px
+        path
+            fill: #5C5B55
+
+.tabButtonActive
+    color: #E95B47
+    .tabIconSmall
+        svg
+            path
+                fill: #E95B47
+
+.tabButtonCenter
+    margin-top: -18px
+
+.tabButtonCenterWrap
+    width: 60px
+    height: 60px
+    border-radius: 50%
+    display: flex
+    align-items: center
+    justify-content: center
+    background: #E95B47
+    color: #FFFCF5
+    box-shadow: 0 10px 22px rgba(233, 91, 71, 0.28)
+    svg
+        path
+            fill: #FFFCF5
+
+.tabButtonCenterActive .tabButtonCenterWrap
+    background: #D84D39
+
+.tabLabel
+    font-size: 11px
+    font-weight: 700
+    line-height: 1
+
+.tabButtonCenter .tabLabel
+    color: #5C5B55

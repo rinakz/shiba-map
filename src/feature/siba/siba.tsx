@@ -5,7 +5,7 @@ import { AppContext } from "../../shared/context/app-context";
 import type { ShibaType, ShibaUser } from "../../shared/types";
 import { supabase } from "../../shared/api/supabase-сlient";
 import stls from "../siba/siba.module.sass";
-import { LayoutPage, ProgressBar } from "../../shared/ui";
+import { CommunityBadge, LayoutPage, ProgressBar } from "../../shared/ui";
 import { IconCafe, IconGroomer, IconPark, IconPeople, IconTg, IconRight } from "../../shared/icons";
 import { Button } from "../../shared/ui";
 import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
@@ -233,6 +233,11 @@ export const Siba = ({ id }: SibaProps) => {
             />
           </div>
           <h1 className={stls.sibaName}>{siba?.siba_name}</h1>
+          <CommunityBadge
+            title={siba?.community_title}
+            avatarUrl={siba?.community_avatar_url}
+            tgLink={siba?.community_tg_link}
+          />
           {status && (
             <span
               className={stls.statusCapsule}

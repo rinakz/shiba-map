@@ -62,10 +62,9 @@ export function Header() {
                 className={stls.knowledgeCta}
                 size="small"
                 variant="secondary"
-                icon={<IconGraduation color="#E95B47" size={36} />}
+                icon={<IconGraduation color="#B56A42" size={28} />}
                 onClick={() => navigate(PATH.Knowledge)}
               />
-              <span className={stls.knowledgeBadge}>Wiki</span>
             </div>
           </Toolbar>
         </AppBar>

@@ -24,6 +24,9 @@ export type SibaMini = {
   siba_name: string;
   siba_icon: string;
   photos: string | null;
+  community_title?: string | null;
+  community_avatar_url?: string | null;
+  community_tg_link?: string | null;
 };
 
 export type CalendarMapProjection = {
