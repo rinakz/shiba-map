@@ -1,14 +1,32 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { fetchPlaceVisits } from "./general-map.utils";
-import type { Place, PlaceKind, PlaceVisit } from "./place-types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useContext, useEffect, useMemo, useState } from "react";
+import {
+  fetchPlaceRatingSummary,
+  fetchPlaceVisits,
+  savePlaceRating,
+} from "./general-map.utils";
+import type {
+  Place,
+  PlaceKind,
+  PlaceRatingSummary,
+  PlaceVisit,
+} from "./place-types";
 import { Button } from "../../shared/ui";
-import { Dialog, Skeleton, SwipeableDrawer, useMediaQuery } from "@mui/material";
+import {
+  Dialog,
+  Skeleton,
+  SwipeableDrawer,
+  useMediaQuery,
+} from "@mui/material";
 import { Siba } from "../siba/siba";
+import { IconCrown } from "../../shared/icons/IconCrown";
+import { IconStar } from "../../shared/icons/IconStar";
 import {
   geocodeAddressFromCoords,
   type YMapGeocodeApi,
 } from "../../shared/api/ymaps-geocode";
+import stls from "./place-sheet.module.sass";
+import { AppContext } from "../../shared/context/app-context";
 
 type PlaceDetailProps = {
   kind: PlaceKind;
@@ -16,20 +34,125 @@ type PlaceDetailProps = {
 };
 
 export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
+  const { authUserId } = useContext(AppContext);
+  const queryClient = useQueryClient();
   const [showAll, setShowAll] = useState(false);
   const [resolvedAddress, setResolvedAddress] = useState<string>(place.address);
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [selectedSibaId, setSelectedSibaId] = useState<string | null>(null);
+  const [hoveredRating, setHoveredRating] = useState<number | null>(null);
+  const [optimisticRating, setOptimisticRating] = useState<number | null>(null);
+  const [ratingError, setRatingError] = useState<string | null>(null);
   const isMobile = useMediaQuery("(max-width:600px)");
   const visitsQuery = useQuery<PlaceVisit[]>({
     queryKey: ["place-visits", kind, place.id],
     queryFn: () => fetchPlaceVisits(kind, place.id),
   });
+  const ratingQuery = useQuery<PlaceRatingSummary>({
+    queryKey: ["place-rating", kind, place.id, authUserId],
+    queryFn: () => fetchPlaceRatingSummary(kind, place.id, authUserId),
+  });
+  const ratePlaceMutation = useMutation({
+    mutationFn: async (value: number) => {
+      if (!authUserId) {
+        throw new Error("Нужно войти, чтобы поставить оценку.");
+      }
+      await savePlaceRating(kind, place.id, authUserId, value);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["place-rating", kind, place.id],
+      });
+    },
+  });
 
   const visits = visitsQuery.data ?? [];
-  const first = visits[0];
+  const uniqueVisitors = useMemo(() => {
+    const bySiba = new Map<string, PlaceVisit>();
+    visits.forEach((visit) => {
+      if (!bySiba.has(visit.siba_id)) {
+        bySiba.set(visit.siba_id, visit);
+      }
+    });
+    return Array.from(bySiba.values());
+  }, [visits]);
 
-  const tryParseCoordsFromAddress = (value: string): [number, number] | null => {
+  const visitCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    visits.forEach((visit) => {
+      counts.set(visit.siba_id, (counts.get(visit.siba_id) ?? 0) + 1);
+    });
+    return counts;
+  }, [visits]);
+
+  const mayor = useMemo(() => {
+    return (
+      uniqueVisitors
+        .map((visit) => ({
+          visit,
+          count: visitCounts.get(visit.siba_id) ?? 0,
+        }))
+        .sort((a, b) => b.count - a.count)[0] ?? null
+    );
+  }, [uniqueVisitors, visitCounts]);
+
+  const visitorsPreview = useMemo(() => {
+    if (!uniqueVisitors.length) return [];
+    if (!mayor) return uniqueVisitors.slice(0, 3);
+    const rest = uniqueVisitors.filter(
+      (visit) => visit.siba_id !== mayor.visit.siba_id,
+    );
+    return [mayor.visit, ...rest].slice(0, 3);
+  }, [mayor, uniqueVisitors]);
+
+  const extraVisitorsCount = Math.max(
+    uniqueVisitors.length - visitorsPreview.length,
+    0,
+  );
+  const placeImages = (place.photos ?? []).filter(Boolean);
+  const coverImage = place.photo ?? placeImages[0] ?? null;
+  const rating = ratingQuery.data?.average ?? null;
+  const myRating = ratingQuery.data?.myRating ?? null;
+  const totalRatings = ratingQuery.data?.total ?? 0;
+  const effectiveMyRating = optimisticRating ?? myRating;
+  const previewRating = hoveredRating ?? effectiveMyRating ?? 0;
+
+  const handleCopyPromo = async () => {
+    if (!place.promo_code) return;
+    try {
+      await navigator.clipboard.writeText(place.promo_code);
+    } catch {
+      // noop
+    }
+  };
+
+  const kindLabel =
+    kind === "cafe"
+      ? "Кафе для сибика"
+      : kind === "park"
+        ? "Парк для прогулок"
+        : "Груминг-точка";
+
+  const handleRate = async (value: number) => {
+    const previousRating = effectiveMyRating ?? null;
+    setRatingError(null);
+    setOptimisticRating(value);
+    try {
+      await ratePlaceMutation.mutateAsync(value);
+      setOptimisticRating(null);
+    } catch (error) {
+      setOptimisticRating(previousRating);
+      setRatingError(
+        error instanceof Error
+          ? error.message
+          : "Не удалось сохранить оценку. Попробуй ещё раз.",
+      );
+    }
+  };
+
+  const tryParseCoordsFromAddress = (
+    value: string,
+  ): [number, number] | null => {
     const trimmed = value.trim();
     if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) return null;
     try {
@@ -47,7 +170,10 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
   const formatCoords = (coords: [number, number]) =>
     `${coords[0].toFixed(5)}, ${coords[1].toFixed(5)}`;
 
-  const addressCoords = useMemo(() => tryParseCoordsFromAddress(place.address), [place.address]);
+  const addressCoords = useMemo(
+    () => tryParseCoordsFromAddress(place.address),
+    [place.address],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -63,7 +189,10 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
       }
       setIsResolvingAddress(true);
       try {
-        const backwardAddr = await geocodeAddressFromCoords(ymaps, addressCoords);
+        const backwardAddr = await geocodeAddressFromCoords(
+          ymaps,
+          addressCoords,
+        );
         if (!cancelled) {
           setResolvedAddress(backwardAddr ?? formatCoords(addressCoords));
         }
@@ -80,88 +209,233 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
   }, [addressCoords, place.address]);
 
   return (
-    <div style={{ padding: 12, maxWidth: 480 }}>
-      <h3 style={{ marginTop: 0 }}>{place.name}</h3>
-      <div style={{ color: "#74736E", marginBottom: 8 }}>
-        {isResolvingAddress ? "Определяем адрес..." : resolvedAddress}
-      </div>
-      {place.photo && (
-        <img
-          src={place.photo}
-          alt={place.name}
-          style={{ width: "100%", borderRadius: 12, marginBottom: 8 }}
-        />
-      )}
-      {first ? (
-        <div
-          style={{
-            marginTop: 8,
-            display: "flex",
-            gap: 8,
-            alignItems: "center",
-            cursor: "pointer",
-          }}
-          onClick={() => setSelectedSibaId(first.siba_id)}
-        >
-          <img
-            src={first.siba_photo ?? `/${first.siba_icon ?? "default"}.png`}
-            alt={first.siba_name ?? "Сиба"}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 14,
-              objectFit: "cover",
-            }}
-          />
-          <div>
-            Тут был: <b>{first.siba_name ?? "Сиба"}</b> —{" "}
-            {new Date(first.visited_at).toLocaleDateString()}
+    <div className={stls.sheet}>
+      <div className={stls.sheetHandle} />
+      <div className={stls.sheetHero}>
+        <div className={stls.sheetHeader}>
+          <div className={stls.sheetHeaderMain}>
+            <span className={stls.kindBadge}>
+              {kind === "cafe" ? "☕" : kind === "park" ? "🌳" : "✂️"}{" "}
+              {kindLabel}
+            </span>
+            <h3 className={stls.sheetTitle}>{place.name}</h3>
+            <div className={stls.sheetSubtitle}>
+              {isResolvingAddress ? "Определяем адрес..." : resolvedAddress}
+            </div>
+          </div>
+          <div className={stls.ratingBadge}>
+            <span className={stls.ratingBadgeIcon}>
+              <IconStar />
+            </span>
+            {rating ? rating.toFixed(1) : "—"}
           </div>
         </div>
-      ) : (
-        <div style={{ marginTop: 8, color: "#74736E" }}>
-          {visitsQuery.isLoading ? (
-            <>
-              <Skeleton variant="rounded" height={28} sx={{ mb: 1 }} />
-              <Skeleton variant="rounded" height={28} />
-            </>
-          ) : (
-            "Пока никто не отметился"
-          )}
-        </div>
-      )}
-      {visits.length > 1 && !showAll && (
-        <div style={{ marginTop: 8 }}>
-          <Button size="small" onClick={() => setShowAll(true)}>
-            Ещё
-          </Button>
-        </div>
-      )}
-      {showAll && (
-        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-          {visits.map((v) => (
-            <div
-              key={v.id}
-              style={{ color: "#74736E", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-              onClick={() => setSelectedSibaId(v.siba_id)}
-            >
-              <img
-                src={v.siba_photo ?? `/${v.siba_icon ?? "default"}.png`}
-                alt={v.siba_name ?? "Сиба"}
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 12,
-                  objectFit: "cover",
-                }}
-              />
-              <span>
-                {new Date(v.visited_at).toLocaleDateString()} — {v.siba_name ?? "Сиба"}
+
+        {coverImage && (
+          <img className={stls.heroImage} src={coverImage} alt={place.name} />
+        )}
+
+        {placeImages.length > 1 && (
+          <div className={stls.photoGrid}>
+            {placeImages.slice(0, 3).map((photo) => (
+              <div key={photo} className={stls.photoCard}>
+                <img src={photo} alt={place.name} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {kind === "cafe" && place.promo_code && (
+        <div className={stls.section}>
+          <h4 className={stls.sectionTitle}>Промокод для сибиков</h4>
+          <div className={stls.ticket}>
+            <div className={stls.ticketContent}>
+              <span className={stls.ticketLabel}>
+                Покажи нос официанту и назови код
               </span>
+              <span className={stls.ticketCode}>{place.promo_code}</span>
             </div>
-          ))}
+            <Button
+              size="small"
+              className={stls.copyButton}
+              onClick={handleCopyPromo}
+            >
+              Копировать
+            </Button>
+          </div>
         </div>
       )}
+
+      <div className={stls.section}>
+        <h4 className={stls.sectionTitle}>Оценка сибика</h4>
+        <div className={stls.ratingPanel}>
+          <div className={stls.ratingStars}>
+            {[1, 2, 3, 4, 5].map((value) => {
+              const active = previewRating >= value;
+              return (
+                <button
+                  key={`rate-${value}`}
+                  type="button"
+                  className={`${stls.ratingStarButton} ${active ? stls.ratingStarButtonActive : ""}`}
+                  onClick={() => handleRate(value)}
+                  onMouseEnter={() => setHoveredRating(value)}
+                  onMouseLeave={() => setHoveredRating(null)}
+                  onFocus={() => setHoveredRating(value)}
+                  onBlur={() => setHoveredRating(null)}
+                  disabled={ratePlaceMutation.isPending}
+                  aria-pressed={Boolean(myRating && myRating >= value)}
+                  aria-label={`Поставить оценку ${value} из 5`}
+                >
+                  <IconStar />
+                </button>
+              );
+            })}
+          </div>
+          <div className={stls.ratingMeta}>
+            {ratePlaceMutation.isPending
+              ? "Сохраняем вашу оценку..."
+              : ratingQuery.isLoading
+                ? "Считаем оценки..."
+                : totalRatings
+                  ? `${rating?.toFixed(1) ?? "—"} из 5 • ${totalRatings} оценок`
+                  : "Пока нет оценок"}
+          </div>
+          <div className={stls.ratingHint}>
+            {ratePlaceMutation.isPending
+              ? "Подождите, сохраняем ваш выбор"
+              : effectiveMyRating
+                ? `Ваша оценка: ${effectiveMyRating} из 5`
+                : "Нажми на звездочку, чтобы поставить свою оценку"}
+          </div>
+          {ratingError && <div className={stls.error}>{ratingError}</div>}
+        </div>
+      </div>
+
+      <div className={stls.section}>
+        <h4 className={stls.sectionTitle}>О месте</h4>
+        <p className={stls.sectionText}>
+          {place.description ??
+            (kind === "cafe"
+              ? "Дог-френдли место для перекуса после прогулки. Можно зайти с сибиком и отдохнуть."
+              : kind === "park"
+                ? "Уютное место для длинных прогулок, знакомств и тренировок с хвостатыми."
+                : "Точка, где можно привести шерсть и бублик в идеальный порядок.")}
+        </p>
+      </div>
+
+      {mayor && (
+        <div className={stls.mayorCard}>
+          <span className={stls.mayorCrown}>
+            <IconCrown />
+          </span>
+          <span>
+            <b>{mayor.visit.siba_name ?? "Сиба"}</b> — мэр{" "}
+            {kind === "park"
+              ? "этого парка"
+              : kind === "cafe"
+                ? "этого кафе"
+                : "этого места"}
+            . Был здесь {mayor.count} раз.
+          </span>
+        </div>
+      )}
+
+      <div className={stls.section}>
+        {uniqueVisitors.length && (
+          <h4 className={stls.sectionTitle}>
+            Тут гуляли ({uniqueVisitors.length})
+          </h4>
+        )}
+        {!uniqueVisitors.length && (
+          <h4 className={stls.sectionTitle}>Тут ещё не гуляли</h4>
+        )}
+        {visitsQuery.isLoading ? (
+          <>
+            <Skeleton variant="rounded" height={64} />
+            <Skeleton variant="rounded" height={56} />
+          </>
+        ) : uniqueVisitors.length ? (
+          <>
+            <div className={stls.avatarRow}>
+              {visitorsPreview.map((visit) => {
+                const isMayor = mayor?.visit.siba_id === visit.siba_id;
+                return (
+                  <button
+                    key={`preview-${visit.siba_id}`}
+                    type="button"
+                    className={stls.visitorChip}
+                    onClick={() => setSelectedSibaId(visit.siba_id)}
+                  >
+                    <span className={stls.visitorAvatarWrap}>
+                      {isMayor && (
+                        <span className={stls.visitorCrown}>
+                          <IconCrown size={18} />
+                        </span>
+                      )}
+                      <img
+                        className={stls.visitorAvatar}
+                        src={
+                          visit.siba_photo ??
+                          `/${visit.siba_icon ?? "default"}.png`
+                        }
+                        alt={visit.siba_name ?? "Сиба"}
+                      />
+                    </span>
+                    <span className={stls.visitorName}>
+                      {visit.siba_name ?? "Сиба"}
+                    </span>
+                  </button>
+                );
+              })}
+              {extraVisitorsCount > 0 && (
+                <div className={stls.visitorMore}>+{extraVisitorsCount}</div>
+              )}
+            </div>
+
+            {(showAll ? visits : visits.slice(0, 4)).length > 0 && (
+              <div className={stls.visitList}>
+                {(showAll ? visits : visits.slice(0, 4)).map((visit) => (
+                  <button
+                    key={visit.id}
+                    type="button"
+                    className={stls.visitRow}
+                    onClick={() => setSelectedSibaId(visit.siba_id)}
+                  >
+                    <img
+                      className={stls.visitorAvatar}
+                      src={
+                        visit.siba_photo ??
+                        `/${visit.siba_icon ?? "default"}.png`
+                      }
+                      alt={visit.siba_name ?? "Сиба"}
+                    />
+                    <span className={stls.visitMeta}>
+                      <span className={stls.visitName}>
+                        {visit.siba_name ?? "Сиба"}
+                      </span>
+                      <span className={stls.visitDate}>
+                        {new Date(visit.visited_at).toLocaleDateString("ru-RU")}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {visits.length > 4 && !showAll && (
+              <Button size="small" onClick={() => setShowAll(true)}>
+                Показать ещё
+              </Button>
+            )}
+          </>
+        ) : (
+          <p className={stls.sectionText}>
+            Пока никто из сибиков не отмечался в этом месте.
+          </p>
+        )}
+      </div>
+
       {isMobile ? (
         <SwipeableDrawer
           anchor="bottom"
@@ -171,7 +445,10 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
           PaperProps={{
             sx: {
               height: "auto",
-              maxHeight: "85vh",
+              maxHeight: "90dvh",
+              padding: "12px",
+              overflowY: "auto",
+              overscrollBehavior: "contain",
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
             },
@@ -185,7 +462,14 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
           onClose={() => setSelectedSibaId(null)}
           fullWidth
           maxWidth="xs"
-          PaperProps={{ sx: { borderRadius: 2 } }}
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              maxHeight: "90dvh",
+              overflowY: "auto",
+              padding: "12px",
+            },
+          }}
         >
           {selectedSibaId && <Siba id={selectedSibaId} />}
         </Dialog>

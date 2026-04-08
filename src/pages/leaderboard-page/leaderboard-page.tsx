@@ -9,7 +9,8 @@ import {
   fetchCommunityMemberships,
 } from "../../shared/api/communities";
 import { AppContext } from "../../shared/context/app-context";
-import { CommunityBadge, IconButton, MainTabBar } from "../../shared/ui";
+import { IconButton, MainTabBar } from "../../shared/ui";
+import { UserBadge } from "../../shared/ui/user-badge";
 import { IconCrown, IconGlobe, IconRight, IconTg } from "../../shared/icons";
 import { fetchAllSibas } from "../profile-page/profile.utils";
 import {
@@ -166,18 +167,21 @@ export const LeaderboardPage = () => {
             </div>
             <div className={stls.content}>
               <div className={stls.nameRow}>
-                <div className={stls.name}>{item.siba_name}</div>
+                <UserBadge
+                  userName={item.siba_name}
+                  nameClassName={stls.name}
+                  chatData={{
+                    title: item.community_title,
+                    avatarUrl: item.community_avatar_url,
+                    tgLink: item.community_tg_link,
+                  }}
+                />
                 {item.place <= 3 && (
                   <span className={stls.crownCorner}>
                     <IconCrown color={crownColorByPlace(item.place)} />
                   </span>
                 )}
               </div>
-              <CommunityBadge
-                title={item.community_title}
-                avatarUrl={item.community_avatar_url}
-                tgLink={item.community_tg_link}
-              />
               <div className={stls.status}>
                 {status ? SIBA_STATUS_LABEL[status] : item.rankTitle}
               </div>
@@ -386,7 +390,10 @@ export const LeaderboardPage = () => {
           PaperProps={{
             sx: {
               height: "auto",
-              maxHeight: "85vh",
+              maxHeight: "90dvh",
+              padding: "12px",
+              overflowY: "auto",
+              overscrollBehavior: "contain",
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
             },
@@ -400,7 +407,9 @@ export const LeaderboardPage = () => {
           onClose={() => setSelectedSibaId(null)}
           fullWidth
           maxWidth="xs"
-          PaperProps={{ sx: { borderRadius: 2 } }}
+          PaperProps={{
+            sx: { borderRadius: 2, maxHeight: "90dvh", overflowY: "auto", padding: "12px" },
+          }}
         >
           {selectedSibaId && <Siba id={selectedSibaId} />}
         </Dialog>

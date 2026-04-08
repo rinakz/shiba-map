@@ -12,6 +12,7 @@ import { IconPark } from "../../shared/icons/IconPark";
 import { IconGroomer } from "../../shared/icons/IconGroomer";
 import { renderToStaticMarkup } from "react-dom/server";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import stls from "./place-sheet.module.sass";
 
 type MapActionTick = {
   globalPixelCenter: [number, number];
@@ -64,6 +65,11 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
   const { authUserId, mySiba, setMySiba } = useContext(AppContext);
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [promoCode, setPromoCode] = useState("");
+  const [resolvedAddressText, setResolvedAddressText] = useState(
+    "Точка на карте пока не выбрана",
+  );
   // Важно: по умолчанию НЕ используем координаты из пропса (они могут быть координатами моей сибы).
   const [coords, setCoords] = useState<number[] | null>([55.75, 37.57]);
   // Превью координат с карты (обновляются при перемещении карты, но в БД уйдут только после подтверждения/геокодинга).
@@ -71,8 +77,8 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
     55.75, 37.57,
   ]);
   const [withVisit, setWithVisit] = useState(false);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const ymapsApiKey = import.meta.env.VITE_YMAPS_API_KEY as string | undefined;
@@ -112,7 +118,9 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
     return data ?? null;
   };
 
-  const extractAddressFromGeoObject = (geoObject: GeoObjectLike | null | undefined) => {
+  const extractAddressFromGeoObject = (
+    geoObject: GeoObjectLike | null | undefined,
+  ) => {
     if (!geoObject) return null;
 
     // 1) Самый “железный” форматтер адресной строки.
@@ -130,7 +138,9 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
     if (propsName) return propsName;
 
     const propsDescription =
-      typeof props?.description === "string" ? props.description.trim() : undefined;
+      typeof props?.description === "string"
+        ? props.description.trim()
+        : undefined;
     if (propsDescription) return propsDescription;
 
     const propsText2 = geoObject.properties?.get?.("text");
@@ -145,7 +155,10 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
     const ymaps = getYmaps();
     if (!ymaps) return null;
 
-    const attempts: [number, number][] = [valueCoords, [valueCoords[1], valueCoords[0]]];
+    const attempts: [number, number][] = [
+      valueCoords,
+      [valueCoords[1], valueCoords[0]],
+    ];
 
     for (const attempt of attempts) {
       try {
@@ -181,6 +194,11 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
         });
         setPreviewCoords(next);
         setCoords(next);
+        getAddressFromCoords(next).then((addressText) => {
+          if (addressText) {
+            setResolvedAddressText(addressText);
+          }
+        });
       },
       (err) => {
         setError(err.message || "Не удалось определить местоположение");
@@ -189,38 +207,45 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
   };
 
   const onPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    if (file && !file.type.startsWith("image/")) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const invalid = files.find((file) => !file.type.startsWith("image/"));
+    if (invalid) {
       setError("Можно загружать только изображения");
       return;
     }
-    if (file && file.size > 10 * 1024 * 1024) {
+    const tooLarge = files.find((file) => file.size > 10 * 1024 * 1024);
+    if (tooLarge) {
       setError("Файл слишком большой. Максимум 10 МБ.");
       return;
     }
     setError(null);
-    setPhotoFile(file);
-    setPhotoPreview(file ? URL.createObjectURL(file) : null);
+    const limited = [...photoFiles, ...files].slice(0, 6);
+    setPhotoFiles(limited);
+    setPhotoPreviews(limited.map((file) => URL.createObjectURL(file)));
   };
 
   const savePlaceMutation = useMutation({
     mutationFn: async ({
       placeName,
       coordinatesToSave,
-      uploadedPhoto,
+      uploadedPhotos,
       withVisitMark,
+      placeDescription,
+      cafePromoCode,
     }: {
       placeName: string;
       coordinatesToSave: [number, number];
-      uploadedPhoto: File | null;
+      uploadedPhotos: File[];
       withVisitMark: boolean;
+      placeDescription: string;
+      cafePromoCode: string;
     }) => {
       const resolvedAddress =
-        (await getAddressFromCoords(coordinatesToSave)) ??
-        "Адрес не определен";
+        (await getAddressFromCoords(coordinatesToSave)) ?? "Адрес не определен";
 
-      let photoUrl: string | null = null;
-      if (uploadedPhoto) {
+      const photoUrls: string[] = [];
+      for (const uploadedPhoto of uploadedPhotos) {
         const { data: up, error: upErr } = await supabase.storage
           .from(PLACES_PHOTOS_BUCKET)
           .upload(
@@ -229,11 +254,18 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
             { contentType: uploadedPhoto.type || "image/jpeg", upsert: true },
           );
         if (upErr) throw upErr;
-        const { data } = supabase.storage.from(PLACES_PHOTOS_BUCKET).getPublicUrl(up.path);
-        photoUrl = data.publicUrl ?? null;
+        const { data } = supabase.storage
+          .from(PLACES_PHOTOS_BUCKET)
+          .getPublicUrl(up.path);
+        if (data.publicUrl) {
+          photoUrls.push(data.publicUrl);
+        }
       }
 
-      const table = kind === "cafe" ? "cafes" : kind === "park" ? "parks" : "groomers";
+      const photoUrl = photoUrls[0] ?? null;
+
+      const table =
+        kind === "cafe" ? "cafes" : kind === "park" ? "parks" : "groomers";
       const { data: place, error: placeErr } = await supabase
         .from(table)
         .insert([
@@ -242,6 +274,11 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
             address: resolvedAddress,
             coordinates: coordinatesToSave,
             photo: photoUrl,
+            photos: photoUrls,
+            description: placeDescription.trim() || null,
+            ...(kind === "cafe"
+              ? { promo_code: cafePromoCode.trim() || null }
+              : {}),
             created_by: authUserId ?? null,
           },
         ])
@@ -250,9 +287,13 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
       if (placeErr) throw placeErr;
 
       if (withVisitMark) {
-        const effectiveMySiba = mySiba?.id ? mySiba : await fetchMySibaForVisit();
+        const effectiveMySiba = mySiba?.id
+          ? mySiba
+          : await fetchMySibaForVisit();
         if (!effectiveMySiba?.id) {
-          throw new Error("Не удалось определить вашу сибу. Попробуйте ещё раз.");
+          throw new Error(
+            "Не удалось определить вашу сибу. Попробуйте ещё раз.",
+          );
         }
 
         if (kind === "cafe") {
@@ -335,8 +376,10 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
       await savePlaceMutation.mutateAsync({
         placeName: name,
         coordinatesToSave: coords as [number, number],
-        uploadedPhoto: photoFile,
+        uploadedPhotos: photoFiles,
         withVisitMark: withVisit,
+        placeDescription: description,
+        cafePromoCode: promoCode,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось сохранить");
@@ -344,91 +387,179 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <h3>{kind === "cafe" ? "Добавить кафе/ресторан" : kind === "park" ? "Добавить парк" : "Добавить грумера"}</h3>
-      <Input label="Название" value={name} onChange={(e) => setName(e.target.value)} />
-      <div style={{ fontSize: 12, color: "#74736E" }}>Выберите адрес</div>
-
-      {ymapsApiKey ? (
-        <div style={{ borderRadius: 20, overflow: "hidden", width: "100%" }}>
-          <YMaps query={{ apikey: ymapsApiKey }}>
-            <Map
-              height="180px"
-              width="100%"
-              instanceRef={mapRef}
-              modules={["control.ZoomControl"]}
-              onActionTickComplete={(e: MapActionTickEvent) => {
-                const projection = e.get("target").options.get("projection");
-                const { globalPixelCenter, zoom } = e.get("tick");
-                const next = projection.fromGlobalPixels(
-                  globalPixelCenter,
-                  zoom,
-                );
-                setPreviewCoords(next);
-                setCoords(next);
-              }}
-              defaultState={{
-                center: (previewCoords ?? initialCenter) as [number, number],
-                zoom: 14,
-                controls: ["zoomControl"],
-              }}
-            >
-              <SearchControl options={{ float: "right", noPlacemark: true }} />
-              <Placemark
-                geometry={(coords ?? previewCoords ?? initialCenter) as [
-                  number,
-                  number,
-                ]}
-                options={{
-                  iconLayout: "default#image",
-                  iconImageHref: iconHrefByKind[kind],
-                  iconImageSize: [40, 40],
-                }}
-              />
-            </Map>
-          </YMaps>
+    <div className={stls.sheet}>
+      <div className={stls.sheetHandle} />
+      <div className={stls.sheetHeader}>
+        <div className={stls.sheetHeaderMain}>
+          <span className={stls.kindBadge}>
+            {kind === "cafe" ? "☕" : kind === "park" ? "🌳" : "✂️"}{" "}
+            {kind === "cafe"
+              ? "Новое кафе"
+              : kind === "park"
+                ? "Новое место для прогулок"
+                : "Новый грумер"}
+          </span>
+          <h3 className={stls.sheetTitle}>
+            {kind === "cafe"
+              ? "Добавить кафе/ресторан"
+              : kind === "park"
+                ? "Добавить парк"
+                : "Добавить грумера"}
+          </h3>
         </div>
-      ) : (
-        <span style={{ fontSize: 12, color: "#E95B47" }}>
-          Не задан ключ карты (`VITE_YMAPS_API_KEY`). Карта не отобразится.
-        </span>
-      )}
-      <Button variant="secondary" onClick={getLocation} iconRight={<IconMap />}>
-        Определить местоположение
-      </Button>
-      <div
-        onClick={() => document.getElementById(`place-photo-${kind}`)?.click()}
-        style={{
-          width: 200,
-          height: 200,
-          borderRadius: 20,
-          background: "rgba(255,252,245,0.5)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          overflow: "hidden",
-        }}
-      >
-        {photoPreview ? (
-          <img src={photoPreview} alt="Фото" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        ) : (
-          <span style={{ color: "#74736E" }}>Загрузить фото</span>
-        )}
       </div>
-      <input id={`place-photo-${kind}`} type="file" accept="image/*" onChange={onPhotoChange} style={{ display: "none" }} />
-      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <Checkbox checked={withVisit} onChange={(e) => setWithVisit(e.target.checked)} />
-        {mySiba?.siba_name ?? "Мой питомец"} был здесь
-      </label>
-      {error && <span style={{ fontSize: 12, color: "#E95B47" }}>{error}</span>}
-      <div style={{ display: "flex", gap: 10 }}>
-        <Button variant="secondary" onClick={onClose} disabled={savePlaceMutation.isPending}>
-          Отмена
-        </Button>
-        <Button onClick={handleSave} loading={savePlaceMutation.isPending}>
-          Сохранить
-        </Button>
+
+      <div className={stls.formGrid}>
+        <Input
+          label="Название"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <div className={stls.addressCard}>
+          <div className={stls.addressInfo}>
+            <span className={stls.addressLabel}>Адрес</span>
+            <span className={stls.addressValue}>{resolvedAddressText}</span>
+          </div>
+          <Button
+            size="small"
+            variant="secondary"
+            onClick={getLocation}
+            iconRight={<IconMap />}
+            className={stls.geoButton}
+          >
+            📍 Геопозиция
+          </Button>
+        </div>
+
+        <div className={stls.mapCard}>
+          {ymapsApiKey ? (
+            <YMaps query={{ apikey: ymapsApiKey }}>
+              <Map
+                height="180px"
+                width="100%"
+                instanceRef={mapRef}
+                modules={["control.ZoomControl"]}
+                onActionTickComplete={(e: MapActionTickEvent) => {
+                  const projection = e.get("target").options.get("projection");
+                  const { globalPixelCenter, zoom } = e.get("tick");
+                  const next = projection.fromGlobalPixels(
+                    globalPixelCenter,
+                    zoom,
+                  );
+                  setPreviewCoords(next);
+                  setCoords(next);
+                  getAddressFromCoords(next).then((addressText) => {
+                    setResolvedAddressText(
+                      addressText ??
+                        `${next[0].toFixed(5)}, ${next[1].toFixed(5)}`,
+                    );
+                  });
+                }}
+                defaultState={{
+                  center: (previewCoords ?? initialCenter) as [number, number],
+                  zoom: 14,
+                  controls: ["zoomControl"],
+                }}
+              >
+                <SearchControl
+                  options={{ float: "right", noPlacemark: true }}
+                />
+                <Placemark
+                  geometry={
+                    (coords ?? previewCoords ?? initialCenter) as [
+                      number,
+                      number,
+                    ]
+                  }
+                  options={{
+                    iconLayout: "default#image",
+                    iconImageHref: iconHrefByKind[kind],
+                    iconImageSize: [40, 40],
+                  }}
+                />
+              </Map>
+            </YMaps>
+          ) : (
+            <span className={stls.error}>
+              Не задан ключ карты (`VITE_YMAPS_API_KEY`). Карта не отобразится.
+            </span>
+          )}
+        </div>
+
+        <textarea
+          className={stls.textarea}
+          placeholder="Описание места: есть ли миски с водой, пледы, безопасная зона и другие детали"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+
+        {kind === "cafe" && (
+          <Input
+            label="Промокод для сибиков"
+            placeholder="Например, SHIBA24"
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value)}
+          />
+        )}
+
+        <div className={stls.section}>
+          <h4 className={stls.sectionTitle}>Фото</h4>
+          <div className={stls.photoGrid}>
+            {photoPreviews.map((preview, index) => (
+              <div key={`${preview}-${index}`} className={stls.photoCard}>
+                <img src={preview} alt={`Фото ${index + 1}`} />
+              </div>
+            ))}
+            {photoPreviews.length < 6 && (
+              <button
+                type="button"
+                className={stls.photoAdd}
+                onClick={() =>
+                  document.getElementById(`place-photo-${kind}`)?.click()
+                }
+              >
+                Добавить фото
+              </button>
+            )}
+          </div>
+          <div className={stls.formHint}>Можно загрузить до 6 изображений.</div>
+          <input
+            id={`place-photo-${kind}`}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={onPhotoChange}
+            style={{ display: "none" }}
+          />
+        </div>
+
+        <label className={stls.checkRow}>
+          <Checkbox
+            checked={withVisit}
+            onChange={(e) => setWithVisit(e.target.checked)}
+          />
+          {mySiba?.siba_name} здесь был
+        </label>
+
+        {error && <span className={stls.error}>{error}</span>}
+
+        <div className={stls.actions}>
+          <button
+            type="button"
+            className={stls.cancelButton}
+            onClick={onClose}
+            disabled={savePlaceMutation.isPending}
+          >
+            Отмена
+          </button>
+          <Button
+            onClick={handleSave}
+            loading={savePlaceMutation.isPending}
+            className={stls.saveButton}
+          >
+            Сохранить
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -6,12 +6,14 @@ import {
   IconFirstAid,
   IconRight,
 } from "../../shared/icons";
-import { CommunityBadge, IconButton } from "../../shared/ui";
+import { IconButton } from "../../shared/ui";
 import type { Community, SibaStatus, ShibaType } from "../../shared/types";
 import {
   getSibaStatusColor,
   isGreenStatus,
 } from "../../shared/utils/siba-status";
+import { ProfileRoleLore } from "./profile-role-lore";
+import { ProfileStatsGrid } from "./profile-stats-grid";
 import { ProfileStatusControl } from "./profile-status-control";
 import stls from "./profile.module.sass";
 
@@ -35,6 +37,9 @@ type ProfileHeaderCardProps = {
   hasHealthAlert: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onBack: () => void;
+  onToggleCommunityManager: () => void;
+  onOpenSubscriptions: () => void;
+  onOpenSubscribers: () => void;
   onStartEdit: () => void;
   onOpenHealth: () => void;
   onOpenFilePicker: () => void;
@@ -58,6 +63,9 @@ export const ProfileHeaderCard = ({
   hasHealthAlert,
   fileInputRef,
   onBack,
+  onToggleCommunityManager,
+  onOpenSubscriptions,
+  onOpenSubscribers,
   onStartEdit,
   onOpenHealth,
   onOpenFilePicker,
@@ -66,6 +74,11 @@ export const ProfileHeaderCard = ({
   setMySiba,
   setSibaIns,
 }: ProfileHeaderCardProps) => {
+  const communityTitle = community?.title ?? mySiba?.community_title;
+  const communityLink = community?.tg_link ?? mySiba?.community_tg_link;
+  const genderLabel =
+    mySiba?.siba_gender === "male" ? "♂" : "♀";
+
   return (
     <div className={stls.sibaInfoContainer}>
       {!isEdit && (
@@ -158,43 +171,61 @@ export const ProfileHeaderCard = ({
           alt="Сиба"
         />
       )}
-      <div className={stls.titleRow}>
-        <div className={stls.nameBlock}>
-          <h1 className={stls.sibaName}>{mySiba?.siba_name}</h1>
-          <CommunityBadge
-            title={community?.title ?? mySiba?.community_title}
-            avatarUrl={community?.avatar_url ?? mySiba?.community_avatar_url}
-            tgLink={community?.tg_link ?? mySiba?.community_tg_link}
-          />
-          <ProfileStatusControl
-            mySiba={mySiba}
-            authUserId={authUserId}
-            isEdit={isEdit}
-            setError={setError}
-            setMySiba={setMySiba}
-            setSibaIns={setSibaIns}
-          />
-        </div>
-      </div>
-      {!isEdit && academyRank && (
-        <div className={stls.rankContainer}>
-          <div className={stls.academyRankUnderName}>
-            {academyRank.icon} {academyRank.rank}
+      <div className={stls.characterCard}>
+        <div className={stls.titleRow}>
+          <div className={stls.nameBlock}>
+            <div className={stls.identityRow}>
+              <h1 className={stls.sibaName}>{mySiba?.siba_name}</h1>
+              <span className={stls.genderBadge}>{genderLabel}</span>
+            </div>
+            <ProfileStatusControl
+              mySiba={mySiba}
+              authUserId={authUserId}
+              isEdit={isEdit}
+              setError={setError}
+              setMySiba={setMySiba}
+              setSibaIns={setSibaIns}
+            />
+            <div className={stls.communityPanel}>
+              <div className={stls.communityPanelTop}>
+                <span className={stls.communityPanelLabel}>Состоит в чате</span>
+                <button
+                  type="button"
+                  className={stls.communityManageButton}
+                  onClick={onToggleCommunityManager}
+                >
+                  {communityTitle ? "Управлять" : "+ Выбрать стаю"}
+                </button>
+              </div>
+              {communityTitle ? (
+                <a
+                  className={stls.communityPanelTitle}
+                  href={communityLink ?? undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {communityTitle}
+                </a>
+              ) : (
+                <div className={stls.communityPanelEmpty}>
+                  Пока не состоит ни в одной стае
+                </div>
+              )}
+            </div>
           </div>
-          <div className={stls.academyQuoteUnderName}>
-            {academyRank.bossQuote}
-          </div>
         </div>
-      )}
-      <div className={stls.statsRow}>
-        <span className={stls.mutedText}>
-          {mySiba?.siba_gender === "male" ? "Мальчик" : "Девочка"}
-        </span>
-        <span className={stls.mutedText}>level: {mySiba?.level ?? 0}</span>
-      </div>
-      <div className={stls.statsRow}>
-        <span>Подписки: {subscriptionsCount}</span>
-        <span>Подписчики: {subscribersCount}</span>
+        <ProfileStatsGrid
+          level={mySiba?.level}
+          subscriptionsCount={subscriptionsCount}
+          subscribersCount={subscribersCount}
+          onSubscriptionsClick={onOpenSubscriptions}
+          onSubscribersClick={onOpenSubscribers}
+        />
+        <ProfileRoleLore
+          rank={academyRank?.rank}
+          icon={academyRank?.icon}
+          quote={academyRank?.bossQuote}
+        />
       </div>
     </div>
   );

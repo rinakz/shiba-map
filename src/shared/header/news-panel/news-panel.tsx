@@ -94,7 +94,10 @@ export const NewsPanel = ({ authUserId, open, onClose }: NewsPanelProps) => {
           PaperProps={{
             sx: {
               height: "auto",
-              maxHeight: "85vh",
+              maxHeight: "90dvh",
+              padding: "12px",
+              overflowY: "auto",
+              overscrollBehavior: "contain",
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
             },
@@ -122,7 +125,10 @@ export const NewsPanel = ({ authUserId, open, onClose }: NewsPanelProps) => {
           PaperProps={{
             sx: {
               height: "auto",
-              maxHeight: "85vh",
+              maxHeight: "90dvh",
+              padding: "12px",
+              overflowY: "auto",
+              overscrollBehavior: "contain",
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
             },
@@ -131,7 +137,15 @@ export const NewsPanel = ({ authUserId, open, onClose }: NewsPanelProps) => {
           {selectedSibaId && <Siba id={selectedSibaId} />}
         </SwipeableDrawer>
       ) : (
-        <Dialog open={Boolean(selectedSibaId)} onClose={() => setSelectedSibaId(null)} fullWidth maxWidth="xs">
+        <Dialog
+          open={Boolean(selectedSibaId)}
+          onClose={() => setSelectedSibaId(null)}
+          fullWidth
+          maxWidth="xs"
+          PaperProps={{
+            sx: { borderRadius: 2, maxHeight: "90dvh", overflowY: "auto", padding: "12px" },
+          }}
+        >
           {selectedSibaId && <Siba id={selectedSibaId} />}
         </Dialog>
       )}

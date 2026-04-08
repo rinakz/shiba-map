@@ -2,11 +2,20 @@ import { useContext, useMemo, useState } from "react";
 import { AppContext } from "../../shared/context/app-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Skeleton from "@mui/material/Skeleton";
-import { fetchNewsFeed } from "../../shared/header/news-panel/news-panel.utils";
+import {
+  buildSafeAvatarSrc,
+  fetchNewsFeed,
+} from "../../shared/header/news-panel/news-panel.utils";
 import type { FeedItem } from "../../shared/header/news-panel/news-panel.types";
 import stls from "../../feature/map/map.module.sass";
 import pageStls from "./news-page.module.sass";
-import { CommunityBadge, IconButton, MainTabBar, SibaToast } from "../../shared/ui";
+import {
+  CommunityBadge,
+  IconButton,
+  MainTabBar,
+  SibaToast,
+} from "../../shared/ui";
+import { UserBadge } from "../../shared/ui/user-badge";
 import { IconCalendar as IconFillCalendar } from "../../shared/icons/IconFillCalendar";
 import { IconLike } from "../../shared/icons/IconLike";
 import { IconCrown } from "../../shared/icons/IconCrown";
@@ -18,6 +27,33 @@ import { fetchAllSibas, profileQueryKeys } from "../profile-page/profile.utils";
 import { supabase } from "../../shared/api/supabase-сlient";
 import { useNavigate } from "react-router-dom";
 import { PATH } from "../../shared/constants/path";
+import { getSibaStatus } from "../../shared/utils/siba-status";
+import type { ShibaType } from "../../shared/types";
+
+const formatActivityDate = (value: string) =>
+  new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+
+const getActivityMeta = (item: FeedItem) => {
+  if (item.commandName) {
+    return { emoji: "🎓", accent: item.commandName, typeLabel: "обучение" };
+  }
+
+  if (item.targetSiba) {
+    return { emoji: "🤝", accent: item.targetSiba.name, typeLabel: "дружба" };
+  }
+
+  if (item.place?.place.name) {
+    return { emoji: "🌳", accent: item.place.place.name, typeLabel: "место" };
+  }
+
+  return { emoji: "🐾", accent: "", typeLabel: "событие" };
+};
 
 export const NewsPage = () => {
   const { authUserId, setSibaIns } = useContext(AppContext);
@@ -77,20 +113,24 @@ export const NewsPage = () => {
       if (!authUserId) return;
       const liked = myLikesSet.has(itemId);
       if (liked) {
-        await supabase.from("news_likes").delete().eq("item_id", itemId).eq("user_id", authUserId);
+        await supabase
+          .from("news_likes")
+          .delete()
+          .eq("item_id", itemId)
+          .eq("user_id", authUserId);
       } else {
-        await supabase.from("news_likes").insert([{ item_id: itemId, user_id: authUserId }]);
+        await supabase
+          .from("news_likes")
+          .insert([{ item_id: itemId, user_id: authUserId }]);
       }
     },
     onMutate: async (itemId: string) => {
       await queryClient.cancelQueries({ queryKey: ["news-likes"] });
       const wasLiked = myLikesSet.has(itemId);
-      const prev = queryClient.getQueryData<{ item_id: string; user_id: string }[] | undefined>([
-        "news-likes",
-        (newsQuery.data ?? []).map((i) => i.id).join(","),
-      ]);
-      const next =
-        prev?.slice() ?? [];
+      const prev = queryClient.getQueryData<
+        { item_id: string; user_id: string }[] | undefined
+      >(["news-likes", (newsQuery.data ?? []).map((i) => i.id).join(",")]);
+      const next = prev?.slice() ?? [];
       if (myLikesSet.has(itemId)) {
         // optimistic remove
         for (let i = next.length - 1; i >= 0; i--) {
@@ -102,12 +142,18 @@ export const NewsPage = () => {
         // optimistic add
         next.push({ item_id: itemId, user_id: authUserId as string });
       }
-      queryClient.setQueryData(["news-likes", (newsQuery.data ?? []).map((i) => i.id).join(",")], next);
+      queryClient.setQueryData(
+        ["news-likes", (newsQuery.data ?? []).map((i) => i.id).join(",")],
+        next,
+      );
       return { prev, wasLiked };
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) {
-        queryClient.setQueryData(["news-likes", (newsQuery.data ?? []).map((i) => i.id).join(",")], ctx.prev);
+        queryClient.setQueryData(
+          ["news-likes", (newsQuery.data ?? []).map((i) => i.id).join(",")],
+          ctx.prev,
+        );
       }
     },
     onSuccess: (_data, _vars, ctx) => {
@@ -125,6 +171,7 @@ export const NewsPage = () => {
     queryFn: async () => {
       if (!likesOpenItemId) {
         return [] as Array<{
+          id: string;
           siba_user_id: string;
           siba_name: string;
           siba_icon: string;
@@ -142,13 +189,14 @@ export const NewsPage = () => {
       const userIds = (data ?? []).map((x: { user_id: string }) => x.user_id);
       if (!userIds.length) return [];
       const { data: sibas, error: sibErr } = await supabase
-        .from("sibains")
+        .from("siba_map_markers")
         .select(
-          "siba_user_id,siba_name,siba_icon,photos,community_title,community_avatar_url,community_tg_link",
+          "id,siba_user_id,siba_name,siba_icon,photos,community_title,community_avatar_url,community_tg_link",
         )
         .in("siba_user_id", userIds);
       if (sibErr) return [];
       return (sibas ?? []) as Array<{
+        id: string;
         siba_user_id: string;
         siba_name: string;
         siba_icon: string;
@@ -160,120 +208,194 @@ export const NewsPage = () => {
     },
   });
   const likesList = likesListQuery.data ?? [];
-  const content = useMemo(
-    () => (
-      <div className={pageStls.content}>
-        <div className={pageStls.topRow}>
-          <button
-            type="button"
-            onClick={() => navigate(PATH.Leaderboard)}
-            className={pageStls.leaderboardButton}
-          >
-            <IconCrown />
-            <div>
-              <div className={pageStls.leaderboardTitle}>Лидеры Сиба-мира</div>
-              <div className={pageStls.leaderboardSubtitle}>
-                Весь мир и Битва Чатов
-              </div>
-            </div>
-          </button>
-          <IconButton
-            onClick={() => setIsCalendarOpen(true)}
-            size="large"
-            icon={<IconFillCalendar />}
-          />
-        </div>
-        {newsQuery.isLoading && (
-          <>
-            <Skeleton variant="rounded" height={52} sx={{ mb: 1 }} />
-            <Skeleton variant="rounded" height={52} sx={{ mb: 1 }} />
-            <Skeleton variant="rounded" height={52} />
-          </>
-        )}
-        {!newsQuery.isLoading && !(newsQuery.data ?? []).length && (
-          <div className={pageStls.mutedText}>Пока нет новостей</div>
-        )}
-        {(newsQuery.data ?? []).map((item) => {
-          const count = likesByItemCount.get(item.id) ?? 0;
-          return (
-            <div key={item.id} className={pageStls.feedItem}>
-              <div className={pageStls.feedItemRow}>
-                <img
-                  src={item.actorSibaAvatar}
-                  alt={item.actorSibaName}
-                  className={pageStls.feedAvatar}
-                  onClick={() => setSelectedSibaId(item.actorSibaId)}
-                />
-                <div className={pageStls.feedText}>
-                  <span
-                    className={pageStls.feedActor}
-                    onClick={() => setSelectedSibaId(item.actorSibaId)}
-                  >
-                    {item.actorSibaName}
-                  </span>{" "}
-                  <div className={pageStls.feedCommunity}>
-                    <CommunityBadge
-                      title={item.actorCommunityTitle}
-                      avatarUrl={item.actorCommunityAvatarUrl}
-                      tgLink={item.actorCommunityTgLink}
-                    />
-                  </div>
-                  <span>{item.verb}</span>{" "}
-                  {item.targetSiba && (
-                    <span
-                      className={pageStls.feedTarget}
-                      onClick={() => setSelectedSibaId(item.targetSiba!.id)}
-                    >
-                      {item.targetSiba.name}
-                    </span>
-                  )}{" "}
-                  {item.place && (
-                    <span className={pageStls.feedPlace}>{item.place.place.name}</span>
-                  )}
-                  {item.commandName && <span className={pageStls.feedCommand}>{item.commandName}</span>}
-                  <div className={pageStls.feedDate}>
-                    {new Date(item.date).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-              <div className={pageStls.feedActions}>
-                <span
-                  onClick={() => toggleLikeMutation.mutate(item.id)}
-                  className={pageStls.likeButton}
-                  title={myLikesSet.has(item.id) ? "Убрать лайк" : "Нравится"}
-                >
-                  <IconLike color={myLikesSet.has(item.id) ? "#E95B47" : "#74736E"} size={18} />
-                </span>
-                {count > 0 && (
-                  <span
-                    className={pageStls.likesCount}
-                    onClick={() => setLikesOpenItemId(item.id)}
-                    title="Кто лайкнул"
-                  >
-                    нравится • {count}
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    ),
-    [
-      navigate,
-      newsQuery.data,
-      newsQuery.isLoading,
-      likesByItemCount,
-      myLikesSet,
-      toggleLikeMutation,
-    ],
+  const walkingSibas = useMemo(
+    () =>
+      ((sibasQuery.data ?? []) as ShibaType[])
+        .filter((item) => getSibaStatus(item) === "walk")
+        .slice(0, 12),
+    [sibasQuery.data],
   );
 
   if (!authUserId) return null;
   return (
     <div className={`${stls.mapContainer} ${pageStls.page}`}>
       <div className={`${stls.mapWrapper} ${pageStls.pageInner}`}>
-        {content}
+        <div className={pageStls.stickyHeader}>
+          <div className={pageStls.headerRow}>
+            <div>
+              <div className={pageStls.headerEyebrow}>Activity Feed</div>
+              <h1 className={pageStls.headerTitle}>События стаи</h1>
+            </div>
+            <IconButton
+              onClick={() => setIsCalendarOpen(true)}
+              size="large"
+              icon={<IconFillCalendar />}
+            />
+          </div>
+          <div className={pageStls.walkingSection}>
+            <div className={pageStls.walkingTitle}>Сегодня гуляют</div>
+            <div className={pageStls.walkingStories}>
+              {walkingSibas.map((siba) => (
+                <button
+                  key={siba.id}
+                  type="button"
+                  className={pageStls.storyCard}
+                  onClick={() => setSelectedSibaId(siba.id)}
+                >
+                  <img
+                    className={pageStls.storyAvatar}
+                    src={buildSafeAvatarSrc(
+                      siba.photos ?? null,
+                      siba.siba_icon,
+                    )}
+                    alt={siba.siba_name}
+                  />
+                  <span className={pageStls.storyName}>{siba.siba_name}</span>
+                </button>
+              ))}
+              {!walkingSibas.length && (
+                <div className={pageStls.walkingEmpty}>
+                  Пока никто не нажал «Хочу гулять»
+                </div>
+              )}
+            </div>
+          </div>
+          <div className={pageStls.topRow}>
+            <button
+              type="button"
+              onClick={() => navigate(PATH.Leaderboard)}
+              className={pageStls.leaderboardButton}
+            >
+              <IconCrown />
+              <div>
+                <div className={pageStls.leaderboardTitle}>
+                  Лидеры Сиба-мира
+                </div>
+                <div className={pageStls.leaderboardSubtitle}>
+                  Весь мир и Битва Чатов
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+        <div className={pageStls.content}>
+          {newsQuery.isLoading && (
+            <>
+              <Skeleton variant="rounded" height={112} sx={{ mb: 1.5 }} />
+              <Skeleton variant="rounded" height={112} sx={{ mb: 1.5 }} />
+              <Skeleton variant="rounded" height={112} />
+            </>
+          )}
+          {!newsQuery.isLoading && !(newsQuery.data ?? []).length && (
+            <div className={pageStls.mutedText}>Пока нет новостей</div>
+          )}
+          {(newsQuery.data ?? []).map((item) => {
+            const count = likesByItemCount.get(item.id) ?? 0;
+            const activityMeta = getActivityMeta(item);
+
+            return (
+              <article key={item.id} className={pageStls.feedCard}>
+                <div className={pageStls.feedCardTop}>
+                  <button
+                    type="button"
+                    className={pageStls.feedAvatarButton}
+                    onClick={() => setSelectedSibaId(item.actorSibaId)}
+                  >
+                    <img
+                      src={item.actorSibaAvatar}
+                      alt={item.actorSibaName}
+                      className={pageStls.feedAvatar}
+                    />
+                  </button>
+                  <div className={pageStls.feedBody}>
+                    <div className={pageStls.feedHeadlineRow}>
+                      <button
+                        type="button"
+                        className={pageStls.feedActorButton}
+                        onClick={() => setSelectedSibaId(item.actorSibaId)}
+                      >
+                        <UserBadge
+                          userName={item.actorSibaName}
+                          className={pageStls.feedActorWrap}
+                          nameClassName={pageStls.feedActor}
+                          chatData={{
+                            title: item.actorCommunityTitle,
+                            avatarUrl: item.actorCommunityAvatarUrl,
+                            tgLink: item.actorCommunityTgLink,
+                          }}
+                        />
+                      </button>
+                      <div className={pageStls.feedDate}>
+                        {formatActivityDate(item.date)}
+                      </div>
+                    </div>
+                    <div className={pageStls.feedContentRow}>
+                      <div className={pageStls.feedEmojiBadge}>
+                        {activityMeta.emoji}
+                      </div>
+                      <div className={pageStls.feedText}>
+                        <span className={pageStls.feedVerb}>{item.verb}</span>{" "}
+                        {item.targetSiba && (
+                          <button
+                            type="button"
+                            className={pageStls.feedTarget}
+                            onClick={() =>
+                              setSelectedSibaId(item.targetSiba!.id)
+                            }
+                          >
+                            {item.targetSiba.name}
+                          </button>
+                        )}
+                        {item.place && (
+                          <>
+                            <span className={pageStls.feedVerb}>:</span>{" "}
+                            <span className={pageStls.feedPlace}>
+                              {item.place.place.name}
+                            </span>
+                          </>
+                        )}
+                        {item.commandName && (
+                          <span className={pageStls.feedCommand}>
+                            {item.commandName}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className={pageStls.feedActions}>
+                      <button
+                        type="button"
+                        onClick={() => toggleLikeMutation.mutate(item.id)}
+                        className={`${pageStls.likeButton} ${
+                          myLikesSet.has(item.id)
+                            ? pageStls.likeButtonActive
+                            : ""
+                        }`}
+                        title={
+                          myLikesSet.has(item.id) ? "Убрать лайк" : "Нравится"
+                        }
+                      >
+                        <IconLike
+                          color={
+                            myLikesSet.has(item.id) ? "#E95B47" : "#74736E"
+                          }
+                          size={18}
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        className={pageStls.likesCount}
+                        onClick={() => setLikesOpenItemId(item.id)}
+                        title="Кто лайкнул"
+                      >
+                        нравится • {count}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </div>
       <MainTabBar active="news" />
       <EventCalendar
@@ -290,7 +412,10 @@ export const NewsPage = () => {
           PaperProps={{
             sx: {
               height: "auto",
-              maxHeight: "85vh",
+              maxHeight: "90dvh",
+              padding: "12px",
+              overflowY: "auto",
+              overscrollBehavior: "contain",
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
             },
@@ -298,8 +423,23 @@ export const NewsPage = () => {
         >
           <div className={pageStls.likesSheetContent}>
             <h3 className={pageStls.likesSheetTitle}>Лайкнули</h3>
+            {likesListQuery.isLoading && (
+              <>
+                <Skeleton variant="rounded" height={42} sx={{ mb: 1 }} />
+                <Skeleton variant="rounded" height={42} sx={{ mb: 1 }} />
+                <Skeleton variant="rounded" height={42} />
+              </>
+            )}
             {likesList.map((s) => (
-              <div key={s.siba_user_id} className={pageStls.likesRow}>
+              <button
+                key={s.siba_user_id}
+                type="button"
+                className={pageStls.likesRow}
+                onClick={() => {
+                  setLikesOpenItemId(null);
+                  setSelectedSibaId(s.id);
+                }}
+              >
                 <img
                   src={s.photos ?? `/${s.siba_icon}.png`}
                   alt={s.siba_name}
@@ -313,9 +453,11 @@ export const NewsPage = () => {
                     tgLink={s.community_tg_link}
                   />
                 </div>
-              </div>
+              </button>
             ))}
-            {!likesList.length && <div className={pageStls.mutedText}>Пока нет лайков</div>}
+            {!likesListQuery.isLoading && !likesList.length && (
+              <div className={pageStls.mutedText}>Пока нет лайков</div>
+            )}
           </div>
         </SwipeableDrawer>
       ) : (
@@ -328,8 +470,23 @@ export const NewsPage = () => {
         >
           <div className={pageStls.likesSheetContent}>
             <h3 className={pageStls.likesSheetTitle}>Лайкнули</h3>
+            {likesListQuery.isLoading && (
+              <>
+                <Skeleton variant="rounded" height={42} sx={{ mb: 1 }} />
+                <Skeleton variant="rounded" height={42} sx={{ mb: 1 }} />
+                <Skeleton variant="rounded" height={42} />
+              </>
+            )}
             {likesList.map((s) => (
-              <div key={s.siba_user_id} className={pageStls.likesRow}>
+              <button
+                key={s.siba_user_id}
+                type="button"
+                className={pageStls.likesRow}
+                onClick={() => {
+                  setLikesOpenItemId(null);
+                  setSelectedSibaId(s.id);
+                }}
+              >
                 <img
                   src={s.photos ?? `/${s.siba_icon}.png`}
                   alt={s.siba_name}
@@ -343,9 +500,11 @@ export const NewsPage = () => {
                     tgLink={s.community_tg_link}
                   />
                 </div>
-              </div>
+              </button>
             ))}
-            {!likesList.length && <div className={pageStls.mutedText}>Пока нет лайков</div>}
+            {!likesListQuery.isLoading && !likesList.length && (
+              <div className={pageStls.mutedText}>Пока нет лайков</div>
+            )}
           </div>
         </Dialog>
       )}
@@ -359,9 +518,12 @@ export const NewsPage = () => {
           PaperProps={{
             sx: {
               height: "auto",
-              maxHeight: "85vh",
+              maxHeight: "90dvh",
+              overflowY: "auto",
+              overscrollBehavior: "contain",
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
+              padding: "12px",
             },
           }}
         >
@@ -373,7 +535,14 @@ export const NewsPage = () => {
           onClose={() => setSelectedSibaId(null)}
           fullWidth
           maxWidth="xs"
-          PaperProps={{ sx: { borderRadius: 2 } }}
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              maxHeight: "90dvh",
+              overflowY: "auto",
+              padding: "12px",
+            },
+          }}
         >
           {selectedSibaId && <Siba id={selectedSibaId} />}
         </Dialog>

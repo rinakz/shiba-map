@@ -6,3 +6,4 @@ export { MainTabBar } from "./main-tab-bar";
 export { ProgressBar } from "./progress-bar";
 export { SibaToast } from "./siba-toast";
 export { CommunityBadge } from "./community-badge";
+export { UserBadge } from "./user-badge";

@@ -5,42 +5,22 @@ import {
   useState,
   type ChangeEvent,
 } from "react";
-import { useQuery } from "@tanstack/react-query";
-import Skeleton from "@mui/material/Skeleton";
-import {
-  assignUserToCommunity,
-  clearUserCommunity,
-  deleteCommunity,
-  fetchAllCommunities,
-  fetchUserCommunity,
-  saveUserCommunity,
-} from "../../shared/api/communities";
 import { AppContext } from "../../shared/context/app-context";
 import stls from "./profile.module.sass";
-import { Button, LayoutPage } from "../../shared/ui";
+import { LayoutPage } from "../../shared/ui";
+import { PeopleListOverlay } from "../../shared/ui/people-list-overlay";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-import { IconRight } from "../../shared/icons";
 import { ProfileAchievements } from "./profile-achievements";
 import { ShibaAcademy } from "./shiba-academy";
 import { KennelSection } from "./kennel-section";
-import { getShibaRank } from "./shiba-academy.data";
 import {
   buildEditDrafts,
   deleteAccount,
-  fetchHealthAlert,
-  fetchMySibaByUserId,
-  fetchSibaAcademyProgress,
-  fetchSubscribersCount,
-  fetchSubscriptionsCount,
-  fetchUserById,
   openFilePicker,
   performSignOut,
-  profileQueryKeys,
-  processCommunityAvatarChange,
   processProfileFileChange,
   submitProfile,
-  uploadCommunityAvatar,
   getProfileActionErrorMessage,
 } from "./profile.utils";
 import { PATH } from "../../shared/constants/path";
@@ -49,7 +29,11 @@ import { ProfileHeaderCard } from "./profile-header-card";
 import { ProfileOwnerCard } from "./profile-owner-card";
 import { ProfileEditForm } from "./profile-edit-form";
 import { ProfileDeleteDrawer } from "./profile-delete-drawer";
-import { ProfileCommunityBlock } from "./profile-community-block";
+import { ProfileCommunityDrawer } from "./profile-community-drawer";
+import { ProfilePageSkeleton } from "./profile-page-skeleton";
+import { ProfileBottomActions } from "./profile-bottom-actions";
+import { useProfilePageQueries } from "./use-profile-page-queries";
+import { useProfileCommunityManager } from "./use-profile-community-manager";
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
@@ -74,79 +58,61 @@ export const ProfilePage = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isPromoRevealed, setIsPromoRevealed] = useState(false);
-  const [communityTitleDraft, setCommunityTitleDraft] = useState("");
-  const [communityLinkDraft, setCommunityLinkDraft] = useState("");
-  const [communitySearchDraft, setCommunitySearchDraft] = useState("");
-  const [communityAvatarDraft, setCommunityAvatarDraft] = useState("");
-  const [communityAvatarFile, setCommunityAvatarFile] = useState<File | null>(null);
-  const [communityAvatarPreviewUrl, setCommunityAvatarPreviewUrl] = useState<string | null>(null);
-  const [community, setCommunity] = useState<import("../../shared/types").Community | null>(null);
-  const [isSavingCommunity, setIsSavingCommunity] = useState(false);
-  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
-  const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
+  const [peopleListMode, setPeopleListMode] = useState<"followers" | "followings" | null>(null);
 
-  const userQuery = useQuery({
-    queryKey: authUserId ? profileQueryKeys.user(authUserId) : ["user", "guest"],
-    queryFn: () => fetchUserById(authUserId as string),
-    enabled: Boolean(authUserId),
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
-  });
-
-  const mySibaQuery = useQuery({
-    queryKey: authUserId ? profileQueryKeys.mySiba(authUserId) : ["mySiba", "guest"],
-    queryFn: () => fetchMySibaByUserId(authUserId as string),
-    enabled: Boolean(authUserId),
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
+  const {
+    userQuery,
+    mySibaQuery,
+    subscriptionsCountQuery,
+    subscribersCountQuery,
+    healthAlertQuery,
+    communityQuery,
+    communitiesQuery,
+    academyRank,
+    peopleListItems,
+    peopleListTitle,
+    isProfileLoading,
+  } = useProfilePageQueries({
+    authUserId,
+    mySiba,
+    peopleListMode,
   });
 
-  const subscriptionsCountQuery = useQuery<number>({
-    queryKey: ["user-friends-counts", "subscriptions", authUserId],
-    enabled: Boolean(authUserId),
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
-    queryFn: () => fetchSubscriptionsCount(authUserId as string),
+  const {
+    community,
+    communityTitleDraft,
+    communityLinkDraft,
+    communitySearchDraft,
+    communityAvatarDraft,
+    communityAvatarFile,
+    communityAvatarPreviewUrl,
+    isSavingCommunity,
+    selectedCommunityId,
+    isCreatingCommunity,
+    isCommunityManagerOpen,
+    isCommunityDirty,
+    isCommunityCreator,
+    setIsCommunityManagerOpen,
+    handleClearCommunity,
+    handleSelectCommunity,
+    handleJoinCommunity,
+    handleSaveCommunity,
+    handleDeleteCommunity,
+    handleToggleCreateMode,
+    handleCommunitySearchChange,
+    handleCommunityTitleChange,
+    handleCommunityLinkChange,
+    handleCommunityAvatarChange,
+    handleOpenCommunityAvatarPicker,
+  } = useProfileCommunityManager({
+    authUserId,
+    communities: communitiesQuery.data ?? [],
+    communityFromQuery: communityQuery.data ?? null,
+    communityAvatarInputRef,
+    setError,
+    setUser,
+    setMySiba,
   });
-
-  const subscribersCountQuery = useQuery<number>({
-    queryKey: ["user-friends-counts", "subscribers", authUserId],
-    enabled: Boolean(authUserId),
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
-    queryFn: () => fetchSubscribersCount(authUserId as string),
-  });
-
-  const academyProgressQuery = useQuery<{ learned_skill_ids: string[] | null } | null>({
-    queryKey: ["siba-academy", mySiba?.id ?? "none"],
-    enabled: Boolean(mySiba?.id),
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
-    queryFn: () => fetchSibaAcademyProgress(mySiba!.id),
-  });
-  const healthAlertQuery = useQuery({
-    queryKey: ["health-alert", mySiba?.id],
-    enabled: Boolean(mySiba?.id),
-    queryFn: () => fetchHealthAlert(mySiba!.id),
-  });
-  const communityQuery = useQuery({
-    queryKey: ["user-community", authUserId],
-    enabled: Boolean(authUserId),
-    queryFn: () => fetchUserCommunity(authUserId as string),
-  });
-  const communitiesQuery = useQuery({
-    queryKey: ["communities", "all"],
-    enabled: Boolean(authUserId),
-    queryFn: fetchAllCommunities,
-  });
-
-  const completedCommandsCount = academyProgressQuery.data?.learned_skill_ids?.length ?? 0;
-  const academyRank = getShibaRank(completedCommandsCount).rank;
 
   useEffect(() => {
     if (userQuery.data) setUser(userQuery.data);
@@ -161,18 +127,6 @@ export const ProfilePage = () => {
     setTgNameDraft(user?.tgname ?? "");
     setIsShowTgNameDraft(Boolean(user?.is_show_tgname));
   }, [user]);
-
-  useEffect(() => {
-    setCommunity(communityQuery.data ?? null);
-    setCommunityTitleDraft(communityQuery.data?.title ?? "");
-    setCommunityLinkDraft(communityQuery.data?.tg_link ?? "");
-    setCommunitySearchDraft(communityQuery.data?.title ?? "");
-    setCommunityAvatarDraft(communityQuery.data?.avatar_url ?? "");
-    setCommunityAvatarPreviewUrl(null);
-    setCommunityAvatarFile(null);
-    setSelectedCommunityId(communityQuery.data?.id ?? null);
-    setIsCreatingCommunity(false);
-  }, [communityQuery.data]);
 
   useEffect(() => {
     setSibaNameDraft(mySiba?.siba_name ?? "");
@@ -284,243 +238,8 @@ export const ProfilePage = () => {
     }
   };
 
-  const handleClearCommunity = async () => {
-    if (!authUserId) return;
-    setIsSavingCommunity(true);
-    try {
-      await clearUserCommunity(authUserId);
-      setCommunity(null);
-      setSelectedCommunityId(null);
-      setCommunityTitleDraft("");
-      setCommunityLinkDraft("");
-      setCommunitySearchDraft("");
-      setCommunityAvatarDraft("");
-      setCommunityAvatarFile(null);
-      setCommunityAvatarPreviewUrl(null);
-      setMySiba((prev) =>
-        prev
-          ? {
-              ...prev,
-              community_id: null,
-              community_title: null,
-              community_avatar_url: null,
-              community_tg_link: null,
-            }
-          : prev,
-      );
-      setUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              community_id: null,
-              community_title: null,
-              community_avatar_url: null,
-              community_tg_link: null,
-            }
-          : prev,
-      );
-      setError(null);
-    } catch (error) {
-      setError(getProfileActionErrorMessage(error, "Не удалось удалить сообщество."));
-    } finally {
-      setIsSavingCommunity(false);
-    }
-  };
-
-  const handleSelectCommunity = (nextCommunity: import("../../shared/types").Community) => {
-    setSelectedCommunityId(nextCommunity.id);
-    setCommunitySearchDraft(nextCommunity.title);
-    setCommunityTitleDraft(nextCommunity.title);
-    setCommunityLinkDraft(nextCommunity.tg_link);
-    setCommunityAvatarDraft(nextCommunity.avatar_url ?? "");
-    setCommunityAvatarFile(null);
-    setCommunityAvatarPreviewUrl(null);
-  };
-
-  const handleJoinCommunity = async () => {
-    if (!authUserId || !selectedCommunityId) return;
-    setIsSavingCommunity(true);
-    try {
-      const nextCommunity =
-        (communitiesQuery.data ?? []).find((item) => item.id === selectedCommunityId) ?? null;
-      if (!nextCommunity) {
-        setError("Не удалось найти выбранное сообщество.");
-        return;
-      }
-      await assignUserToCommunity({ authUserId, communityId: selectedCommunityId });
-      setCommunity(nextCommunity);
-      setCommunitySearchDraft(nextCommunity.title);
-      setCommunityTitleDraft(nextCommunity.title);
-      setCommunityLinkDraft(nextCommunity.tg_link);
-      setCommunityAvatarDraft(nextCommunity.avatar_url ?? "");
-      setCommunityAvatarFile(null);
-      setCommunityAvatarPreviewUrl(null);
-      setIsCreatingCommunity(false);
-      setMySiba((prev) =>
-        prev
-          ? {
-              ...prev,
-              community_id: nextCommunity.id,
-              community_title: nextCommunity.title,
-              community_avatar_url: nextCommunity.avatar_url ?? null,
-              community_tg_link: nextCommunity.tg_link,
-            }
-          : prev,
-      );
-      setUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              community_id: nextCommunity.id,
-              community_title: nextCommunity.title,
-              community_avatar_url: nextCommunity.avatar_url ?? null,
-              community_tg_link: nextCommunity.tg_link,
-            }
-          : prev,
-      );
-      setError(null);
-    } catch (error) {
-      setError(getProfileActionErrorMessage(error, "Не удалось вступить в сообщество."));
-    } finally {
-      setIsSavingCommunity(false);
-    }
-  };
-
-  const handleSaveCommunity = async () => {
-    if (!authUserId) return;
-    setIsSavingCommunity(true);
-    try {
-      let avatarUrl = communityAvatarDraft;
-      if (communityAvatarFile) {
-        avatarUrl = await uploadCommunityAvatar(authUserId, communityAvatarFile);
-      }
-
-      let savedCommunity = null;
-      if (selectedCommunityId) {
-        const selected = (communitiesQuery.data ?? []).find((item) => item.id === selectedCommunityId);
-        if (selected && selected.title === communityTitleDraft.trim() && selected.tg_link === communityLinkDraft.trim() && !communityAvatarFile) {
-          await assignUserToCommunity({ authUserId, communityId: selected.id });
-          savedCommunity = selected;
-        }
-      }
-
-      if (!savedCommunity) {
-        savedCommunity = await saveUserCommunity({
-          authUserId,
-          title: communityTitleDraft,
-          tgLink: communityLinkDraft,
-          avatarUrl: avatarUrl ?? "",
-        });
-      }
-
-      setCommunity(savedCommunity);
-      setSelectedCommunityId(savedCommunity?.id ?? null);
-      setCommunitySearchDraft(savedCommunity?.title ?? "");
-      setCommunityTitleDraft(savedCommunity?.title ?? "");
-      setCommunityLinkDraft(savedCommunity?.tg_link ?? "");
-      setCommunityAvatarDraft(savedCommunity?.avatar_url ?? "");
-      setCommunityAvatarFile(null);
-      setCommunityAvatarPreviewUrl(null);
-      setIsCreatingCommunity(false);
-      setMySiba((prev) =>
-        prev
-          ? {
-              ...prev,
-              community_id: savedCommunity?.id ?? null,
-              community_title: savedCommunity?.title ?? null,
-              community_avatar_url: savedCommunity?.avatar_url ?? null,
-              community_tg_link: savedCommunity?.tg_link ?? null,
-            }
-          : prev,
-      );
-      setUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              community_id: savedCommunity?.id ?? null,
-              community_title: savedCommunity?.title ?? null,
-              community_avatar_url: savedCommunity?.avatar_url ?? null,
-              community_tg_link: savedCommunity?.tg_link ?? null,
-            }
-          : prev,
-      );
-      setError(null);
-    } catch (error) {
-      setError(getProfileActionErrorMessage(error, "Не удалось сохранить сообщество."));
-    } finally {
-      setIsSavingCommunity(false);
-    }
-  };
-
-  const handleDeleteCommunity = async () => {
-    if (!community?.id) return;
-    setIsSavingCommunity(true);
-    try {
-      await deleteCommunity(community.id);
-      setCommunity(null);
-      setSelectedCommunityId(null);
-      setCommunityTitleDraft("");
-      setCommunityLinkDraft("");
-      setCommunitySearchDraft("");
-      setCommunityAvatarDraft("");
-      setCommunityAvatarFile(null);
-      setCommunityAvatarPreviewUrl(null);
-      setIsCreatingCommunity(false);
-      setMySiba((prev) =>
-        prev
-          ? {
-              ...prev,
-              community_id: null,
-              community_title: null,
-              community_avatar_url: null,
-              community_tg_link: null,
-            }
-          : prev,
-      );
-      setUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              community_id: null,
-              community_title: null,
-              community_avatar_url: null,
-              community_tg_link: null,
-            }
-          : prev,
-      );
-      setError(null);
-    } catch (error) {
-      setError(getProfileActionErrorMessage(error, "Не удалось удалить сообщество."));
-    } finally {
-      setIsSavingCommunity(false);
-    }
-  };
-
-  const isCommunityDirty =
-    (community?.title ?? "") !== communityTitleDraft.trim() ||
-    (community?.tg_link ?? "") !== communityLinkDraft.trim() ||
-    (community?.avatar_url ?? "") !== communityAvatarDraft ||
-    Boolean(communityAvatarFile);
-  const isCommunityCreator =
-    Boolean(authUserId && community?.created_by && community.created_by === authUserId);
-
-  const isProfileLoading =
-    userQuery.isLoading ||
-    mySibaQuery.isLoading ||
-    subscriptionsCountQuery.isLoading ||
-    subscribersCountQuery.isLoading;
-
   if (isProfileLoading && !mySiba) {
-    return (
-      <LayoutPage>
-        <div className={stls.profileContainer}>
-          <Skeleton variant="rounded" width={200} height={200} />
-          <Skeleton variant="text" width={220} height={56} />
-          <Skeleton variant="rounded" width="100%" height={92} />
-          <Skeleton variant="rounded" width="100%" height={180} />
-        </div>
-      </LayoutPage>
-    );
+    return <ProfilePageSkeleton />;
   }
 
   return (
@@ -540,6 +259,11 @@ export const ProfilePage = () => {
           hasHealthAlert={Boolean(healthAlertQuery.data)}
           fileInputRef={fileInputRef}
           onBack={() => navigate(PATH.Home)}
+          onToggleCommunityManager={() =>
+            setIsCommunityManagerOpen((prev) => !prev)
+          }
+          onOpenSubscriptions={() => setPeopleListMode("followings")}
+          onOpenSubscribers={() => setPeopleListMode("followers")}
           onStartEdit={handleStartEdit}
           onOpenHealth={() => navigate(PATH.HealthPass)}
           onOpenFilePicker={() => openFilePicker(fileInputRef)}
@@ -552,61 +276,6 @@ export const ProfilePage = () => {
           user={user}
           isPromoRevealed={isPromoRevealed}
           onPromoClick={handlePromoClick}
-        />
-        <ProfileCommunityBlock
-          community={community}
-          communities={communitiesQuery.data ?? []}
-          searchValue={communitySearchDraft}
-          isCreateMode={isCreatingCommunity}
-          isCreator={isCommunityCreator}
-          selectedCommunityId={selectedCommunityId}
-          titleValue={communityTitleDraft}
-          linkValue={communityLinkDraft}
-          avatarValue={communityAvatarDraft}
-          avatarPreviewUrl={communityAvatarPreviewUrl}
-          hasUploadedAvatar={Boolean(communityAvatarFile)}
-          isSaving={isSavingCommunity}
-          isDirty={isCommunityDirty}
-          communityAvatarInputRef={communityAvatarInputRef}
-          onSearchChange={(value) => {
-            setCommunitySearchDraft(value);
-            setSelectedCommunityId(null);
-          }}
-          onTitleChange={(value) => {
-            setSelectedCommunityId(null);
-            setCommunityTitleDraft(value);
-          }}
-          onLinkChange={(value) => {
-            setSelectedCommunityId(null);
-            setCommunityLinkDraft(value);
-          }}
-          onToggleCreateMode={() => {
-            const nextIsCreating = !isCreatingCommunity;
-            setIsCreatingCommunity(nextIsCreating);
-            setSelectedCommunityId(null);
-            setCommunitySearchDraft("");
-            if (nextIsCreating) {
-              setCommunityTitleDraft("");
-              setCommunityLinkDraft("");
-              setCommunityAvatarDraft("");
-              setCommunityAvatarFile(null);
-              setCommunityAvatarPreviewUrl(null);
-            }
-          }}
-          onOpenAvatarPicker={() => openFilePicker(communityAvatarInputRef)}
-          onAvatarChange={(event) =>
-            processCommunityAvatarChange(
-              event,
-              setError,
-              setCommunityAvatarFile,
-              setCommunityAvatarPreviewUrl,
-            )
-          }
-          onSelectCommunity={handleSelectCommunity}
-          onJoin={handleJoinCommunity}
-          onSaveNew={handleSaveCommunity}
-          onLeave={handleClearCommunity}
-          onDelete={handleDeleteCommunity}
         />
         {isEdit && (
           <ProfileEditForm
@@ -629,60 +298,61 @@ export const ProfilePage = () => {
         <KennelSection siba={mySiba} authUserId={authUserId ?? undefined} />
         {error && (
           <span className={stls.errorText}>{error}</span>
-        )}{" "}
-        {isEdit ? (
-          <div className={stls.editActions}>
-            <Button
-              size="large"
-              variant="secondary"
-              disabled={isSavingProfile}
-              onClick={() => {
-                setIsEdit(false);
-                setPhotoFile(null);
-                setPhotoPreviewUrl(null);
-                setError(null);
-              }}
-            >
-              Отмена
-            </Button>
-            <Button
-              size="large"
-              loading={isSavingProfile}
-              iconRight={<IconRight />}
-              onClick={handleSubmit}
-            >
-              Сохранить
-            </Button>
-          </div>
-        ) : null}
-        <div className={stls.bottomActions}>
-          {!isEdit && (
-            <Button
-              size="medium"
-              className={stls.fullWidth}
-              variant="secondary"
-              onClick={() => setIsDeleteDrawerOpen(true)}
-            >
-              Удалить аккаунт
-            </Button>
-          )}
-          {!isEdit && (
-            <Button
-              size="medium"
-              className={stls.fullWidth}
-              iconRight={<IconRight />}
-              loading={isSigningOut}
-              onClick={handleSignOut}
-            >
-              Выйти
-            </Button>
-          )}
-        </div>
+        )}
+        <ProfileBottomActions
+          isEdit={isEdit}
+          isSavingProfile={isSavingProfile}
+          isSigningOut={isSigningOut}
+          onCancelEdit={() => {
+            setIsEdit(false);
+            setPhotoFile(null);
+            setPhotoPreviewUrl(null);
+            setError(null);
+          }}
+          onSave={handleSubmit}
+          onOpenDelete={() => setIsDeleteDrawerOpen(true)}
+          onSignOut={handleSignOut}
+        />
         <ProfileDeleteDrawer
           open={isDeleteDrawerOpen}
           isDeletingAccount={isDeletingAccount}
           onClose={() => setIsDeleteDrawerOpen(false)}
           onDelete={handleDeleteAccount}
+        />
+        <ProfileCommunityDrawer
+          open={isCommunityManagerOpen}
+          community={community}
+          communities={communitiesQuery.data ?? []}
+          searchValue={communitySearchDraft}
+          isCreateMode={isCreatingCommunity}
+          isCreator={isCommunityCreator}
+          selectedCommunityId={selectedCommunityId}
+          titleValue={communityTitleDraft}
+          linkValue={communityLinkDraft}
+          avatarValue={communityAvatarDraft}
+          avatarPreviewUrl={communityAvatarPreviewUrl}
+          hasUploadedAvatar={Boolean(communityAvatarFile)}
+          isSaving={isSavingCommunity}
+          isDirty={isCommunityDirty}
+          communityAvatarInputRef={communityAvatarInputRef}
+          onClose={() => setIsCommunityManagerOpen(false)}
+          onSearchChange={handleCommunitySearchChange}
+          onTitleChange={handleCommunityTitleChange}
+          onLinkChange={handleCommunityLinkChange}
+          onToggleCreateMode={handleToggleCreateMode}
+          onOpenAvatarPicker={handleOpenCommunityAvatarPicker}
+          onAvatarChange={handleCommunityAvatarChange}
+          onSelectCommunity={handleSelectCommunity}
+          onJoin={handleJoinCommunity}
+          onSaveNew={handleSaveCommunity}
+          onLeave={handleClearCommunity}
+          onDelete={handleDeleteCommunity}
+        />
+        <PeopleListOverlay
+          open={Boolean(peopleListMode)}
+          title={peopleListTitle}
+          items={peopleListItems}
+          onClose={() => setPeopleListMode(null)}
         />
       </div>
     </LayoutPage>

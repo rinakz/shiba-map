@@ -60,7 +60,7 @@ export const fetchSibaByUserMap = async (userIds: string[]) => {
   const { data, error } = await supabase
     .from("siba_map_markers")
     .select(
-      "siba_user_id,siba_name,siba_icon,photos,community_title,community_avatar_url,community_tg_link",
+      "id,siba_user_id,siba_name,siba_icon,photos,community_title,community_avatar_url,community_tg_link",
     )
     .in("siba_user_id", userIds);
 

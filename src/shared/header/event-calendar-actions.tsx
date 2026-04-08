@@ -18,7 +18,8 @@ import {
 
 type EventCalendarActionsProps = {
   selectedEvents: EventRow[];
-  isCalendarLoading: boolean;
+  isEventsLoading: boolean;
+  isParticipantsLoading: boolean;
   sibaByUser: Map<string, SibaMini>;
   participants: ParticipantRow[];
   authUserId: string;
@@ -47,7 +48,8 @@ type EventCalendarActionsProps = {
 
 export const EventCalendarActions = ({
   selectedEvents,
-  isCalendarLoading,
+  isEventsLoading,
+  isParticipantsLoading,
   sibaByUser,
   participants,
   authUserId,
@@ -75,7 +77,7 @@ export const EventCalendarActions = ({
 }: EventCalendarActionsProps) => {
   return (
     <>
-      {isCalendarLoading ? (
+      {isEventsLoading ? (
         <>
           <Skeleton variant="rounded" height={120} sx={{ mb: 1 }} />
           <Skeleton variant="rounded" height={120} sx={{ mb: 1 }} />
@@ -133,37 +135,49 @@ export const EventCalendarActions = ({
               >
                 {isGoing ? "Я пойду (выбрано)" : "Я пойду"} • {eventParticipants.length}
               </Button>
-              <div
-                className={stls.participantsRow}
-                onClick={() => onOpenParticipants(e.id)}
-              >
-                <div className={stls.avatarsStack}>
-                  {previewParticipants.length ? (
-                    previewParticipants.map((s) => (
-                      <img
-                        key={`${e.id}-${s.siba_user_id}`}
-                        className={stls.stackAvatar}
-                        src={s.photos ?? `/${s.siba_icon}.png`}
-                        alt={s.siba_name}
-                      />
-                    ))
-                  ) : (
-                    <img
-                      className={stls.stackAvatar}
-                      src="/default.png"
-                      alt="Пока участников нет"
-                    />
-                  )}
+              {isParticipantsLoading ? (
+                <div className={stls.participantsSkeleton} aria-hidden="true">
+                  <div className={stls.avatarsStack}>
+                    <Skeleton variant="circular" width={24} height={24} />
+                    <Skeleton variant="circular" width={24} height={24} />
+                    <Skeleton variant="circular" width={24} height={24} />
+                  </div>
+                  <Skeleton variant="text" width={110} height={20} />
                 </div>
-                <span className={stls.eventMeta}>
-                  Участники: {eventParticipants.length}
-                </span>
-                {participantSibas.length > previewParticipants.length && (
-                  <span className={stls.stackMore}>
-                    +{participantSibas.length - previewParticipants.length}
+              ) : (
+                <button
+                  type="button"
+                  className={stls.participantsRow}
+                  onClick={() => onOpenParticipants(e.id)}
+                >
+                  <div className={stls.avatarsStack}>
+                    {previewParticipants.length ? (
+                      previewParticipants.map((s) => (
+                        <img
+                          key={`${e.id}-${s.siba_user_id}`}
+                          className={stls.stackAvatar}
+                          src={s.photos ?? `/${s.siba_icon}.png`}
+                          alt={s.siba_name}
+                        />
+                      ))
+                    ) : (
+                      <img
+                        className={stls.stackAvatar}
+                        src="/default.png"
+                        alt="Пока участников нет"
+                      />
+                    )}
+                  </div>
+                  <span className={stls.eventMeta}>
+                    Участники: {eventParticipants.length}
                   </span>
-                )}
-              </div>
+                  {participantSibas.length > previewParticipants.length && (
+                    <span className={stls.stackMore}>
+                      +{participantSibas.length - previewParticipants.length}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
           );
         })

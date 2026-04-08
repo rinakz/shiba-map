@@ -190,25 +190,25 @@ export const GeneralMap = () => {
       >
         {ymapsApiKey ? (
           <YMaps query={{ apikey: ymapsApiKey }}>
-        <Map
-          height="88vh"
-          width="100%"
-          instanceRef={mapRef}
+            <Map
+              height="88vh"
+              width="100%"
+              instanceRef={mapRef}
               onLoad={() => setIsMapLoading(false)}
-          onActionTickComplete={onActionTickComplete}
-          modules={["control.ZoomControl"]}
-          defaultState={{
-            center: coordinates,
-            zoom: 10,
-            controls: ["zoomControl"],
-          }}
+              onActionTickComplete={onActionTickComplete}
+              modules={["control.ZoomControl"]}
+              defaultState={{
+                center: coordinates,
+                zoom: 10,
+                controls: ["zoomControl"],
+              }}
               onClick={(evt: { get: (k: "coords") => [number, number] }) => {
                 if (!addingHazardKind) return;
                 const coords = evt.get("coords");
                 setPendingHazardCoords(coords);
               }}
-        >
-          <SearchControl options={{ float: "right", noPlacemark: true }} />
+            >
+              <SearchControl options={{ float: "right", noPlacemark: true }} />
               {isVerified && (
                 <Clusterer
                   options={{ clusterDisableClickZoom: true }}
@@ -224,7 +224,7 @@ export const GeneralMap = () => {
                     inst.events?.add("click", handleClusterClick);
                   }}
                 >
-            {sibaIns
+                  {sibaIns
                     // Показываем сиб на карте, если он прошёл верификацию:
                     // фото ИЛИ приглашение по промокоду (computed `is_verified` из view).
                     .filter((el: ShibaType) => {
@@ -244,14 +244,14 @@ export const GeneralMap = () => {
                       );
 
                       return (
-                <Placemark
-                  onClick={() => {
-                    setIsOpenSiba(true);
-                    setSelectedSibaId(el.id);
-                  }}
-                  key={el.id}
-                  options={{
-                    iconLayout: "default#image",
+                        <Placemark
+                          onClick={() => {
+                            setIsOpenSiba(true);
+                            setSelectedSibaId(el.id);
+                          }}
+                          key={el.id}
+                          options={{
+                            iconLayout: "default#image",
                             iconImageHref: getSibaMarkerHref(
                               el?.siba_icon,
                               isWalkStatus,
@@ -354,10 +354,10 @@ export const GeneralMap = () => {
                     pendingCoords={pendingHazardCoords}
                     setPendingCoords={setPendingHazardCoords}
                   />
-          </Clusterer>
+                </Clusterer>
               )}
-        </Map>
-      </YMaps>
+            </Map>
+          </YMaps>
         ) : (
           <div className={stls.verifyOverlay}>
             <div className={stls.verifyCard}>
@@ -433,6 +433,7 @@ export const GeneralMap = () => {
               maxHeight: "85vh",
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
+              padding: "12px",
             },
           }}
         >
@@ -442,11 +443,11 @@ export const GeneralMap = () => {
         </SwipeableDrawer>
       ) : (
         <Dialog
-        open={isOpenSiba}
-        onClose={() => {
-          setIsOpenSiba(false);
-          setSelectedSibaId(null);
-        }}
+          open={isOpenSiba}
+          onClose={() => {
+            setIsOpenSiba(false);
+            setSelectedSibaId(null);
+          }}
           fullWidth
           maxWidth="xs"
           PaperProps={{
@@ -521,7 +522,9 @@ export const GeneralMap = () => {
               setIsHazardPickerOpen(false);
             }}
           >
-            <span className={`${stls.hazardBtn} ${stls.hazardBtnBlue}`}>🧪</span>
+            <span className={`${stls.hazardBtn} ${stls.hazardBtnBlue}`}>
+              🧪
+            </span>
             <span className={stls.hazardMenuLabel}>Реагенты</span>
           </button>
           <button
@@ -533,7 +536,9 @@ export const GeneralMap = () => {
               setIsHazardPickerOpen(false);
             }}
           >
-            <span className={`${stls.hazardBtn} ${stls.hazardBtnOrange}`}>🎆</span>
+            <span className={`${stls.hazardBtn} ${stls.hazardBtnOrange}`}>
+              🎆
+            </span>
             <span className={stls.hazardMenuLabel}>Салют</span>
           </button>
         </div>
@@ -547,9 +552,11 @@ export const GeneralMap = () => {
           sx: {
             height: "auto",
             maxHeight: "85vh",
+            overflowY: "auto",
+            overscrollBehavior: "contain",
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
-            p: 2,
+            padding: "12px",
             background: "#FFFCF5",
           },
         }}
@@ -570,8 +577,12 @@ export const GeneralMap = () => {
           sx: {
             height: "auto",
             maxHeight: "85vh",
+            overflowY: "auto",
+            overscrollBehavior: "contain",
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
+            padding: "12px",
+            background: "#FFFCF5",
           },
         }}
       >

@@ -5,10 +5,10 @@ import { AppContext } from "../../shared/context/app-context";
 import type { SibaStatus, ShibaType, ShibaUser } from "../../shared/types";
 import { supabase } from "../../shared/api/supabase-сlient";
 import stls from "../siba/siba.module.sass";
-import { CommunityBadge, LayoutPage, ProgressBar } from "../../shared/ui";
+import { ProgressBar } from "../../shared/ui";
+import { PeopleListOverlay } from "../../shared/ui/people-list-overlay";
 import { IconCafe, IconGroomer, IconPark, IconPeople, IconTg, IconRight } from "../../shared/icons";
 import { Button } from "../../shared/ui";
-import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import Skeleton from "@mui/material/Skeleton";
 import {
   getAchievementPercent,
@@ -35,7 +35,6 @@ const statusClassSuffix: Record<SibaStatus, string> = {
 export const Siba = ({ id }: SibaProps) => {
   const { sibaIns, authUserId } = useContext(AppContext);
   const queryClient = useQueryClient();
-  const isMobile = useMediaQuery("(max-width:600px)");
 
   const siba = sibaIns.find((el: ShibaType) => el.id == id);
   const status = siba ? getSibaStatus(siba) : null;
@@ -217,40 +216,19 @@ export const Siba = ({ id }: SibaProps) => {
 
   if (isSibaLoading) {
     return (
-      <LayoutPage>
-        <div className={stls.profileContainer}>
-          <Skeleton variant="rounded" width={96} height={96} />
-          <Skeleton variant="text" width={180} height={48} />
-          <Skeleton variant="rounded" width="100%" height={96} />
-          <Skeleton variant="rounded" width="100%" height={180} />
-        </div>
-      </LayoutPage>
+      <div className={stls.profileContainer}>
+        <Skeleton variant="rounded" width={96} height={96} />
+        <Skeleton variant="text" width={180} height={48} />
+        <Skeleton variant="rounded" width="100%" height={96} />
+        <Skeleton variant="rounded" width="100%" height={180} />
+      </div>
     );
   }
 
-  const peopleListContent = (
-    <div className={stls.peopleSheet}>
-      <h3 className={stls.peopleSheetTitle}>{listTitle}</h3>
-      <div className={stls.peopleList}>
-        {listData.map((item) => (
-          <div key={item.id} className={stls.peopleRow}>
-            <img
-              src={item.photos ?? `/${item.siba_icon}.png`}
-              alt={item.siba_name}
-              className={stls.peopleAvatar}
-            />
-            <span>{item.siba_name}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
-    <LayoutPage>
-      <>
-        <div className={stls.profileContainer}>
-          <div className={stls.sibaInfoContainer}>
+    <>
+      <div className={stls.profileContainer}>
+        <div className={stls.sibaInfoContainer}>
             <div
               className={cn(
                 stls.avatarFrame,
@@ -267,139 +245,150 @@ export const Siba = ({ id }: SibaProps) => {
                 alt="Сиба"
               />
             </div>
-            <h1 className={stls.sibaName}>{siba?.siba_name}</h1>
-            <CommunityBadge
-              title={siba?.community_title}
-              avatarUrl={siba?.community_avatar_url}
-              tgLink={siba?.community_tg_link}
-            />
-            {status && (
-              <span className={cn(stls.statusCapsule, statusCapsuleToneClass)}>
-                <span className={cn(stls.statusDot, statusDotToneClass)} />
-                {SHIBA_STATUSES.find((s) => s.id === status)?.label}
-              </span>
-            )}
-            {academyRank && (
-              <>
-                <div className={stls.rankUnderAvatar}>
-                  {academyRank.icon} {academyRank.rank}
-                </div>
-                <div className={stls.rankQuoteUnderAvatar}>{academyRank.bossQuote}</div>
-              </>
-            )}
-            <div className={stls.statsRow}>
-              <span className={stls.mutedText}>
-                {siba?.siba_gender === "male" ? "Мальчик" : "Девочка"}
-              </span>
-              <span className={stls.mutedText}>level: {siba?.level ?? 0}</span>
-            </div>
-            <div className={stls.statsRow}>
-              <span
-                className={stls.statsClickable}
-                onClick={() => setListMode("followings")}
-              >
-                Подписки: {followingsCountQuery.data ?? 0}
-              </span>{" "}
-              <span
-                className={stls.statsClickable}
-                onClick={() => setListMode("followers")}
-              >
-                Подписчики: {followersCountQuery.data ?? 0}
-              </span>
-            </div>
-          </div>
-          <div className={stls.ownerCard}>
-            <div className={stls.ownerMain}>
-              <IconPeople /> {sibaUser?.nickname}
-            </div>
-            <div className={stls.ownerInfo}>
-              <IconTg />
-              {sibaUser?.is_show_tgname ? sibaUser?.tgname : "Информация скрыта"}
-            </div>
-            {canSubscribe && !isSubscribedQuery.data && (
-              <Button
-                size="medium"
-                iconRight={<IconRight />}
-                onClick={handleSubscribe}
-                disabled={isSubscribing || Boolean(isSubscribedQuery.data)}
-                loading={isSubscribing || isSubscribedQuery.isLoading}
-              >
-                Подписаться
-              </Button>
-            )}
-          </div>
-          <KennelSection siba={siba} authUserId={authUserId ?? undefined} editable={false} />
-          <div className={stls.achievements}>
-            {knownCommands.length > 0 && (
-              <div className={stls.commandsSection}>
-                <div className={stls.sectionTitle}>Знает команды</div>
-                <div className={stls.commandsGrid}>
-                  {knownCommands.map((skill) => (
-                    <div key={skill.id} className={stls.commandCard}>
-                      <span className={stls.commandIcon}>{skill.icon}</span>
-                      <span className={stls.commandName}>{skill.name}</span>
+            <div className={stls.characterCard}>
+              <div className={stls.titleRow}>
+                <div className={stls.nameBlock}>
+                  <div className={stls.identityRow}>
+                    <h1 className={stls.sibaName}>{siba?.siba_name ?? ""}</h1>
+                    <span className={stls.genderBadge}>
+                      {siba?.siba_gender === "male" ? "♂" : "♀"}
+                    </span>
+                  </div>
+                  {status && (
+                    <span className={cn(stls.statusCapsule, statusCapsuleToneClass)}>
+                      <span className={cn(stls.statusDot, statusDotToneClass)} />
+                      {SHIBA_STATUSES.find((item) => item.id === status)?.label}
+                    </span>
+                  )}
+                  <div className={stls.communityPanel}>
+                    <div className={stls.communityPanelTop}>
+                      <span className={stls.communityPanelLabel}>Состоит в чате</span>
                     </div>
-                  ))}
+                    {siba?.community_title ? (
+                      <a
+                        className={stls.communityPanelTitle}
+                        href={siba?.community_tg_link ?? undefined}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {siba.community_title}
+                      </a>
+                    ) : (
+                      <div className={stls.communityPanelEmpty}>
+                        Пока не состоит ни в одной стае
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
-            <div className={stls.sectionTitle}>Достижения</div>
-            <div className={stls.progressContainer}>
-              <div className={stls.progressTitle}>
-                <IconCafe />
-                <p>Кафе</p>
+              <div className={stls.profileStatsSection}>
+                <div className={stls.profileStatsGrid}>
+                  <div className={stls.profileStatCell}>
+                    <span className={stls.profileStatLabel}>⭐ Level</span>
+                    <span className={stls.profileStatValue}>{siba?.level ?? 0}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`${stls.profileStatCell} ${stls.profileStatButton}`}
+                    onClick={() => setListMode("followings")}
+                  >
+                    <span className={stls.profileStatLabel}>Подписки</span>
+                    <span className={stls.profileStatValue}>
+                      {followingsCountQuery.data ?? 0}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${stls.profileStatCell} ${stls.profileStatButton}`}
+                    onClick={() => setListMode("followers")}
+                  >
+                    <span className={stls.profileStatLabel}>Подписчики</span>
+                    <span className={stls.profileStatValue}>
+                      {followersCountQuery.data ?? 0}
+                    </span>
+                  </button>
+                </div>
               </div>
-              <ProgressBar value={siba?.cafe ?? 0} color="#7A7B7B" />
-              <span>{getAchievementPercent(siba?.cafe ?? 0)}%</span>
+              {academyRank && (
+                <div className={stls.roleLoreSection}>
+                  <div className={stls.roleLoreCard}>
+                    <div className={stls.roleLoreTitle}>
+                      {academyRank.icon} {academyRank.rank}
+                    </div>
+                    <div className={stls.roleLoreQuote}>{academyRank.bossQuote}</div>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className={stls.progressContainer}>
-              <div className={stls.progressTitle}>
-                <IconPark />
-                <p>Парки </p>
-              </div>{" "}
-              <ProgressBar value={siba?.park ?? 0} color="#2BB26E" />
-              <span>{getAchievementPercent(siba?.park ?? 0)}%</span>
-            </div>
-            <div className={stls.progressContainer}>
-              <div className={stls.progressTitle}>
-                <IconGroomer />
-                <p>Грумер </p>
+        </div>
+        <div className={stls.ownerCard}>
+          <div className={stls.ownerMain}>
+            <IconPeople /> {sibaUser?.nickname}
+          </div>
+          <div className={stls.ownerInfo}>
+            <IconTg />
+            {sibaUser?.is_show_tgname ? sibaUser?.tgname : "Информация скрыта"}
+          </div>
+          {canSubscribe && !isSubscribedQuery.data && (
+            <Button
+              size="medium"
+              iconRight={<IconRight />}
+              onClick={handleSubscribe}
+              disabled={isSubscribing || Boolean(isSubscribedQuery.data)}
+              loading={isSubscribing || isSubscribedQuery.isLoading}
+            >
+              Подписаться
+            </Button>
+          )}
+        </div>
+        <KennelSection siba={siba} authUserId={authUserId ?? undefined} editable={false} />
+        <div className={stls.achievements}>
+          {knownCommands.length > 0 && (
+            <div className={stls.commandsSection}>
+              <div className={stls.sectionTitle}>Знает команды</div>
+              <div className={stls.commandsGrid}>
+                {knownCommands.map((skill) => (
+                  <div key={skill.id} className={stls.commandCard}>
+                    <span className={stls.commandIcon}>{skill.icon}</span>
+                    <span className={stls.commandName}>{skill.name}</span>
+                  </div>
+                ))}
               </div>
-              <ProgressBar value={siba?.groomer ?? 0} color="#333944" />
-              <span>{getAchievementPercent(siba?.groomer ?? 0)}%</span>
             </div>
+          )}
+          <div className={stls.sectionTitle}>Достижения</div>
+          <div className={stls.progressContainer}>
+            <div className={stls.progressTitle}>
+              <IconCafe />
+              <p>Кафе</p>
+            </div>
+            <ProgressBar value={siba?.cafe ?? 0} color="#7A7B7B" />
+            <span>{getAchievementPercent(siba?.cafe ?? 0)}%</span>
+          </div>
+          <div className={stls.progressContainer}>
+            <div className={stls.progressTitle}>
+              <IconPark />
+              <p>Парки </p>
+            </div>
+            <ProgressBar value={siba?.park ?? 0} color="#2BB26E" />
+            <span>{getAchievementPercent(siba?.park ?? 0)}%</span>
+          </div>
+          <div className={stls.progressContainer}>
+            <div className={stls.progressTitle}>
+              <IconGroomer />
+              <p>Грумер </p>
+            </div>
+            <ProgressBar value={siba?.groomer ?? 0} color="#333944" />
+            <span>{getAchievementPercent(siba?.groomer ?? 0)}%</span>
           </div>
         </div>
-        {isMobile ? (
-          <SwipeableDrawer
-            anchor="bottom"
-            open={Boolean(listMode)}
-            onOpen={() => {}}
-            onClose={() => setListMode(null)}
-            PaperProps={{
-              sx: {
-                height: "auto",
-                maxHeight: "85vh",
-                borderTopLeftRadius: 16,
-                borderTopRightRadius: 16,
-              },
-              className: stls.peopleOverlayPaper,
-            }}
-          >
-            {peopleListContent}
-          </SwipeableDrawer>
-        ) : (
-          <Dialog
-            open={Boolean(listMode)}
-            onClose={() => setListMode(null)}
-            fullWidth
-            maxWidth="xs"
-            PaperProps={{ className: stls.peopleOverlayPaper }}
-          >
-            {peopleListContent}
-          </Dialog>
-        )}
-      </>
-    </LayoutPage>
+      </div>
+      <PeopleListOverlay
+        open={Boolean(listMode)}
+        title={listTitle}
+        items={listData}
+        onClose={() => setListMode(null)}
+      />
+    </>
   );
 };

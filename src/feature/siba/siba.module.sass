@@ -10,7 +10,7 @@
 .sibaInfoContainer
     display: flex
     flex-direction: column
-    gap: 8px
+    gap: 14px
     align-items: center
     width: 100%
 
@@ -58,8 +58,154 @@
     border-radius: 12px
 
 .sibaName
-    font-size: 64px
+    font-size: 42px
     margin: 0
+    line-height: 1
+    text-align: center
+
+.sibaNameBadge
+    justify-content: center
+
+.characterCard
+    width: 100%
+    display: flex
+    flex-direction: column
+    gap: 16px
+    position: relative
+    overflow: hidden
+
+.titleRow
+    display: flex
+    align-items: center
+    justify-content: center
+    gap: 12px
+    width: 100%
+
+.nameBlock
+    display: flex
+    flex-direction: column
+    align-items: center
+    gap: 12px
+    width: 100%
+
+.identityRow
+    display: flex
+    align-items: center
+    justify-content: center
+    gap: 10px
+    flex-wrap: wrap
+
+.genderBadge
+    color: #5C5B55
+    font-size: 13px
+    font-weight: 700
+
+.communityPanel
+    width: -webkit-fill-available
+    display: flex
+    flex-direction: column
+    gap: 8px
+    padding: 14px
+    border-radius: 20px
+    background: rgba(255, 252, 245, 0.78)
+    border: 1px solid #E7E1D2
+
+.communityPanelTop
+    display: flex
+    align-items: center
+    justify-content: space-between
+    gap: 12px
+
+.communityPanelLabel
+    font-size: 12px
+    color: #74736E
+    text-transform: uppercase
+    letter-spacing: 0.04em
+
+.communityPanelTitle
+    font-size: 20px
+    line-height: 1.2
+    font-weight: 800
+    color: #333944
+    text-decoration: none
+
+.communityPanelEmpty
+    font-size: 14px
+    color: #74736E
+
+.profileStatsSection
+    display: flex
+    flex-direction: column
+    gap: 10px
+    width: 100%
+
+.profileStatsGrid
+    display: grid
+    grid-template-columns: repeat(3, minmax(0, 1fr))
+    gap: 12px
+    width: 100%
+
+.profileStatCell
+    display: flex
+    flex-direction: column
+    align-items: center
+    justify-content: center
+    gap: 6px
+    min-height: 40px
+    padding: 8px 4px
+    border-radius: 18px
+    background: linear-gradient(180deg, rgba(255, 252, 245, 0.98) 0%, rgba(248, 244, 236, 0.94) 100%)
+    border: 1px solid #E7E1D2
+    text-align: center
+    box-shadow: 0 8px 18px rgba(103, 100, 94, 0.05)
+
+.profileStatButton
+    appearance: none
+    cursor: pointer
+    width: 100%
+    font: inherit
+    color: inherit
+
+.profileStatLabel
+    font-size: 12px
+    color: #74736E
+
+.profileStatValue
+    font-size: 24px
+    line-height: 1
+    font-weight: 800
+    color: #333944
+
+.roleLoreSection
+    display: flex
+    flex-direction: column
+    gap: 10px
+
+.roleLoreCard
+    display: flex
+    flex-direction: column
+    gap: 10px
+    padding: 16px
+    border-radius: 22px
+    background: rgba(255, 252, 245, 0.96)
+    border: 1px solid rgba(233, 91, 71, 0.16)
+    box-shadow: 0 12px 24px rgba(233, 91, 71, 0.06)
+
+.roleLoreTitle
+    text-align: center
+    font-size: 24px
+    line-height: 1.2
+    font-weight: 800
+    color: #E95B47
+
+.roleLoreQuote
+    padding: 14px 16px
+    border-radius: 18px
+    background: rgba(244, 240, 232, 0.95)
+    color: #5C5B55
+    font-size: 15px
+    line-height: 1.45
+    text-align: center
 
 .statusCapsule
     display: inline-flex
@@ -101,27 +247,6 @@
     100%
         box-shadow: 0 0 0 0 rgba(74, 222, 128, 0)
 
-.rankUnderAvatar
-    margin-top: 4px
-    font-size: 14px
-    color: #333944
-    font-weight: 700
-    text-align: center
-
-.rankQuoteUnderAvatar
-    margin-top: 2px
-    font-size: 12px
-    color: #65635E
-    text-align: center
-
-.statsRow
-    display: flex
-    justify-content: space-around
-    width: 100%
-
-.statsClickable
-    cursor: pointer
-
 .statusRow
     display: flex
     align-items: center
@@ -152,9 +277,6 @@
 
 .statusDotBoysOnly
     background: #2BB26E
-
-.mutedText
-    color: #74736E
 
 .ownerCard
     display: flex
@@ -230,34 +352,6 @@
     white-space: nowrap
     overflow: hidden
     text-overflow: ellipsis
-
-.peopleOverlayPaper
-    border-radius: 18px !important
-
-.peopleSheet
-    padding: 14px
-    background: rgba(255, 252, 245, 0.98)
-
-.peopleSheetTitle
-    margin: 0 0 10px
-    color: #333944
-
-.peopleList
-    display: flex
-    flex-direction: column
-    gap: 8px
-
-.peopleRow
-    display: flex
-    align-items: center
-    gap: 8px
-    padding: 8px 0
-
-.peopleAvatar
-    width: 28px
-    height: 28px
-    border-radius: 14px
-    object-fit: cover
 
 .progressTitle
     display: flex

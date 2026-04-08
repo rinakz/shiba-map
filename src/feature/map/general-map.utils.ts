@@ -1,7 +1,7 @@
 import { supabase } from "../../shared/api/supabase-сlient";
 import { SIBA_PHOTOS_BUCKET } from "../../shared/constants/storage";
 import type { ShibaType } from "../../shared/types";
-import type { Place, PlaceKind, PlaceVisit } from "./place-types";
+import type { Place, PlaceKind, PlaceRatingSummary, PlaceVisit } from "./place-types";
 import type { ChangeEvent } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import React from "react";
@@ -611,4 +611,73 @@ export const fetchPlaceVisits = async (
       siba_photo: byId.get(v.siba_id)?.photos,
     } as PlaceVisit;
   });
+};
+
+export const fetchPlaceRatingSummary = async (
+  kind: PlaceKind,
+  placeId: string,
+  authUserId: string | null,
+): Promise<PlaceRatingSummary> => {
+  const { data, error } = await supabase
+    .from("place_ratings")
+    .select("user_id,rating")
+    .eq("place_kind", kind)
+    .eq("place_id", placeId);
+
+  if (error) {
+    // Ratings are optional until the SQL migration with `place_ratings` is applied.
+    if (error.code === "42P01" || error.message.includes("place_ratings")) {
+      return {
+        average: null,
+        total: 0,
+        myRating: null,
+      };
+    }
+    throw error;
+  }
+
+  const rows = (data ?? []) as Array<{ user_id: string; rating: number }>;
+  const total = rows.length;
+  const average =
+    total > 0
+      ? rows.reduce((sum, row) => sum + Number(row.rating || 0), 0) / total
+      : null;
+  const myRating =
+    authUserId
+      ? rows.find((row) => row.user_id === authUserId)?.rating ?? null
+      : null;
+
+  return {
+    average,
+    total,
+    myRating,
+  };
+};
+
+export const savePlaceRating = async (
+  kind: PlaceKind,
+  placeId: string,
+  authUserId: string,
+  rating: number,
+) => {
+  const { error } = await supabase.from("place_ratings").upsert(
+    [
+      {
+        place_kind: kind,
+        place_id: placeId,
+        user_id: authUserId,
+        rating,
+      },
+    ],
+    { onConflict: "place_kind,place_id,user_id" },
+  );
+
+  if (error) {
+    if (error.code === "42P01" || error.message.includes("place_ratings")) {
+      throw new Error(
+        "Рейтинги ещё не включены в базе. Нужно применить обновлённый `supabase/sql/places.sql`.",
+      );
+    }
+    throw error;
+  }
 };

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import Skeleton from "@mui/material/Skeleton";
+import { Siba } from "../../feature/siba/siba";
 import stls from "./event-calendar.module.sass";
 import { supabase } from "../api/supabase-сlient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -48,6 +49,7 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
   >({});
   const [togglingEventId, setTogglingEventId] = useState<string | null>(null);
   const [participantsEventId, setParticipantsEventId] = useState<string | null>(null);
+  const [selectedSibaId, setSelectedSibaId] = useState<string | null>(null);
 
   const from = monthStart(currentMonth);
   const to = monthEnd(currentMonth);
@@ -67,42 +69,59 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
     },
   });
 
+  const eventIds = useMemo(
+    () => (eventsQuery.data ?? []).map((event) => event.id),
+    [eventsQuery.data],
+  );
+
   const participantsQuery = useQuery<ParticipantRow[]>({
-    queryKey: ["walk-event-participants", from.toISOString(), to.toISOString()],
-    enabled: open,
+    queryKey: [
+      "walk-event-participants",
+      from.toISOString(),
+      to.toISOString(),
+      eventIds.join(","),
+    ],
+    enabled: open && eventIds.length > 0,
     queryFn: async () => {
-      const ids = (eventsQuery.data ?? []).map((e) => e.id);
-      if (!ids.length) return [];
       const { data, error } = await supabase
         .from("walk_event_participants")
         .select("event_id,user_id")
-        .in("event_id", ids);
+        .in("event_id", eventIds);
       if (error) return [];
       return (data ?? []) as ParticipantRow[];
     },
   });
 
-  const sibaByUserQuery = useQuery<Map<string, SibaMini>>({
-    queryKey: ["walk-events-sibas", from.toISOString(), to.toISOString()],
-    enabled: open,
-    queryFn: async () => {
-      const userIds = Array.from(
+  const sibaUserIds = useMemo(
+    () =>
+      Array.from(
         new Set([
-          ...(eventsQuery.data ?? []).map((e) => e.organizer_user_id),
-          ...(participantsQuery.data ?? []).map((p) => p.user_id),
+          ...(eventsQuery.data ?? []).map((event) => event.organizer_user_id),
+          ...(participantsQuery.data ?? []).map((participant) => participant.user_id),
         ]),
-      );
-      return fetchSibaByUserMap(userIds);
-    },
+      ),
+    [eventsQuery.data, participantsQuery.data],
+  );
+
+  const sibaByUserQuery = useQuery<Map<string, SibaMini>>({
+    queryKey: [
+      "walk-events-sibas",
+      from.toISOString(),
+      to.toISOString(),
+      sibaUserIds.join(","),
+    ],
+    enabled: open && sibaUserIds.length > 0,
+    queryFn: () => fetchSibaByUserMap(sibaUserIds),
   });
 
   const events = eventsQuery.data ?? [];
   const participants = participantsQuery.data ?? [];
   const sibaByUser = sibaByUserQuery.data ?? new globalThis.Map<string, SibaMini>();
-  const isCalendarLoading =
+  const isEventsLoading = eventsQuery.isLoading;
+  const isParticipantsLoading =
     eventsQuery.isLoading ||
     participantsQuery.isLoading ||
-    sibaByUserQuery.isLoading;
+    (sibaUserIds.length > 0 && sibaByUserQuery.isLoading);
 
   const daysWithEvents = useMemo(() => {
     const keys = new Set<string>();
@@ -202,6 +221,8 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
     setDateTime("");
     setDescription("");
     await queryClient.invalidateQueries({ queryKey: ["walk-events"] });
+    await queryClient.invalidateQueries({ queryKey: ["walk-event-participants"] });
+    await queryClient.invalidateQueries({ queryKey: ["walk-events-sibas"] });
   };
 
   const handleToggleGoing = async (eventId: string) => {
@@ -222,6 +243,7 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
           .insert([{ event_id: eventId, user_id: authUserId }]);
       }
       await queryClient.invalidateQueries({ queryKey: ["walk-event-participants"] });
+      await queryClient.invalidateQueries({ queryKey: ["walk-events-sibas"] });
     } finally {
       setTogglingEventId(null);
     }
@@ -249,7 +271,8 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
 
       <EventCalendarActions
         selectedEvents={selectedEvents}
-        isCalendarLoading={isCalendarLoading}
+        isEventsLoading={isEventsLoading}
+        isParticipantsLoading={isParticipantsLoading}
         sibaByUser={sibaByUser}
         participants={participants}
         authUserId={authUserId}
@@ -291,20 +314,28 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
       <h3 className={stls.participantsTitle}>
         Участники {participantsEvent ? `— ${participantsEvent.title}` : ""}
       </h3>
-      {isCalendarLoading ? (
+      {isParticipantsLoading ? (
         <>
           <Skeleton variant="rounded" height={48} sx={{ mb: 1 }} />
           <Skeleton variant="rounded" height={48} />
         </>
       ) : participantsList.length ? (
         participantsList.map((s) => (
-          <div key={`list-${s.siba_user_id}`} className={stls.participantItem}>
+          <button
+            key={`list-${s.siba_user_id}`}
+            type="button"
+            className={stls.participantItem}
+            onClick={() => {
+              setParticipantsEventId(null);
+              setSelectedSibaId(s.id);
+            }}
+          >
             <img
               className={stls.participantAvatar}
               src={s.photos ?? `/${s.siba_icon}.png`}
               alt={s.siba_name}
             />
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div className={stls.participantMeta}>
               <span>{s.siba_name}</span>
               <CommunityBadge
                 title={s.community_title}
@@ -312,7 +343,7 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
                 tgLink={s.community_tg_link}
               />
             </div>
-          </div>
+          </button>
         ))
       ) : (
         <div className={stls.eventMeta}>Пока участников нет</div>
@@ -331,8 +362,10 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
           sx: {
             height: "auto",
             maxHeight: "90vh",
+            overflowY: "auto",
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
+            padding: "12px",
           },
         }}
       >
@@ -347,12 +380,33 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
           sx: {
             height: "auto",
             maxHeight: "85vh",
+            overflowY: "auto",
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
+            padding: "12px",
           },
         }}
       >
         {participantsContent}
+      </SwipeableDrawer>
+      <SwipeableDrawer
+        anchor="bottom"
+        open={Boolean(selectedSibaId)}
+        onOpen={() => {}}
+        onClose={() => setSelectedSibaId(null)}
+        PaperProps={{
+          sx: {
+            height: "auto",
+            maxHeight: "90dvh",
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            padding: "12px",
+          },
+        }}
+      >
+        {selectedSibaId && <Siba id={selectedSibaId} />}
       </SwipeableDrawer>
     </>
   ) : (
@@ -362,7 +416,7 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
         onClose={onClose}
         fullWidth
         maxWidth="md"
-        PaperProps={{ sx: { borderRadius: 2 } }}
+        PaperProps={{ sx: { borderRadius: 2, padding: "12px" } }}
       >
         {content}
       </Dialog>
@@ -371,9 +425,25 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
         onClose={() => setParticipantsEventId(null)}
         fullWidth
         maxWidth="xs"
-        PaperProps={{ sx: { borderRadius: 2 } }}
+        PaperProps={{ sx: { borderRadius: 2, padding: "12px" } }}
       >
         {participantsContent}
+      </Dialog>
+      <Dialog
+        open={Boolean(selectedSibaId)}
+        onClose={() => setSelectedSibaId(null)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: "90dvh",
+            overflowY: "auto",
+            padding: "12px",
+          },
+        }}
+      >
+        {selectedSibaId && <Siba id={selectedSibaId} />}
       </Dialog>
     </>
   );
