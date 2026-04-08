@@ -4,6 +4,7 @@ import {
   clearUserCommunity,
   deleteCommunity,
   saveUserCommunity,
+  updateCommunity,
 } from "../../shared/api/communities";
 import type { Community, ShibaType, ShibaUser } from "../../shared/types";
 import {
@@ -45,6 +46,7 @@ export const useProfileCommunityManager = ({
   const [isSavingCommunity, setIsSavingCommunity] = useState(false);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
   const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
+  const [isEditingCommunity, setIsEditingCommunity] = useState(false);
   const [isCommunityManagerOpen, setIsCommunityManagerOpen] = useState(false);
 
   useEffect(() => {
@@ -57,6 +59,7 @@ export const useProfileCommunityManager = ({
     setCommunityAvatarFile(null);
     setSelectedCommunityId(communityFromQuery?.id ?? null);
     setIsCreatingCommunity(false);
+    setIsEditingCommunity(false);
     setIsCommunityManagerOpen(false);
   }, [communityFromQuery]);
 
@@ -70,6 +73,7 @@ export const useProfileCommunityManager = ({
     setCommunityAvatarFile(null);
     setCommunityAvatarPreviewUrl(null);
     setIsCreatingCommunity(false);
+    setIsEditingCommunity(false);
     setIsCommunityManagerOpen(false);
   };
 
@@ -154,7 +158,15 @@ export const useProfileCommunityManager = ({
       }
 
       let savedCommunity: Community | null = null;
-      if (selectedCommunityId) {
+      if (isEditingCommunity && community?.id) {
+        savedCommunity = await updateCommunity({
+          communityId: community.id,
+          authUserId,
+          title: communityTitleDraft,
+          tgLink: communityLinkDraft,
+          avatarUrl: avatarUrl ?? "",
+        });
+      } else if (selectedCommunityId) {
         const selected = communities.find((item) => item.id === selectedCommunityId);
         if (
           selected &&
@@ -204,6 +216,7 @@ export const useProfileCommunityManager = ({
   const handleToggleCreateMode = () => {
     const nextIsCreating = !isCreatingCommunity;
     setIsCreatingCommunity(nextIsCreating);
+    setIsEditingCommunity(false);
     setSelectedCommunityId(null);
     setCommunitySearchDraft("");
     if (nextIsCreating) {
@@ -217,16 +230,21 @@ export const useProfileCommunityManager = ({
 
   const handleCommunitySearchChange = (value: string) => {
     setCommunitySearchDraft(value);
+    setIsEditingCommunity(false);
     setSelectedCommunityId(null);
   };
 
   const handleCommunityTitleChange = (value: string) => {
-    setSelectedCommunityId(null);
+    if (!isEditingCommunity) {
+      setSelectedCommunityId(null);
+    }
     setCommunityTitleDraft(value);
   };
 
   const handleCommunityLinkChange = (value: string) => {
-    setSelectedCommunityId(null);
+    if (!isEditingCommunity) {
+      setSelectedCommunityId(null);
+    }
     setCommunityLinkDraft(value);
   };
 
@@ -247,6 +265,19 @@ export const useProfileCommunityManager = ({
   const isCommunityCreator =
     Boolean(authUserId && community?.created_by && community.created_by === authUserId);
 
+  const handleStartCommunityEdit = () => {
+    if (!community) return;
+    setIsCreatingCommunity(true);
+    setIsEditingCommunity(true);
+    setSelectedCommunityId(community.id);
+    setCommunitySearchDraft(community.title);
+    setCommunityTitleDraft(community.title);
+    setCommunityLinkDraft(community.tg_link);
+    setCommunityAvatarDraft(community.avatar_url ?? "");
+    setCommunityAvatarFile(null);
+    setCommunityAvatarPreviewUrl(null);
+  };
+
   return {
     community,
     communityTitleDraft,
@@ -258,6 +289,7 @@ export const useProfileCommunityManager = ({
     isSavingCommunity,
     selectedCommunityId,
     isCreatingCommunity,
+    isEditingCommunity,
     isCommunityManagerOpen,
     isCommunityDirty,
     isCommunityCreator,
@@ -267,6 +299,7 @@ export const useProfileCommunityManager = ({
     handleJoinCommunity,
     handleSaveCommunity,
     handleDeleteCommunity,
+    handleStartCommunityEdit,
     handleToggleCreateMode,
     handleCommunitySearchChange,
     handleCommunityTitleChange,

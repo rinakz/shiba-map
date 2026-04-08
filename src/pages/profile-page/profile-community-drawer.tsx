@@ -9,6 +9,7 @@ type ProfileCommunityDrawerProps = {
   communities: Community[];
   searchValue: string;
   isCreateMode: boolean;
+  isEditingMode: boolean;
   isCreator: boolean;
   selectedCommunityId: string | null;
   titleValue: string;
@@ -29,6 +30,7 @@ type ProfileCommunityDrawerProps = {
   onSelectCommunity: (community: Community) => void;
   onJoin: () => void;
   onSaveNew: () => void;
+  onStartEdit: () => void;
   onLeave: () => void;
   onDelete: () => void;
 };
@@ -39,6 +41,7 @@ export const ProfileCommunityDrawer = ({
   communities,
   searchValue,
   isCreateMode,
+  isEditingMode,
   isCreator,
   selectedCommunityId,
   titleValue,
@@ -59,6 +62,7 @@ export const ProfileCommunityDrawer = ({
   onSelectCommunity,
   onJoin,
   onSaveNew,
+  onStartEdit,
   onLeave,
   onDelete,
 }: ProfileCommunityDrawerProps) => {
@@ -82,6 +86,7 @@ export const ProfileCommunityDrawer = ({
           communities={communities}
           searchValue={searchValue}
           isCreateMode={isCreateMode}
+          isEditingMode={isEditingMode}
           isCreator={isCreator}
           selectedCommunityId={selectedCommunityId}
           titleValue={titleValue}
@@ -101,6 +106,7 @@ export const ProfileCommunityDrawer = ({
           onSelectCommunity={onSelectCommunity}
           onJoin={onJoin}
           onSaveNew={onSaveNew}
+          onStartEdit={onStartEdit}
           onLeave={onLeave}
           onDelete={onDelete}
         />

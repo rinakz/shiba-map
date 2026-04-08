@@ -104,6 +104,40 @@ export const saveUserCommunity = async (params: {
   return community as Community;
 };
 
+export const updateCommunity = async (params: {
+  communityId: string;
+  authUserId: string;
+  title: string;
+  tgLink: string;
+  avatarUrl: string;
+}) => {
+  const { communityId, authUserId, title, tgLink, avatarUrl } = params;
+  const normalizedTitle = title.trim();
+  const normalizedLink = normalizeTelegramLink(tgLink);
+  const normalizedAvatar = avatarUrl.trim() || null;
+
+  if (!normalizedTitle || !normalizedLink) {
+    throw new Error("Для сообщества нужны название и ссылка.");
+  }
+
+  const { data: community, error } = await supabase
+    .from("communities")
+    .update({
+      title: normalizedTitle,
+      tg_link: normalizedLink,
+      avatar_url: normalizedAvatar,
+      created_by: authUserId,
+    })
+    .eq("id", communityId)
+    .eq("created_by", authUserId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+
+  return community as Community;
+};
+
 export const assignUserToCommunity = async (params: {
   authUserId: string;
   communityId: string;

@@ -392,33 +392,51 @@ export const uploadCommunityAvatar = async (
   authUserId: string,
   communityAvatarFile: File,
 ) => {
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from(COMMUNITIES_BUCKET)
-    .upload(
-      `avatars/${authUserId}_${Date.now()}_${communityAvatarFile.name}`,
-      communityAvatarFile,
-      {
+  const targetPath = `avatars/${authUserId}/${Date.now()}_${communityAvatarFile.name}`;
+  const bucketsToTry =
+    COMMUNITIES_BUCKET === SIBA_PHOTOS_BUCKET
+      ? [COMMUNITIES_BUCKET]
+      : [COMMUNITIES_BUCKET, SIBA_PHOTOS_BUCKET];
+
+  let lastErrorMessage = "";
+
+  for (const bucket of bucketsToTry) {
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(bucket)
+      .upload(targetPath, communityAvatarFile, {
         contentType: communityAvatarFile.type ?? "image/png",
         upsert: true,
-      },
-    );
-  if (uploadError) {
-    throw new Error(
-      `Не удалось загрузить фото сообщества: ${uploadError.message}`,
-    );
+      });
+
+    if (uploadError) {
+      lastErrorMessage = uploadError.message;
+      const isMissingBucket =
+        uploadError.message.toLowerCase().includes("bucket not found");
+
+      if (isMissingBucket && bucket !== bucketsToTry[bucketsToTry.length - 1]) {
+        continue;
+      }
+
+      throw new Error(`Не удалось загрузить фото сообщества: ${uploadError.message}`);
+    }
+
+    if (!uploadData?.path) {
+      throw new Error("Не удалось получить путь загруженного аватара сообщества.");
+    }
+
+    const { data } = supabase.storage.from(bucket).getPublicUrl(uploadData.path);
+    if (!data?.publicUrl) {
+      throw new Error("Ошибка получения публичного URL аватара сообщества.");
+    }
+
+    return data.publicUrl;
   }
-  if (!uploadData?.path) {
-    throw new Error(
-      "Не удалось получить путь загруженного аватара сообщества.",
-    );
-  }
-  const { data } = supabase.storage
-    .from(COMMUNITIES_BUCKET)
-    .getPublicUrl(uploadData.path);
-  if (!data?.publicUrl) {
-    throw new Error("Ошибка получения публичного URL аватара сообщества.");
-  }
-  return data.publicUrl;
+
+  throw new Error(
+    lastErrorMessage
+      ? `Не удалось загрузить фото сообщества: ${lastErrorMessage}`
+      : "Не удалось загрузить фото сообщества.",
+  );
 };
 
 export const getProfileActionErrorMessage = (

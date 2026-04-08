@@ -8,6 +8,7 @@ type ProfileCommunityBlockProps = {
   communities: Community[];
   searchValue: string;
   isCreateMode: boolean;
+  isEditingMode: boolean;
   isCreator: boolean;
   selectedCommunityId: string | null;
   titleValue: string;
@@ -27,6 +28,7 @@ type ProfileCommunityBlockProps = {
   onSelectCommunity: (community: Community) => void;
   onJoin: () => void;
   onSaveNew: () => void;
+  onStartEdit: () => void;
   onLeave: () => void;
   onDelete: () => void;
 };
@@ -36,6 +38,7 @@ export const ProfileCommunityBlock = ({
   communities,
   searchValue,
   isCreateMode,
+  isEditingMode,
   isCreator,
   selectedCommunityId,
   titleValue,
@@ -55,6 +58,7 @@ export const ProfileCommunityBlock = ({
   onSelectCommunity,
   onJoin,
   onSaveNew,
+  onStartEdit,
   onLeave,
   onDelete,
 }: ProfileCommunityBlockProps) => {
@@ -90,7 +94,12 @@ export const ProfileCommunityBlock = ({
               )}
             </div>
             <div className={stls.communitySelectedMeta}>
-              <div className={stls.communitySelectedTitle}>{community.title}</div>
+              <div className={stls.communitySelectedTitleRow}>
+                <div className={stls.communitySelectedTitle}>{community.title}</div>
+                {isCreator && (
+                  <span className={stls.communityOwnerBadge}>Вы создатель</span>
+                )}
+              </div>
               <div className={stls.communitySelectedLink}>{community.tg_link}</div>
             </div>
           </div>
@@ -102,14 +111,24 @@ export const ProfileCommunityBlock = ({
         </div>
         <div className={stls.communityActions}>
           {isCreator ? (
-            <Button
-              size="medium"
-              variant="secondary"
-              loading={isSaving}
-              onClick={onDelete}
-            >
-              Удалить сообщество
-            </Button>
+            <>
+              <Button
+                size="medium"
+                variant="secondary"
+                loading={isSaving}
+                onClick={onStartEdit}
+              >
+                Редактировать
+              </Button>
+              <Button
+                size="medium"
+                variant="secondary"
+                loading={isSaving}
+                onClick={onDelete}
+              >
+                Удалить сообщество
+              </Button>
+            </>
           ) : (
             <Button
               size="medium"
@@ -246,7 +265,7 @@ export const ProfileCommunityBlock = ({
               disabled={!isDirty}
               onClick={onSaveNew}
             >
-              Сохранить сообщество
+              {isEditingMode ? "Сохранить изменения" : "Сохранить сообщество"}
             </Button>
           </div>
         </>

@@ -94,6 +94,7 @@ export const ProfilePage = () => {
     isSavingCommunity,
     selectedCommunityId,
     isCreatingCommunity,
+    isEditingCommunity,
     isCommunityManagerOpen,
     isCommunityDirty,
     isCommunityCreator,
@@ -103,6 +104,7 @@ export const ProfilePage = () => {
     handleJoinCommunity,
     handleSaveCommunity,
     handleDeleteCommunity,
+    handleStartCommunityEdit,
     handleToggleCreateMode,
     handleCommunitySearchChange,
     handleCommunityTitleChange,
@@ -330,6 +332,7 @@ export const ProfilePage = () => {
           communities={communitiesQuery.data ?? []}
           searchValue={communitySearchDraft}
           isCreateMode={isCreatingCommunity}
+          isEditingMode={isEditingCommunity}
           isCreator={isCommunityCreator}
           selectedCommunityId={selectedCommunityId}
           titleValue={communityTitleDraft}
@@ -350,6 +353,7 @@ export const ProfilePage = () => {
           onSelectCommunity={handleSelectCommunity}
           onJoin={handleJoinCommunity}
           onSaveNew={handleSaveCommunity}
+          onStartEdit={handleStartCommunityEdit}
           onLeave={handleClearCommunity}
           onDelete={handleDeleteCommunity}
         />
