@@ -1,9 +1,11 @@
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { supabase } from "../../shared/api/supabase-сlient";
-import { saveUserCommunity } from "../../shared/api/communities";
-import { COMMUNITIES_BUCKET, SIBA_PHOTOS_BUCKET } from "../../shared/constants/storage";
+import {
+  COMMUNITIES_BUCKET,
+  SIBA_PHOTOS_BUCKET,
+} from "../../shared/constants/storage";
 import { PATH } from "../../shared/constants/path";
-import type { Community, SibaStatus, ShibaType, ShibaUser } from "../../shared/types";
+import type { SibaStatus, ShibaType, ShibaUser } from "../../shared/types";
 
 type SetUser = Dispatch<SetStateAction<Partial<ShibaUser> | undefined>>;
 type SetMySiba = Dispatch<SetStateAction<ShibaType | undefined>>;
@@ -13,7 +15,9 @@ export const profileQueryKeys = {
   allSibas: () => ["sibas"] as const,
 };
 
-export const openFilePicker = (fileInputRef: { current: HTMLInputElement | null }) => {
+export const openFilePicker = (fileInputRef: {
+  current: HTMLInputElement | null;
+}) => {
   fileInputRef.current?.click();
 };
 
@@ -113,7 +117,8 @@ export const fetchHealthAlert = async (sibaId: string) => {
   const leftDays = (date: string | null | undefined, days: number) => {
     if (!date) return -1;
     return Math.ceil(
-      (new Date(`${date}T00:00:00`).getTime() + days * 86400000 - now) / 86400000,
+      (new Date(`${date}T00:00:00`).getTime() + days * 86400000 - now) /
+        86400000,
     );
   };
 
@@ -149,7 +154,7 @@ export const fetchAllSibas = async () => {
 
 export const buildEditDrafts = (
   user: Partial<ShibaUser> | undefined,
-  mySiba: ShibaType | undefined
+  mySiba: ShibaType | undefined,
 ) => ({
   nickname: user?.nickname ?? "",
   tgName: user?.tgname ?? "",
@@ -163,7 +168,7 @@ export const processProfileFileChange = (
   event: ChangeEvent<HTMLInputElement>,
   setError: (value: string | null) => void,
   setPhotoFile: (value: File | null) => void,
-  setPhotoPreviewUrl: (value: string | null) => void
+  setPhotoPreviewUrl: (value: string | null) => void,
 ) => {
   setError(null);
   const file = event.target.files?.[0];
@@ -184,11 +189,20 @@ export const processProfileFileChange = (
   setPhotoPreviewUrl(URL.createObjectURL(file));
 };
 
+const extractErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+};
+
 export const processCommunityAvatarChange = (
   event: ChangeEvent<HTMLInputElement>,
   setError: (value: string | null) => void,
   setCommunityAvatarFile: (value: File | null) => void,
-  setCommunityAvatarPreviewUrl: (value: string | null) => void
+  setCommunityAvatarPreviewUrl: (value: string | null) => void,
 ) => {
   setError(null);
   const file = event.target.files?.[0];
@@ -219,10 +233,6 @@ type SubmitProfileParams = {
   sibaNameDraft: string;
   sibaGenderDraft: string;
   sibaIconDraft: string;
-  communityTitleDraft: string;
-  communityLinkDraft: string;
-  communityAvatarDraft: string;
-  communityAvatarFile: File | null;
   photoFile: File | null;
   setError: (value: string | null) => void;
   setUser: SetUser;
@@ -230,9 +240,6 @@ type SubmitProfileParams = {
   setIsEdit: (value: boolean) => void;
   setPhotoFile: (value: File | null) => void;
   setPhotoPreviewUrl: (value: string | null) => void;
-  setCommunity: (value: Community | null) => void;
-  setCommunityAvatarFile: (value: File | null) => void;
-  setCommunityAvatarPreviewUrl: (value: string | null) => void;
 };
 
 export const submitProfile = async (params: SubmitProfileParams) => {
@@ -246,10 +253,6 @@ export const submitProfile = async (params: SubmitProfileParams) => {
     sibaNameDraft,
     sibaGenderDraft,
     sibaIconDraft,
-    communityTitleDraft,
-    communityLinkDraft,
-    communityAvatarDraft,
-    communityAvatarFile,
     photoFile,
     setError,
     setUser,
@@ -257,13 +260,9 @@ export const submitProfile = async (params: SubmitProfileParams) => {
     setIsEdit,
     setPhotoFile,
     setPhotoPreviewUrl,
-    setCommunity,
-    setCommunityAvatarFile,
-    setCommunityAvatarPreviewUrl,
   } = params;
 
   let uploadedPhotoUrl: string | undefined;
-  let uploadedCommunityAvatarUrl: string | undefined;
   if (photoFile) {
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(SIBA_PHOTOS_BUCKET)
@@ -273,11 +272,11 @@ export const submitProfile = async (params: SubmitProfileParams) => {
         {
           contentType: photoFile.type ?? "image/png",
           upsert: true,
-        }
+        },
       );
 
     if (uploadError) {
-      setError(uploadError.message);
+      setError(`Не удалось загрузить фото профиля: ${uploadError.message}`);
       return;
     }
 
@@ -296,35 +295,6 @@ export const submitProfile = async (params: SubmitProfileParams) => {
     }
 
     uploadedPhotoUrl = data.publicUrl;
-  }
-
-  if (communityAvatarFile) {
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from(COMMUNITIES_BUCKET)
-      .upload(
-        `avatars/${authUserId}_${Date.now()}_${communityAvatarFile.name}`,
-        communityAvatarFile,
-        {
-          contentType: communityAvatarFile.type ?? "image/png",
-          upsert: true,
-        }
-      );
-    if (uploadError) {
-      setError(uploadError.message);
-      return;
-    }
-    if (!uploadData?.path) {
-      setError("Не удалось получить путь загруженного аватара сообщества.");
-      return;
-    }
-    const { data } = supabase.storage
-      .from(COMMUNITIES_BUCKET)
-      .getPublicUrl(uploadData.path);
-    if (!data?.publicUrl) {
-      setError("Ошибка получения публичного URL аватара сообщества.");
-      return;
-    }
-    uploadedCommunityAvatarUrl = data.publicUrl;
   }
 
   const { error: updateUserError } = await supabase
@@ -356,48 +326,68 @@ export const submitProfile = async (params: SubmitProfileParams) => {
     return;
   }
 
-  const savedCommunity = await saveUserCommunity({
-    authUserId,
-    title: communityTitleDraft,
-    tgLink: communityLinkDraft,
-    avatarUrl: uploadedCommunityAvatarUrl ?? communityAvatarDraft,
-  });
-
   setIsEdit(false);
   setPhotoFile(null);
   setPhotoPreviewUrl(null);
-  setCommunityAvatarFile(null);
-  setCommunityAvatarPreviewUrl(null);
   setError(null);
   setUser({
     ...user,
     nickname: nicknameDraft,
     tgname: tgNameDraft,
     is_show_tgname: isShowTgNameDraft,
-    community_id: savedCommunity?.id ?? null,
-    community_title: savedCommunity?.title ?? null,
-    community_avatar_url: savedCommunity?.avatar_url ?? null,
-    community_tg_link: savedCommunity?.tg_link ?? null,
   });
   setMySiba({
     ...mySiba,
     siba_name: sibaNameDraft,
     siba_gender: sibaGenderDraft,
     siba_icon: sibaIconDraft,
-    community_id: savedCommunity?.id ?? null,
-    community_title: savedCommunity?.title ?? null,
-    community_avatar_url: savedCommunity?.avatar_url ?? null,
-    community_tg_link: savedCommunity?.tg_link ?? null,
     ...(uploadedPhotoUrl ? { photos: uploadedPhotoUrl } : {}),
   });
-  setCommunity(savedCommunity);
 };
+
+export const uploadCommunityAvatar = async (
+  authUserId: string,
+  communityAvatarFile: File,
+) => {
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from(COMMUNITIES_BUCKET)
+    .upload(
+      `avatars/${authUserId}_${Date.now()}_${communityAvatarFile.name}`,
+      communityAvatarFile,
+      {
+        contentType: communityAvatarFile.type ?? "image/png",
+        upsert: true,
+      },
+    );
+  if (uploadError) {
+    throw new Error(
+      `Не удалось загрузить фото сообщества: ${uploadError.message}`,
+    );
+  }
+  if (!uploadData?.path) {
+    throw new Error(
+      "Не удалось получить путь загруженного аватара сообщества.",
+    );
+  }
+  const { data } = supabase.storage
+    .from(COMMUNITIES_BUCKET)
+    .getPublicUrl(uploadData.path);
+  if (!data?.publicUrl) {
+    throw new Error("Ошибка получения публичного URL аватара сообщества.");
+  }
+  return data.publicUrl;
+};
+
+export const getProfileActionErrorMessage = (
+  error: unknown,
+  fallback: string,
+) => extractErrorMessage(error, fallback);
 
 export const setSibaStatus = async (
   mySiba: ShibaType,
   nextStatus: SibaStatus | null,
   setError: (value: string | null) => void,
-  setMySiba: SetMySiba
+  setMySiba: SetMySiba,
 ) => {
   const nextValue = nextStatus === "walk";
   const { error: updateError } = await supabase
@@ -416,7 +406,7 @@ export const setSibaStatus = async (
 
 export const deleteAccount = async (
   setError: (value: string | null) => void,
-  navigate: (to: string) => void
+  navigate: (to: string) => void,
 ) => {
   const { error: deleteError } = await supabase.rpc("delete_my_account");
   if (deleteError) {
@@ -429,6 +419,9 @@ export const deleteAccount = async (
 };
 
 export const performSignOut = async (navigate: (to: string) => void) => {
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    throw new Error(`Не удалось выйти: ${error.message}`);
+  }
   navigate(PATH.Login);
 };

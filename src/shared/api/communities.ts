@@ -128,3 +128,8 @@ export const clearUserCommunity = async (authUserId: string) => {
     .eq("user_id", authUserId);
   if (error) throw error;
 };
+
+export const deleteCommunity = async (communityId: string) => {
+  const { error } = await supabase.from("communities").delete().eq("id", communityId);
+  if (error) throw error;
+};

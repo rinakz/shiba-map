@@ -2,7 +2,7 @@ import { useContext, useState } from "react";
 import cn from "classnames";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppContext } from "../../shared/context/app-context";
-import type { ShibaType, ShibaUser } from "../../shared/types";
+import type { SibaStatus, ShibaType, ShibaUser } from "../../shared/types";
 import { supabase } from "../../shared/api/supabase-сlient";
 import stls from "../siba/siba.module.sass";
 import { CommunityBadge, LayoutPage, ProgressBar } from "../../shared/ui";
@@ -16,10 +16,20 @@ import {
   shibaSkills,
 } from "../../pages/profile-page/shiba-academy.data";
 import { KennelSection } from "../../pages/profile-page/kennel-section";
-import { getSibaStatus, getSibaStatusColor, isGreenStatus, SHIBA_STATUSES } from "../../shared/utils/siba-status";
+import { getSibaStatus, isGreenStatus, SHIBA_STATUSES } from "../../shared/utils/siba-status";
 
 type SibaProps = {
   id: string;
+};
+
+const statusClassSuffix: Record<SibaStatus, string> = {
+  walk: "Walk",
+  training: "Training",
+  angry: "Angry",
+  heat: "Heat",
+  sick: "Sick",
+  girls_only: "GirlsOnly",
+  boys_only: "BoysOnly",
 };
 
 export const Siba = ({ id }: SibaProps) => {
@@ -72,7 +82,7 @@ export const Siba = ({ id }: SibaProps) => {
 
   const followersCountQuery = useQuery<number>({
     queryKey: ["user-friends-counts", "followers", siba?.siba_user_id],
-    enabled: Boolean(authUserId && siba?.siba_user_id),
+    enabled: Boolean(siba?.siba_user_id),
     queryFn: async () => {
       const { count, error } = await supabase
         .from("user_friends")
@@ -85,7 +95,7 @@ export const Siba = ({ id }: SibaProps) => {
 
   const followingsCountQuery = useQuery<number>({
     queryKey: ["user-friends-counts", "followings", siba?.siba_user_id],
-    enabled: Boolean(authUserId && siba?.siba_user_id),
+    enabled: Boolean(siba?.siba_user_id),
     queryFn: async () => {
       const { count, error } = await supabase
         .from("user_friends")
@@ -142,6 +152,14 @@ export const Siba = ({ id }: SibaProps) => {
       : listMode === "followings"
       ? (followingsListQuery.data ?? [])
       : [];
+  const statusToneClass = status ? stls[`status${statusClassSuffix[status]}`] : undefined;
+  const statusCapsuleToneClass = status
+    ? stls[`statusCapsule${statusClassSuffix[status]}`]
+    : undefined;
+  const statusDotToneClass = status
+    ? stls[`statusDot${statusClassSuffix[status]}`]
+    : undefined;
+  const listTitle = listMode === "followers" ? "Подписчики" : "Подписки";
 
   const academyProgressQuery = useQuery<{ learned_skill_ids: string[] | null } | null>({
     queryKey: ["siba-academy", siba?.id ?? "none"],
@@ -169,21 +187,19 @@ export const Siba = ({ id }: SibaProps) => {
     if (isSubscribedQuery.data) return;
     try {
       setIsSubscribing(true);
-
-      // Создать связь друзей (в обе стороны): подписка взаимная.
-      await supabase.from("user_friends").upsert(
-        [
-          { user_id: authUserId, friend_user_id: siba.siba_user_id },
-          { user_id: siba.siba_user_id, friend_user_id: authUserId },
-        ],
+      const { error } = await supabase.from("user_friends").upsert(
+        [{ user_id: authUserId, friend_user_id: siba.siba_user_id }],
         { onConflict: "user_id,friend_user_id" },
       );
-      // Счётчики считаем из user_friends, поэтому достаточно инвалидации.
+      if (error) throw error;
       await queryClient.invalidateQueries({
         queryKey: ["user-friends-counts"],
       });
       await queryClient.invalidateQueries({
         queryKey: ["is-subscribed", authUserId, siba?.siba_user_id],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["friends-list"],
       });
     } catch (e) {
       console.error("Subscribe error:", e);
@@ -212,135 +228,148 @@ export const Siba = ({ id }: SibaProps) => {
     );
   }
 
+  const peopleListContent = (
+    <div className={stls.peopleSheet}>
+      <h3 className={stls.peopleSheetTitle}>{listTitle}</h3>
+      <div className={stls.peopleList}>
+        {listData.map((item) => (
+          <div key={item.id} className={stls.peopleRow}>
+            <img
+              src={item.photos ?? `/${item.siba_icon}.png`}
+              alt={item.siba_name}
+              className={stls.peopleAvatar}
+            />
+            <span>{item.siba_name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <LayoutPage>
       <>
         <div className={stls.profileContainer}>
           <div className={stls.sibaInfoContainer}>
-          <div
-            className={cn(stls.avatarFrame, {
-              [stls.wantToWalk]: isGreenStatus(status),
-              [stls.avatarPulse]: isGreenStatus(status),
-            })}
-            style={{
-              borderColor: status ? getSibaStatusColor(status) : "transparent",
-            }}
-          >
-            <img
-              className={stls.avatarImage}
-              src={siba?.photos ?? `/${siba?.siba_icon}.png`}
-              alt="Сиба"
-            />
-          </div>
-          <h1 className={stls.sibaName}>{siba?.siba_name}</h1>
-          <CommunityBadge
-            title={siba?.community_title}
-            avatarUrl={siba?.community_avatar_url}
-            tgLink={siba?.community_tg_link}
-          />
-          {status && (
-            <span
-              className={stls.statusCapsule}
-              style={{ borderColor: getSibaStatusColor(status) }}
+            <div
+              className={cn(
+                stls.avatarFrame,
+                statusToneClass,
+                {
+                  [stls.wantToWalk]: isGreenStatus(status),
+                  [stls.avatarPulse]: isGreenStatus(status),
+                },
+              )}
             >
-              <span
-                className={stls.statusDot}
-                style={{ backgroundColor: getSibaStatusColor(status) }}
+              <img
+                className={stls.avatarImage}
+                src={siba?.photos ?? `/${siba?.siba_icon}.png`}
+                alt="Сиба"
               />
-              {SHIBA_STATUSES.find((s) => s.id === status)?.label}
-            </span>
-          )}
-          {academyRank && (
-            <>
-              <div className={stls.rankUnderAvatar}>
-                {academyRank.icon} {academyRank.rank}
+            </div>
+            <h1 className={stls.sibaName}>{siba?.siba_name}</h1>
+            <CommunityBadge
+              title={siba?.community_title}
+              avatarUrl={siba?.community_avatar_url}
+              tgLink={siba?.community_tg_link}
+            />
+            {status && (
+              <span className={cn(stls.statusCapsule, statusCapsuleToneClass)}>
+                <span className={cn(stls.statusDot, statusDotToneClass)} />
+                {SHIBA_STATUSES.find((s) => s.id === status)?.label}
+              </span>
+            )}
+            {academyRank && (
+              <>
+                <div className={stls.rankUnderAvatar}>
+                  {academyRank.icon} {academyRank.rank}
+                </div>
+                <div className={stls.rankQuoteUnderAvatar}>{academyRank.bossQuote}</div>
+              </>
+            )}
+            <div className={stls.statsRow}>
+              <span className={stls.mutedText}>
+                {siba?.siba_gender === "male" ? "Мальчик" : "Девочка"}
+              </span>
+              <span className={stls.mutedText}>level: {siba?.level ?? 0}</span>
+            </div>
+            <div className={stls.statsRow}>
+              <span
+                className={stls.statsClickable}
+                onClick={() => setListMode("followings")}
+              >
+                Подписки: {followingsCountQuery.data ?? 0}
+              </span>{" "}
+              <span
+                className={stls.statsClickable}
+                onClick={() => setListMode("followers")}
+              >
+                Подписчики: {followersCountQuery.data ?? 0}
+              </span>
+            </div>
+          </div>
+          <div className={stls.ownerCard}>
+            <div className={stls.ownerMain}>
+              <IconPeople /> {sibaUser?.nickname}
+            </div>
+            <div className={stls.ownerInfo}>
+              <IconTg />
+              {sibaUser?.is_show_tgname ? sibaUser?.tgname : "Информация скрыта"}
+            </div>
+            {canSubscribe && !isSubscribedQuery.data && (
+              <Button
+                size="medium"
+                iconRight={<IconRight />}
+                onClick={handleSubscribe}
+                disabled={isSubscribing || Boolean(isSubscribedQuery.data)}
+                loading={isSubscribing || isSubscribedQuery.isLoading}
+              >
+                Подписаться
+              </Button>
+            )}
+          </div>
+          <KennelSection siba={siba} authUserId={authUserId ?? undefined} editable={false} />
+          <div className={stls.achievements}>
+            {knownCommands.length > 0 && (
+              <div className={stls.commandsSection}>
+                <div className={stls.sectionTitle}>Знает команды</div>
+                <div className={stls.commandsGrid}>
+                  {knownCommands.map((skill) => (
+                    <div key={skill.id} className={stls.commandCard}>
+                      <span className={stls.commandIcon}>{skill.icon}</span>
+                      <span className={stls.commandName}>{skill.name}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className={stls.rankQuoteUnderAvatar}>{academyRank.bossQuote}</div>
-            </>
-          )}
-          <div className={stls.statsRow}>
-            <span className={stls.mutedText}>
-              {siba?.siba_gender === "male" ? "Мальчик" : "Девочка"}
-            </span>
-            <span className={stls.mutedText}>level: {siba?.level ?? 0}</span>
-          </div>
-          <div className={stls.statsRow}>
-            <span
-              style={{ cursor: "pointer" }}
-              onClick={() => setListMode("followers")}
-            >
-              Подписки: {followersCountQuery.data ?? 0}
-            </span>{" "}
-            <span
-              style={{ cursor: "pointer" }}
-              onClick={() => setListMode("followings")}
-            >
-              Подписчики: {followingsCountQuery.data ?? 0}
-            </span>
-          </div>
-        </div>
-        <div className={stls.ownerCard}>
-          <div className={stls.ownerMain}>
-            <IconPeople /> {sibaUser?.nickname}
-          </div>
-          <div className={stls.ownerInfo}>
-            <IconTg />
-            {sibaUser?.is_show_tgname ? sibaUser?.tgname : "Информация скрыта"}
-          </div>
-          {canSubscribe && !isSubscribedQuery.data && (
-            <Button
-              size="medium"
-              iconRight={<IconRight />}
-              onClick={handleSubscribe}
-              disabled={isSubscribing || Boolean(isSubscribedQuery.data)}
-              loading={isSubscribing || isSubscribedQuery.isLoading}
-            >
-              Подписаться
-            </Button>
-          )}
-        </div>
-        <KennelSection siba={siba} authUserId={authUserId ?? undefined} editable={false} />
-        <div className={stls.achievements}>
-          {knownCommands.length > 0 && (
-            <div className={stls.commandsSection}>
-              <div className={stls.sectionTitle}>Знает команды</div>
-              <div className={stls.commandsGrid}>
-                {knownCommands.map((skill) => (
-                  <div key={skill.id} className={stls.commandCard}>
-                    <span className={stls.commandIcon}>{skill.icon}</span>
-                    <span className={stls.commandName}>{skill.name}</span>
-                  </div>
-                ))}
+            )}
+            <div className={stls.sectionTitle}>Достижения</div>
+            <div className={stls.progressContainer}>
+              <div className={stls.progressTitle}>
+                <IconCafe />
+                <p>Кафе</p>
               </div>
+              <ProgressBar value={siba?.cafe ?? 0} color="#7A7B7B" />
+              <span>{getAchievementPercent(siba?.cafe ?? 0)}%</span>
             </div>
-          )}
-          <div className={stls.sectionTitle}>Достижения</div>
-          <div className={stls.progressContainer}>
-            <div className={stls.progressTitle}>
-              <IconCafe />
-              <p>Кафе</p>
+            <div className={stls.progressContainer}>
+              <div className={stls.progressTitle}>
+                <IconPark />
+                <p>Парки </p>
+              </div>{" "}
+              <ProgressBar value={siba?.park ?? 0} color="#2BB26E" />
+              <span>{getAchievementPercent(siba?.park ?? 0)}%</span>
             </div>
-            <ProgressBar value={siba?.cafe ?? 0} color="#7A7B7B" />
-            <span>{getAchievementPercent(siba?.cafe ?? 0)}%</span>
-          </div>
-          <div className={stls.progressContainer}>
-            <div className={stls.progressTitle}>
-              <IconPark />
-              <p>Парки </p>
-            </div>{" "}
-            <ProgressBar value={siba?.park ?? 0} color="#2BB26E" />
-            <span>{getAchievementPercent(siba?.park ?? 0)}%</span>
-          </div>
-          <div className={stls.progressContainer}>
-            <div className={stls.progressTitle}>
-              <IconGroomer />
-              <p>Грумер </p>
+            <div className={stls.progressContainer}>
+              <div className={stls.progressTitle}>
+                <IconGroomer />
+                <p>Грумер </p>
+              </div>
+              <ProgressBar value={siba?.groomer ?? 0} color="#333944" />
+              <span>{getAchievementPercent(siba?.groomer ?? 0)}%</span>
             </div>
-            <ProgressBar value={siba?.groomer ?? 0} color="#333944" />
-            <span>{getAchievementPercent(siba?.groomer ?? 0)}%</span>
           </div>
         </div>
-      </div>
         {isMobile ? (
           <SwipeableDrawer
             anchor="bottom"
@@ -354,21 +383,10 @@ export const Siba = ({ id }: SibaProps) => {
                 borderTopLeftRadius: 16,
                 borderTopRightRadius: 16,
               },
+              className: stls.peopleOverlayPaper,
             }}
           >
-            <div style={{ padding: 12 }}>
-              <h3>{listMode === "followers" ? "Подписки" : "Подписчики"}</h3>
-              {listData.map((item) => (
-                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0" }}>
-                  <img
-                    src={item.photos ?? `/${item.siba_icon}.png`}
-                    alt={item.siba_name}
-                    style={{ width: 28, height: 28, borderRadius: 14, objectFit: "cover" }}
-                  />
-                  <span>{item.siba_name}</span>
-                </div>
-              ))}
-            </div>
+            {peopleListContent}
           </SwipeableDrawer>
         ) : (
           <Dialog
@@ -376,21 +394,9 @@ export const Siba = ({ id }: SibaProps) => {
             onClose={() => setListMode(null)}
             fullWidth
             maxWidth="xs"
-            PaperProps={{ sx: { borderRadius: 2 } }}
+            PaperProps={{ className: stls.peopleOverlayPaper }}
           >
-            <div style={{ padding: 12 }}>
-              <h3>{listMode === "followers" ? "Подписки" : "Подписчики"}</h3>
-              {listData.map((item) => (
-                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0" }}>
-                  <img
-                    src={item.photos ?? `/${item.siba_icon}.png`}
-                    alt={item.siba_name}
-                    style={{ width: 28, height: 28, borderRadius: 14, objectFit: "cover" }}
-                  />
-                  <span>{item.siba_name}</span>
-                </div>
-              ))}
-            </div>
+            {peopleListContent}
           </Dialog>
         )}
       </>

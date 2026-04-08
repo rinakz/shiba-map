@@ -1,7 +1,7 @@
 import {
   Routes as MainRouter,
   Route,
-  BrowserRouter,
+  HashRouter,
   Navigate,
 } from "react-router-dom";
 import { PATH } from "../shared/constants/path";
@@ -19,7 +19,7 @@ export const Routes: FC = () => {
   if (isAuthLoading) return null;
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Header />
       <main>
         <MainRouter>
@@ -92,6 +92,6 @@ export const Routes: FC = () => {
           />
         </MainRouter>
       </main>
-    </BrowserRouter>
+    </HashRouter>
   );
 };

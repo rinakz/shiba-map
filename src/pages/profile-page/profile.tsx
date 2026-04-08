@@ -7,7 +7,14 @@ import {
 } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Skeleton from "@mui/material/Skeleton";
-import { clearUserCommunity, fetchUserCommunity } from "../../shared/api/communities";
+import {
+  assignUserToCommunity,
+  clearUserCommunity,
+  deleteCommunity,
+  fetchAllCommunities,
+  fetchUserCommunity,
+  saveUserCommunity,
+} from "../../shared/api/communities";
 import { AppContext } from "../../shared/context/app-context";
 import stls from "./profile.module.sass";
 import { Button, LayoutPage } from "../../shared/ui";
@@ -33,14 +40,16 @@ import {
   processCommunityAvatarChange,
   processProfileFileChange,
   submitProfile,
+  uploadCommunityAvatar,
+  getProfileActionErrorMessage,
 } from "./profile.utils";
 import { PATH } from "../../shared/constants/path";
 import { getSibaStatus } from "../../shared/utils/siba-status";
 import { ProfileHeaderCard } from "./profile-header-card";
 import { ProfileOwnerCard } from "./profile-owner-card";
-import { ProfileCommunityPreview } from "./profile-community-preview";
 import { ProfileEditForm } from "./profile-edit-form";
 import { ProfileDeleteDrawer } from "./profile-delete-drawer";
+import { ProfileCommunityBlock } from "./profile-community-block";
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
@@ -67,10 +76,14 @@ export const ProfilePage = () => {
   const [isPromoRevealed, setIsPromoRevealed] = useState(false);
   const [communityTitleDraft, setCommunityTitleDraft] = useState("");
   const [communityLinkDraft, setCommunityLinkDraft] = useState("");
+  const [communitySearchDraft, setCommunitySearchDraft] = useState("");
   const [communityAvatarDraft, setCommunityAvatarDraft] = useState("");
   const [communityAvatarFile, setCommunityAvatarFile] = useState<File | null>(null);
   const [communityAvatarPreviewUrl, setCommunityAvatarPreviewUrl] = useState<string | null>(null);
   const [community, setCommunity] = useState<import("../../shared/types").Community | null>(null);
+  const [isSavingCommunity, setIsSavingCommunity] = useState(false);
+  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
+  const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
 
   const userQuery = useQuery({
     queryKey: authUserId ? profileQueryKeys.user(authUserId) : ["user", "guest"],
@@ -126,6 +139,11 @@ export const ProfilePage = () => {
     enabled: Boolean(authUserId),
     queryFn: () => fetchUserCommunity(authUserId as string),
   });
+  const communitiesQuery = useQuery({
+    queryKey: ["communities", "all"],
+    enabled: Boolean(authUserId),
+    queryFn: fetchAllCommunities,
+  });
 
   const completedCommandsCount = academyProgressQuery.data?.learned_skill_ids?.length ?? 0;
   const academyRank = getShibaRank(completedCommandsCount).rank;
@@ -148,9 +166,12 @@ export const ProfilePage = () => {
     setCommunity(communityQuery.data ?? null);
     setCommunityTitleDraft(communityQuery.data?.title ?? "");
     setCommunityLinkDraft(communityQuery.data?.tg_link ?? "");
+    setCommunitySearchDraft(communityQuery.data?.title ?? "");
     setCommunityAvatarDraft(communityQuery.data?.avatar_url ?? "");
     setCommunityAvatarPreviewUrl(null);
     setCommunityAvatarFile(null);
+    setSelectedCommunityId(communityQuery.data?.id ?? null);
+    setIsCreatingCommunity(false);
   }, [communityQuery.data]);
 
   useEffect(() => {
@@ -196,10 +217,6 @@ export const ProfilePage = () => {
         sibaNameDraft,
         sibaGenderDraft,
         sibaIconDraft,
-        communityTitleDraft,
-        communityLinkDraft,
-        communityAvatarDraft,
-        communityAvatarFile,
         photoFile,
         setError,
         setUser,
@@ -207,10 +224,9 @@ export const ProfilePage = () => {
         setIsEdit,
         setPhotoFile,
         setPhotoPreviewUrl,
-        setCommunity,
-        setCommunityAvatarFile,
-        setCommunityAvatarPreviewUrl,
       });
+    } catch (error) {
+      setError(getProfileActionErrorMessage(error, "Не удалось сохранить профиль."));
     } finally {
       setIsSavingProfile(false);
     }
@@ -237,11 +253,6 @@ export const ProfilePage = () => {
     setSibaNameDraft(drafts.sibaName);
     setSibaGenderDraft(drafts.sibaGender);
     setSibaIconDraft(drafts.sibaIcon);
-    setCommunityTitleDraft(community?.title ?? "");
-    setCommunityLinkDraft(community?.tg_link ?? "");
-    setCommunityAvatarDraft(community?.avatar_url ?? "");
-    setCommunityAvatarFile(null);
-    setCommunityAvatarPreviewUrl(null);
     setIsEdit(true);
   };
 
@@ -250,6 +261,8 @@ export const ProfilePage = () => {
     setIsSigningOut(true);
     try {
       await performSignOut(navigate);
+    } catch (error) {
+      setError(getProfileActionErrorMessage(error, "Не удалось выйти из профиля."));
     } finally {
       setIsSigningOut(false);
     }
@@ -273,14 +286,223 @@ export const ProfilePage = () => {
 
   const handleClearCommunity = async () => {
     if (!authUserId) return;
-    await clearUserCommunity(authUserId);
-    setCommunity(null);
-    setCommunityTitleDraft("");
-    setCommunityLinkDraft("");
-    setCommunityAvatarDraft("");
+    setIsSavingCommunity(true);
+    try {
+      await clearUserCommunity(authUserId);
+      setCommunity(null);
+      setSelectedCommunityId(null);
+      setCommunityTitleDraft("");
+      setCommunityLinkDraft("");
+      setCommunitySearchDraft("");
+      setCommunityAvatarDraft("");
+      setCommunityAvatarFile(null);
+      setCommunityAvatarPreviewUrl(null);
+      setMySiba((prev) =>
+        prev
+          ? {
+              ...prev,
+              community_id: null,
+              community_title: null,
+              community_avatar_url: null,
+              community_tg_link: null,
+            }
+          : prev,
+      );
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              community_id: null,
+              community_title: null,
+              community_avatar_url: null,
+              community_tg_link: null,
+            }
+          : prev,
+      );
+      setError(null);
+    } catch (error) {
+      setError(getProfileActionErrorMessage(error, "Не удалось удалить сообщество."));
+    } finally {
+      setIsSavingCommunity(false);
+    }
+  };
+
+  const handleSelectCommunity = (nextCommunity: import("../../shared/types").Community) => {
+    setSelectedCommunityId(nextCommunity.id);
+    setCommunitySearchDraft(nextCommunity.title);
+    setCommunityTitleDraft(nextCommunity.title);
+    setCommunityLinkDraft(nextCommunity.tg_link);
+    setCommunityAvatarDraft(nextCommunity.avatar_url ?? "");
     setCommunityAvatarFile(null);
     setCommunityAvatarPreviewUrl(null);
   };
+
+  const handleJoinCommunity = async () => {
+    if (!authUserId || !selectedCommunityId) return;
+    setIsSavingCommunity(true);
+    try {
+      const nextCommunity =
+        (communitiesQuery.data ?? []).find((item) => item.id === selectedCommunityId) ?? null;
+      if (!nextCommunity) {
+        setError("Не удалось найти выбранное сообщество.");
+        return;
+      }
+      await assignUserToCommunity({ authUserId, communityId: selectedCommunityId });
+      setCommunity(nextCommunity);
+      setCommunitySearchDraft(nextCommunity.title);
+      setCommunityTitleDraft(nextCommunity.title);
+      setCommunityLinkDraft(nextCommunity.tg_link);
+      setCommunityAvatarDraft(nextCommunity.avatar_url ?? "");
+      setCommunityAvatarFile(null);
+      setCommunityAvatarPreviewUrl(null);
+      setIsCreatingCommunity(false);
+      setMySiba((prev) =>
+        prev
+          ? {
+              ...prev,
+              community_id: nextCommunity.id,
+              community_title: nextCommunity.title,
+              community_avatar_url: nextCommunity.avatar_url ?? null,
+              community_tg_link: nextCommunity.tg_link,
+            }
+          : prev,
+      );
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              community_id: nextCommunity.id,
+              community_title: nextCommunity.title,
+              community_avatar_url: nextCommunity.avatar_url ?? null,
+              community_tg_link: nextCommunity.tg_link,
+            }
+          : prev,
+      );
+      setError(null);
+    } catch (error) {
+      setError(getProfileActionErrorMessage(error, "Не удалось вступить в сообщество."));
+    } finally {
+      setIsSavingCommunity(false);
+    }
+  };
+
+  const handleSaveCommunity = async () => {
+    if (!authUserId) return;
+    setIsSavingCommunity(true);
+    try {
+      let avatarUrl = communityAvatarDraft;
+      if (communityAvatarFile) {
+        avatarUrl = await uploadCommunityAvatar(authUserId, communityAvatarFile);
+      }
+
+      let savedCommunity = null;
+      if (selectedCommunityId) {
+        const selected = (communitiesQuery.data ?? []).find((item) => item.id === selectedCommunityId);
+        if (selected && selected.title === communityTitleDraft.trim() && selected.tg_link === communityLinkDraft.trim() && !communityAvatarFile) {
+          await assignUserToCommunity({ authUserId, communityId: selected.id });
+          savedCommunity = selected;
+        }
+      }
+
+      if (!savedCommunity) {
+        savedCommunity = await saveUserCommunity({
+          authUserId,
+          title: communityTitleDraft,
+          tgLink: communityLinkDraft,
+          avatarUrl: avatarUrl ?? "",
+        });
+      }
+
+      setCommunity(savedCommunity);
+      setSelectedCommunityId(savedCommunity?.id ?? null);
+      setCommunitySearchDraft(savedCommunity?.title ?? "");
+      setCommunityTitleDraft(savedCommunity?.title ?? "");
+      setCommunityLinkDraft(savedCommunity?.tg_link ?? "");
+      setCommunityAvatarDraft(savedCommunity?.avatar_url ?? "");
+      setCommunityAvatarFile(null);
+      setCommunityAvatarPreviewUrl(null);
+      setIsCreatingCommunity(false);
+      setMySiba((prev) =>
+        prev
+          ? {
+              ...prev,
+              community_id: savedCommunity?.id ?? null,
+              community_title: savedCommunity?.title ?? null,
+              community_avatar_url: savedCommunity?.avatar_url ?? null,
+              community_tg_link: savedCommunity?.tg_link ?? null,
+            }
+          : prev,
+      );
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              community_id: savedCommunity?.id ?? null,
+              community_title: savedCommunity?.title ?? null,
+              community_avatar_url: savedCommunity?.avatar_url ?? null,
+              community_tg_link: savedCommunity?.tg_link ?? null,
+            }
+          : prev,
+      );
+      setError(null);
+    } catch (error) {
+      setError(getProfileActionErrorMessage(error, "Не удалось сохранить сообщество."));
+    } finally {
+      setIsSavingCommunity(false);
+    }
+  };
+
+  const handleDeleteCommunity = async () => {
+    if (!community?.id) return;
+    setIsSavingCommunity(true);
+    try {
+      await deleteCommunity(community.id);
+      setCommunity(null);
+      setSelectedCommunityId(null);
+      setCommunityTitleDraft("");
+      setCommunityLinkDraft("");
+      setCommunitySearchDraft("");
+      setCommunityAvatarDraft("");
+      setCommunityAvatarFile(null);
+      setCommunityAvatarPreviewUrl(null);
+      setIsCreatingCommunity(false);
+      setMySiba((prev) =>
+        prev
+          ? {
+              ...prev,
+              community_id: null,
+              community_title: null,
+              community_avatar_url: null,
+              community_tg_link: null,
+            }
+          : prev,
+      );
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              community_id: null,
+              community_title: null,
+              community_avatar_url: null,
+              community_tg_link: null,
+            }
+          : prev,
+      );
+      setError(null);
+    } catch (error) {
+      setError(getProfileActionErrorMessage(error, "Не удалось удалить сообщество."));
+    } finally {
+      setIsSavingCommunity(false);
+    }
+  };
+
+  const isCommunityDirty =
+    (community?.title ?? "") !== communityTitleDraft.trim() ||
+    (community?.tg_link ?? "") !== communityLinkDraft.trim() ||
+    (community?.avatar_url ?? "") !== communityAvatarDraft ||
+    Boolean(communityAvatarFile);
+  const isCommunityCreator =
+    Boolean(authUserId && community?.created_by && community.created_by === authUserId);
 
   const isProfileLoading =
     userQuery.isLoading ||
@@ -331,41 +553,75 @@ export const ProfilePage = () => {
           isPromoRevealed={isPromoRevealed}
           onPromoClick={handlePromoClick}
         />
-        {!isEdit && (
-          <ProfileCommunityPreview community={community} mySiba={mySiba} />
-        )}
+        <ProfileCommunityBlock
+          community={community}
+          communities={communitiesQuery.data ?? []}
+          searchValue={communitySearchDraft}
+          isCreateMode={isCreatingCommunity}
+          isCreator={isCommunityCreator}
+          selectedCommunityId={selectedCommunityId}
+          titleValue={communityTitleDraft}
+          linkValue={communityLinkDraft}
+          avatarValue={communityAvatarDraft}
+          avatarPreviewUrl={communityAvatarPreviewUrl}
+          hasUploadedAvatar={Boolean(communityAvatarFile)}
+          isSaving={isSavingCommunity}
+          isDirty={isCommunityDirty}
+          communityAvatarInputRef={communityAvatarInputRef}
+          onSearchChange={(value) => {
+            setCommunitySearchDraft(value);
+            setSelectedCommunityId(null);
+          }}
+          onTitleChange={(value) => {
+            setSelectedCommunityId(null);
+            setCommunityTitleDraft(value);
+          }}
+          onLinkChange={(value) => {
+            setSelectedCommunityId(null);
+            setCommunityLinkDraft(value);
+          }}
+          onToggleCreateMode={() => {
+            const nextIsCreating = !isCreatingCommunity;
+            setIsCreatingCommunity(nextIsCreating);
+            setSelectedCommunityId(null);
+            setCommunitySearchDraft("");
+            if (nextIsCreating) {
+              setCommunityTitleDraft("");
+              setCommunityLinkDraft("");
+              setCommunityAvatarDraft("");
+              setCommunityAvatarFile(null);
+              setCommunityAvatarPreviewUrl(null);
+            }
+          }}
+          onOpenAvatarPicker={() => openFilePicker(communityAvatarInputRef)}
+          onAvatarChange={(event) =>
+            processCommunityAvatarChange(
+              event,
+              setError,
+              setCommunityAvatarFile,
+              setCommunityAvatarPreviewUrl,
+            )
+          }
+          onSelectCommunity={handleSelectCommunity}
+          onJoin={handleJoinCommunity}
+          onSaveNew={handleSaveCommunity}
+          onLeave={handleClearCommunity}
+          onDelete={handleDeleteCommunity}
+        />
         {isEdit && (
           <ProfileEditForm
-            authUserId={authUserId}
-            communityAvatarInputRef={communityAvatarInputRef}
             nicknameDraft={nicknameDraft}
             tgNameDraft={tgNameDraft}
             isShowTgNameDraft={isShowTgNameDraft}
             sibaNameDraft={sibaNameDraft}
             sibaGenderDraft={sibaGenderDraft}
             sibaIconDraft={sibaIconDraft}
-            communityTitleDraft={communityTitleDraft}
-            communityLinkDraft={communityLinkDraft}
-            communityAvatarDraft={communityAvatarDraft}
-            communityAvatarPreviewUrl={communityAvatarPreviewUrl}
             onNicknameChange={setNicknameDraft}
             onTgNameChange={setTgNameDraft}
             onShowTgNameChange={setIsShowTgNameDraft}
             onSibaNameChange={setSibaNameDraft}
             onSibaGenderChange={setSibaGenderDraft}
             onSibaIconChange={setSibaIconDraft}
-            onCommunityTitleChange={setCommunityTitleDraft}
-            onCommunityLinkChange={setCommunityLinkDraft}
-            onOpenCommunityAvatarPicker={() => openFilePicker(communityAvatarInputRef)}
-            onCommunityAvatarChange={(event) =>
-              processCommunityAvatarChange(
-                event,
-                setError,
-                setCommunityAvatarFile,
-                setCommunityAvatarPreviewUrl,
-              )
-            }
-            onClearCommunity={handleClearCommunity}
           />
         )}
         <ProfileAchievements mySiba={mySiba} />
