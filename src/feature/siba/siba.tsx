@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import cn from "classnames";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import { AppContext } from "../../shared/context/app-context";
 import type { SibaStatus, ShibaType, ShibaUser } from "../../shared/types";
 import { supabase } from "../../shared/api/supabase-сlient";
@@ -16,6 +17,10 @@ import {
   shibaSkills,
 } from "../../pages/profile-page/shiba-academy.data";
 import { KennelSection } from "../../pages/profile-page/kennel-section";
+import {
+  fetchFollowersList,
+  fetchFollowingsList,
+} from "../../pages/profile-page/profile.utils";
 import { getSibaStatus, isGreenStatus, SHIBA_STATUSES } from "../../shared/utils/siba-status";
 
 type SibaProps = {
@@ -33,6 +38,7 @@ const statusClassSuffix: Record<SibaStatus, string> = {
 };
 
 export const Siba = ({ id }: SibaProps) => {
+  const isMobile = useMediaQuery("(max-width:600px)");
   const { sibaIns, authUserId } = useContext(AppContext);
   const queryClient = useQueryClient();
 
@@ -64,6 +70,7 @@ export const Siba = ({ id }: SibaProps) => {
 
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [listMode, setListMode] = useState<"followers" | "followings" | null>(null);
+  const [selectedNestedSibaId, setSelectedNestedSibaId] = useState<string | null>(null);
 
   const isSubscribedQuery = useQuery<boolean>({
     queryKey: ["is-subscribed", authUserId, siba?.siba_user_id],
@@ -108,41 +115,13 @@ export const Siba = ({ id }: SibaProps) => {
   const followersListQuery = useQuery<ShibaType[]>({
     queryKey: ["friends-list", "followers", siba?.siba_user_id],
     enabled: Boolean(listMode === "followers" && siba?.siba_user_id),
-    queryFn: async () => {
-      const { data: links, error: linksError } = await supabase
-        .from("user_friends")
-        .select("user_id")
-        .eq("friend_user_id", siba!.siba_user_id);
-      if (linksError) throw linksError;
-      const userIds = (links ?? []).map((x: { user_id: string }) => x.user_id);
-      if (!userIds.length) return [];
-      const { data: sibas, error: sibasError } = await supabase
-        .from("sibains")
-        .select("*")
-        .in("siba_user_id", userIds);
-      if (sibasError) throw sibasError;
-      return (sibas ?? []) as ShibaType[];
-    },
+    queryFn: () => fetchFollowersList(siba!.siba_user_id),
   });
 
   const followingsListQuery = useQuery<ShibaType[]>({
     queryKey: ["friends-list", "followings", siba?.siba_user_id],
     enabled: Boolean(listMode === "followings" && siba?.siba_user_id),
-    queryFn: async () => {
-      const { data: links, error: linksError } = await supabase
-        .from("user_friends")
-        .select("friend_user_id")
-        .eq("user_id", siba!.siba_user_id);
-      if (linksError) throw linksError;
-      const userIds = (links ?? []).map((x: { friend_user_id: string }) => x.friend_user_id);
-      if (!userIds.length) return [];
-      const { data: sibas, error: sibasError } = await supabase
-        .from("sibains")
-        .select("*")
-        .in("siba_user_id", userIds);
-      if (sibasError) throw sibasError;
-      return (sibas ?? []) as ShibaType[];
-    },
+    queryFn: () => fetchFollowingsList(siba!.siba_user_id),
   });
 
   const listData =
@@ -159,6 +138,12 @@ export const Siba = ({ id }: SibaProps) => {
     ? stls[`statusDot${statusClassSuffix[status]}`]
     : undefined;
   const listTitle = listMode === "followers" ? "Подписчики" : "Подписки";
+  const isPeopleListLoading =
+    listMode === "followers"
+      ? followersListQuery.isLoading
+      : listMode === "followings"
+        ? followingsListQuery.isLoading
+        : false;
 
   const academyProgressQuery = useQuery<{ learned_skill_ids: string[] | null } | null>({
     queryKey: ["siba-academy", siba?.id ?? "none"],
@@ -387,8 +372,51 @@ export const Siba = ({ id }: SibaProps) => {
         open={Boolean(listMode)}
         title={listTitle}
         items={listData}
+        isLoading={isPeopleListLoading}
+        onItemClick={(item) => {
+          setListMode(null);
+          setSelectedNestedSibaId(item.id);
+        }}
         onClose={() => setListMode(null)}
       />
+      {isMobile ? (
+        <SwipeableDrawer
+          anchor="bottom"
+          open={Boolean(selectedNestedSibaId)}
+          onOpen={() => {}}
+          onClose={() => setSelectedNestedSibaId(null)}
+          PaperProps={{
+            sx: {
+              height: "auto",
+              maxHeight: "90dvh",
+              overflowY: "auto",
+              overscrollBehavior: "contain",
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              padding: "12px",
+            },
+          }}
+        >
+          {selectedNestedSibaId && <Siba id={selectedNestedSibaId} />}
+        </SwipeableDrawer>
+      ) : (
+        <Dialog
+          open={Boolean(selectedNestedSibaId)}
+          onClose={() => setSelectedNestedSibaId(null)}
+          fullWidth
+          maxWidth="sm"
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              maxHeight: "90dvh",
+              overflowY: "auto",
+              padding: "12px",
+            },
+          }}
+        >
+          {selectedNestedSibaId && <Siba id={selectedNestedSibaId} />}
+        </Dialog>
+      )}
     </>
   );
 };

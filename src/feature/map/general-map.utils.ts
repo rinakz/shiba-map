@@ -31,6 +31,40 @@ type ResolveCurrentSibaParams = {
   setMySiba: (value: ShibaType) => void;
 };
 
+type SavePlaceVisitParams = {
+  kind: PlaceKind;
+  placeId: string;
+  authUserId: string | null;
+  mySiba?: ShibaType;
+  setMySiba: (value: ShibaType) => void;
+};
+
+const PLACE_VISIT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+const getPlaceVisitConfig = (kind: PlaceKind) => {
+  if (kind === "cafe") {
+    return {
+      table: "siba_cafe_visits",
+      filterColumn: "cafe_id",
+      counterField: "cafe",
+    } as const;
+  }
+
+  if (kind === "park") {
+    return {
+      table: "siba_park_visits",
+      filterColumn: "place_id",
+      counterField: "park",
+    } as const;
+  }
+
+  return {
+    table: "siba_groomer_visits",
+    filterColumn: "place_id",
+    counterField: "groomer",
+  } as const;
+};
+
 export const resolveCurrentSiba = async ({
   mySiba,
   authUserId,
@@ -95,6 +129,27 @@ export const resolveCurrentSiba = async ({
 
   setMySiba(insertedSiba);
   return insertedSiba;
+};
+
+export const fetchMySibaForVisit = async (
+  authUserId: string,
+  setMySiba: (value: ShibaType) => void,
+) => {
+  const { data, error } = await supabase
+    .from("sibains")
+    .select("*")
+    .eq("siba_user_id", authUserId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (data) {
+    setMySiba(data);
+  }
+
+  return (data as ShibaType | null) ?? null;
 };
 
 export const normalizeCoords = (coords: unknown): [number, number] | null => {
@@ -567,15 +622,7 @@ export const fetchPlaceVisits = async (
   kind: PlaceKind,
   placeId: string,
 ): Promise<PlaceVisit[]> => {
-  const table =
-    kind === "cafe"
-      ? "siba_cafe_visits"
-      : kind === "park"
-      ? "siba_park_visits"
-      : "siba_groomer_visits";
-
-  // В cafe — cafe_id, в park/groomer — place_id (унифицируем в TS через alias).
-  const filterColumn = kind === "cafe" ? "cafe_id" : "place_id";
+  const { table, filterColumn } = getPlaceVisitConfig(kind);
   const { data: visits, error: visitsErr } = await supabase
     .from(table)
     .select(`id, ${filterColumn}, siba_id, visited_at`)
@@ -611,6 +658,91 @@ export const fetchPlaceVisits = async (
       siba_photo: byId.get(v.siba_id)?.photos,
     } as PlaceVisit;
   });
+};
+
+export const canVisitPlaceAgain = (visitedAt?: string | null) => {
+  if (!visitedAt) return true;
+  const visitedTs = new Date(visitedAt).getTime();
+  if (!Number.isFinite(visitedTs)) return true;
+  return Date.now() - visitedTs >= PLACE_VISIT_COOLDOWN_MS;
+};
+
+export const getNextPlaceVisitAt = (visitedAt?: string | null) => {
+  if (!visitedAt) return null;
+  const visitedTs = new Date(visitedAt).getTime();
+  if (!Number.isFinite(visitedTs)) return null;
+  return new Date(visitedTs + PLACE_VISIT_COOLDOWN_MS);
+};
+
+export const savePlaceVisit = async ({
+  kind,
+  placeId,
+  authUserId,
+  mySiba,
+  setMySiba,
+}: SavePlaceVisitParams) => {
+  if (!authUserId) {
+    throw new Error("Нужно войти, чтобы отмечать посещения.");
+  }
+
+  const effectiveMySiba = mySiba?.id
+    ? mySiba
+    : await fetchMySibaForVisit(authUserId, setMySiba);
+
+  if (!effectiveMySiba?.id) {
+    throw new Error("Не удалось определить вашу сибу. Попробуйте ещё раз.");
+  }
+
+  const { table, filterColumn, counterField } = getPlaceVisitConfig(kind);
+  const { data: latestVisit, error: latestVisitError } = await supabase
+    .from(table)
+    .select("visited_at")
+    .eq(filterColumn, placeId)
+    .eq("siba_id", effectiveMySiba.id)
+    .order("visited_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (latestVisitError) {
+    throw new Error(latestVisitError.message);
+  }
+
+  const lastVisitedAt =
+    (latestVisit as { visited_at?: string | null } | null)?.visited_at ?? null;
+
+  if (!canVisitPlaceAgain(lastVisitedAt)) {
+    throw new Error("Отмечаться в этом месте можно только раз в 24 часа.");
+  }
+
+  const visitedAt = new Date().toISOString();
+  const { error: visitError } = await supabase.from(table).insert([
+    {
+      [filterColumn]: placeId,
+      siba_id: effectiveMySiba.id,
+      visited_at: visitedAt,
+    },
+  ]);
+
+  if (visitError) {
+    throw new Error(visitError.message);
+  }
+
+  const nextCounterValue = (effectiveMySiba[counterField] ?? 0) + 1;
+  const { error: updateError } = await supabase
+    .from("sibains")
+    .update({ [counterField]: nextCounterValue })
+    .eq("id", effectiveMySiba.id);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  setMySiba({ ...effectiveMySiba, [counterField]: nextCounterValue });
+
+  return {
+    sibaId: effectiveMySiba.id,
+    visitedAt,
+  };
 };
 
 export const fetchPlaceRatingSummary = async (

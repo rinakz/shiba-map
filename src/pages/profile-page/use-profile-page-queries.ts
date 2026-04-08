@@ -113,6 +113,12 @@ export const useProfilePageQueries = ({
         : [];
   const peopleListTitle =
     peopleListMode === "followers" ? "Подписчики" : "Подписки";
+  const peopleListIsLoading =
+    peopleListMode === "followers"
+      ? followersListQuery.isLoading
+      : peopleListMode === "followings"
+        ? followingsListQuery.isLoading
+        : false;
 
   const isProfileLoading =
     userQuery.isLoading ||
@@ -134,6 +140,7 @@ export const useProfilePageQueries = ({
     academyRank,
     peopleListItems,
     peopleListTitle,
+    peopleListIsLoading,
     isProfileLoading,
   };
 };

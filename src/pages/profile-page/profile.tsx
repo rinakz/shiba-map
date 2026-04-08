@@ -5,12 +5,14 @@ import {
   useState,
   type ChangeEvent,
 } from "react";
+import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import { AppContext } from "../../shared/context/app-context";
 import stls from "./profile.module.sass";
 import { LayoutPage } from "../../shared/ui";
 import { PeopleListOverlay } from "../../shared/ui/people-list-overlay";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { Siba } from "../../feature/siba/siba";
 import { ProfileAchievements } from "./profile-achievements";
 import { ShibaAcademy } from "./shiba-academy";
 import { KennelSection } from "./kennel-section";
@@ -36,6 +38,7 @@ import { useProfilePageQueries } from "./use-profile-page-queries";
 import { useProfileCommunityManager } from "./use-profile-community-manager";
 
 export const ProfilePage = () => {
+  const isMobile = useMediaQuery("(max-width:600px)");
   const navigate = useNavigate();
   const location = useLocation();
   const { authUserId, user, mySiba, setUser, setMySiba, setSibaIns } =
@@ -59,6 +62,7 @@ export const ProfilePage = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isPromoRevealed, setIsPromoRevealed] = useState(false);
   const [peopleListMode, setPeopleListMode] = useState<"followers" | "followings" | null>(null);
+  const [selectedSibaId, setSelectedSibaId] = useState<string | null>(null);
 
   const {
     userQuery,
@@ -71,6 +75,7 @@ export const ProfilePage = () => {
     academyRank,
     peopleListItems,
     peopleListTitle,
+    peopleListIsLoading,
     isProfileLoading,
   } = useProfilePageQueries({
     authUserId,
@@ -352,8 +357,51 @@ export const ProfilePage = () => {
           open={Boolean(peopleListMode)}
           title={peopleListTitle}
           items={peopleListItems}
+          isLoading={peopleListIsLoading}
+          onItemClick={(item) => {
+            setPeopleListMode(null);
+            setSelectedSibaId(item.id);
+          }}
           onClose={() => setPeopleListMode(null)}
         />
+        {isMobile ? (
+          <SwipeableDrawer
+            anchor="bottom"
+            open={Boolean(selectedSibaId)}
+            onOpen={() => {}}
+            onClose={() => setSelectedSibaId(null)}
+            PaperProps={{
+              sx: {
+                height: "auto",
+                maxHeight: "90dvh",
+                overflowY: "auto",
+                overscrollBehavior: "contain",
+                borderTopLeftRadius: 16,
+                borderTopRightRadius: 16,
+                padding: "12px",
+              },
+            }}
+          >
+            {selectedSibaId && <Siba id={selectedSibaId} />}
+          </SwipeableDrawer>
+        ) : (
+          <Dialog
+            open={Boolean(selectedSibaId)}
+            onClose={() => setSelectedSibaId(null)}
+            fullWidth
+            maxWidth="sm"
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+                maxHeight: "90dvh",
+                overflowY: "auto",
+                padding: "12px",
+              },
+            }}
+          >
+            {selectedSibaId && <Siba id={selectedSibaId} />}
+          </Dialog>
+        )}
       </div>
     </LayoutPage>
   );

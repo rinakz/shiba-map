@@ -12,6 +12,7 @@ import { IconPark } from "../../shared/icons/IconPark";
 import { IconGroomer } from "../../shared/icons/IconGroomer";
 import { renderToStaticMarkup } from "react-dom/server";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { savePlaceVisit } from "./general-map.utils";
 import stls from "./place-sheet.module.sass";
 
 type MapActionTick = {
@@ -101,21 +102,6 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
 
   const getYmaps = () => {
     return (window as unknown as { ymaps?: YMapsApi }).ymaps;
-  };
-
-  const fetchMySibaForVisit = async () => {
-    if (!authUserId) return null;
-    const { data, error } = await supabase
-      .from("sibains")
-      .select("*")
-      .eq("siba_user_id", authUserId)
-      .maybeSingle();
-    if (error) {
-      console.error("Не удалось загрузить вашу сибу для визита:", error);
-      return null;
-    }
-    if (data) setMySiba(data);
-    return data ?? null;
   };
 
   const extractAddressFromGeoObject = (
@@ -287,70 +273,13 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
       if (placeErr) throw placeErr;
 
       if (withVisitMark) {
-        const effectiveMySiba = mySiba?.id
-          ? mySiba
-          : await fetchMySibaForVisit();
-        if (!effectiveMySiba?.id) {
-          throw new Error(
-            "Не удалось определить вашу сибу. Попробуйте ещё раз.",
-          );
-        }
-
-        if (kind === "cafe") {
-          const { error: visitErr } = await supabase
-            .from("siba_cafe_visits")
-            .insert([
-              {
-                cafe_id: place.id,
-                siba_id: effectiveMySiba.id,
-                visited_at: new Date().toISOString(),
-              },
-            ]);
-          if (visitErr) throw new Error(visitErr.message);
-          const nextCafe = (effectiveMySiba.cafe ?? 0) + 1;
-          const { error: updateErr } = await supabase
-            .from("sibains")
-            .update({ cafe: nextCafe })
-            .eq("id", effectiveMySiba.id);
-          if (updateErr) throw new Error(updateErr.message);
-          setMySiba({ ...effectiveMySiba, cafe: nextCafe });
-        } else if (kind === "park") {
-          const { error: visitErr } = await supabase
-            .from("siba_park_visits")
-            .insert([
-              {
-                place_id: place.id,
-                siba_id: effectiveMySiba.id,
-                visited_at: new Date().toISOString(),
-              },
-            ]);
-          if (visitErr) throw new Error(visitErr.message);
-          const nextPark = (effectiveMySiba.park ?? 0) + 1;
-          const { error: updateErr } = await supabase
-            .from("sibains")
-            .update({ park: nextPark })
-            .eq("id", effectiveMySiba.id);
-          if (updateErr) throw new Error(updateErr.message);
-          setMySiba({ ...effectiveMySiba, park: nextPark });
-        } else {
-          const { error: visitErr } = await supabase
-            .from("siba_groomer_visits")
-            .insert([
-              {
-                place_id: place.id,
-                siba_id: effectiveMySiba.id,
-                visited_at: new Date().toISOString(),
-              },
-            ]);
-          if (visitErr) throw new Error(visitErr.message);
-          const nextGroomer = (effectiveMySiba.groomer ?? 0) + 1;
-          const { error: updateErr } = await supabase
-            .from("sibains")
-            .update({ groomer: nextGroomer })
-            .eq("id", effectiveMySiba.id);
-          if (updateErr) throw new Error(updateErr.message);
-          setMySiba({ ...effectiveMySiba, groomer: nextGroomer });
-        }
+        await savePlaceVisit({
+          kind,
+          placeId: place.id,
+          authUserId,
+          mySiba,
+          setMySiba,
+        });
       }
     },
     onSuccess: async () => {

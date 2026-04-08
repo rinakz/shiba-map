@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useContext, useEffect, useMemo, useState } from "react";
 import {
+  canVisitPlaceAgain,
   fetchPlaceRatingSummary,
   fetchPlaceVisits,
+  getNextPlaceVisitAt,
   savePlaceRating,
+  savePlaceVisit,
 } from "./general-map.utils";
 import type {
   Place,
@@ -34,7 +37,7 @@ type PlaceDetailProps = {
 };
 
 export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
-  const { authUserId } = useContext(AppContext);
+  const { authUserId, mySiba, setMySiba } = useContext(AppContext);
   const queryClient = useQueryClient();
   const [showAll, setShowAll] = useState(false);
   const [resolvedAddress, setResolvedAddress] = useState<string>(place.address);
@@ -43,6 +46,7 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
   const [hoveredRating, setHoveredRating] = useState<number | null>(null);
   const [optimisticRating, setOptimisticRating] = useState<number | null>(null);
   const [ratingError, setRatingError] = useState<string | null>(null);
+  const [visitError, setVisitError] = useState<string | null>(null);
   const isMobile = useMediaQuery("(max-width:600px)");
   const visitsQuery = useQuery<PlaceVisit[]>({
     queryKey: ["place-visits", kind, place.id],
@@ -116,6 +120,12 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
   const totalRatings = ratingQuery.data?.total ?? 0;
   const effectiveMyRating = optimisticRating ?? myRating;
   const previewRating = hoveredRating ?? effectiveMyRating ?? 0;
+  const latestMyVisit = useMemo(() => {
+    if (!mySiba?.id) return null;
+    return visits.find((visit) => visit.siba_id === mySiba.id) ?? null;
+  }, [mySiba?.id, visits]);
+  const canVisitNow = canVisitPlaceAgain(latestMyVisit?.visited_at ?? null);
+  const nextVisitAt = getNextPlaceVisitAt(latestMyVisit?.visited_at ?? null);
 
   const handleCopyPromo = async () => {
     if (!place.promo_code) return;
@@ -146,6 +156,36 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
         error instanceof Error
           ? error.message
           : "Не удалось сохранить оценку. Попробуй ещё раз.",
+      );
+    }
+  };
+
+  const visitPlaceMutation = useMutation({
+    mutationFn: async () => {
+      await savePlaceVisit({
+        kind,
+        placeId: place.id,
+        authUserId,
+        mySiba,
+        setMySiba,
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["place-visits", kind, place.id],
+      });
+    },
+  });
+
+  const handleVisitPlace = async () => {
+    setVisitError(null);
+    try {
+      await visitPlaceMutation.mutateAsync();
+    } catch (error) {
+      setVisitError(
+        error instanceof Error
+          ? error.message
+          : "Не удалось сохранить посещение. Попробуй ещё раз.",
       );
     }
   };
@@ -324,6 +364,42 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
         </p>
       </div>
 
+      <div className={stls.section}>
+        <h4 className={stls.sectionTitle}>Отметиться в месте</h4>
+        <div className={stls.visitActionCard}>
+          {canVisitNow ? (
+            <>
+              <p className={stls.sectionText}>
+                Отметься, чтобы попасть в список посетителей и побороться за звание мэра.
+              </p>
+              <Button
+                size="small"
+                className={stls.visitButton}
+                onClick={handleVisitPlace}
+                loading={visitPlaceMutation.isPending}
+                disabled={visitPlaceMutation.isPending || !authUserId}
+              >
+                Посетить
+              </Button>
+            </>
+          ) : (
+            <p className={stls.sectionText}>
+              Ты уже отметил это место.
+              {nextVisitAt
+                ? ` Снова можно посетить ${nextVisitAt.toLocaleString("ru-RU", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}.`
+                : ""}
+            </p>
+          )}
+          {visitError && <div className={stls.error}>{visitError}</div>}
+        </div>
+      </div>
+
       {mayor && (
         <div className={stls.mayorCard}>
           <span className={stls.mayorCrown}>
@@ -342,12 +418,11 @@ export const PlaceDetail = ({ kind, place }: PlaceDetailProps) => {
       )}
 
       <div className={stls.section}>
-        {uniqueVisitors.length && (
+        {uniqueVisitors.length ? (
           <h4 className={stls.sectionTitle}>
             Тут гуляли ({uniqueVisitors.length})
           </h4>
-        )}
-        {!uniqueVisitors.length && (
+        ) : (
           <h4 className={stls.sectionTitle}>Тут ещё не гуляли</h4>
         )}
         {visitsQuery.isLoading ? (

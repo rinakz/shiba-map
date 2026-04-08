@@ -89,6 +89,25 @@ export const fetchSubscribersCount = async (authUserId: string) => {
   return count ?? 0;
 };
 
+export const fetchSibasByUserIds = async (userIds: string[]) => {
+  const uniqueUserIds = Array.from(new Set(userIds.filter(Boolean)));
+  if (!uniqueUserIds.length) return [];
+
+  const { data, error } = await supabase
+    .from("siba_map_markers")
+    .select("*")
+    .in("siba_user_id", uniqueUserIds);
+  if (error) throw error;
+
+  const sibasByUserId = new Map(
+    ((data ?? []) as ShibaType[]).map((item) => [item.siba_user_id, item]),
+  );
+
+  return uniqueUserIds
+    .map((userId) => sibasByUserId.get(userId))
+    .filter((item): item is ShibaType => Boolean(item));
+};
+
 export const fetchFollowersList = async (authUserId: string) => {
   const { data: links, error: linksError } = await supabase
     .from("user_friends")
@@ -97,15 +116,7 @@ export const fetchFollowersList = async (authUserId: string) => {
   if (linksError) throw linksError;
 
   const userIds = (links ?? []).map((item: { user_id: string }) => item.user_id);
-  if (!userIds.length) return [];
-
-  const { data, error } = await supabase
-    .from("sibains")
-    .select("*")
-    .in("siba_user_id", userIds);
-  if (error) throw error;
-
-  return (data ?? []) as ShibaType[];
+  return fetchSibasByUserIds(userIds);
 };
 
 export const fetchFollowingsList = async (authUserId: string) => {
@@ -118,15 +129,7 @@ export const fetchFollowingsList = async (authUserId: string) => {
   const userIds = (links ?? []).map(
     (item: { friend_user_id: string }) => item.friend_user_id,
   );
-  if (!userIds.length) return [];
-
-  const { data, error } = await supabase
-    .from("sibains")
-    .select("*")
-    .in("siba_user_id", userIds);
-  if (error) throw error;
-
-  return (data ?? []) as ShibaType[];
+  return fetchSibasByUserIds(userIds);
 };
 
 export const fetchSibaAcademyProgress = async (sibaId: string) => {

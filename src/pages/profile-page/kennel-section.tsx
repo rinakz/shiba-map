@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button, Input } from "../../shared/ui";
 import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
+import Skeleton from "@mui/material/Skeleton";
 import { YMaps, Map, Placemark, SearchControl } from "@pbe/react-yandex-maps";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "../../shared/api/supabase-сlient";
@@ -170,7 +171,10 @@ export const KennelSection = ({ siba, authUserId, editable = true }: Props) => {
     () => (
       <div className={stls.section}>
         {myKennelQuery.isLoading ? (
-          <div className={stls.muted}>Загружаем питомник...</div>
+          <div className={stls.card}>
+            <Skeleton variant="text" width="55%" height={28} />
+            <Skeleton variant="rounded" width="100%" height={56} />
+          </div>
         ) : (
           <div className={stls.card}>
             <div className={stls.cardTop}>
@@ -192,7 +196,19 @@ export const KennelSection = ({ siba, authUserId, editable = true }: Props) => {
                 </button>
               ) : null}
             </div>
-            {myKennelQuery.data && relatedSibasQuery.data?.length ? (
+            {myKennelQuery.data && relatedSibasQuery.isLoading ? (
+              <div style={{ marginTop: 8 }}>
+                <div className={stls.treeTitle}>
+                  <IconTree />
+                  <span>Генеалогическое древо</span>
+                </div>
+                <div className={stls.treeWrap}>
+                  <Skeleton variant="rounded" width={88} height={34} />
+                  <Skeleton variant="rounded" width={94} height={34} />
+                  <Skeleton variant="rounded" width={78} height={34} />
+                </div>
+              </div>
+            ) : myKennelQuery.data && relatedSibasQuery.data?.length ? (
               <div style={{ marginTop: 8 }}>
                 <div className={stls.treeTitle}>
                   <IconTree />
@@ -217,7 +233,13 @@ export const KennelSection = ({ siba, authUserId, editable = true }: Props) => {
         )}
       </div>
     ),
-    [myKennelQuery.data, myKennelQuery.isLoading, relatedSibasQuery.data, editable],
+    [
+      myKennelQuery.data,
+      myKennelQuery.isLoading,
+      relatedSibasQuery.data,
+      relatedSibasQuery.isLoading,
+      editable,
+    ],
   );
 
   const selector = (
@@ -230,13 +252,21 @@ export const KennelSection = ({ siba, authUserId, editable = true }: Props) => {
       </div>
       {mode === "select" ? (
         <div>
-          {(listQuery.data ?? []).map((k) => (
-            <div key={k.id} className={stls.listItem}
-              onClick={() => setSelectedKennel(k)}
-            >
-              <span style={{ fontWeight: 600 }}>{k.name}</span>
-            </div>
-          ))}
+          {listQuery.isLoading ? (
+            <>
+              <Skeleton variant="rounded" width="100%" height={36} sx={{ mb: 1 }} />
+              <Skeleton variant="rounded" width="100%" height={36} sx={{ mb: 1 }} />
+              <Skeleton variant="rounded" width="72%" height={36} />
+            </>
+          ) : (
+            (listQuery.data ?? []).map((k) => (
+              <div key={k.id} className={stls.listItem}
+                onClick={() => setSelectedKennel(k)}
+              >
+                <span style={{ fontWeight: 600 }}>{k.name}</span>
+              </div>
+            ))
+          )}
           {selectedKennel && (
             <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
               <Button size="small" onClick={() => attachMutation.mutate(selectedKennel.id)} loading={attachMutation.isPending}>
