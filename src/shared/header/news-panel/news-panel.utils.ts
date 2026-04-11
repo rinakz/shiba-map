@@ -28,14 +28,138 @@ export const buildSafeAvatarSrc = (photo: string | null, icon: string) => {
   return `/${icon}.png`;
 };
 
+/** Название питомника из каталога kennels (связь siba_kennels), иначе в бейдже остаётся community_title. */
+async function fetchKennelTitleBySibaIdMap(
+  sibaIds: string[],
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!sibaIds.length) return map;
+  const { data, error } = await supabase
+    .from("siba_kennels")
+    .select("siba_id, kennels(name)")
+    .in("siba_id", sibaIds);
+  if (error || !data?.length) return map;
+  for (const row of data) {
+    const sibaId = String((row as { siba_id: string }).siba_id);
+    const emb = (row as { kennels: unknown }).kennels;
+    const kennel = Array.isArray(emb) ? emb[0] : emb;
+    const rawName =
+      kennel &&
+      typeof kennel === "object" &&
+      kennel !== null &&
+      "name" in kennel
+        ? String((kennel as { name: string }).name).trim()
+        : "";
+    if (rawName && !map.has(sibaId)) map.set(sibaId, rawName);
+  }
+  return map;
+}
+
+function actorBadgeTitle(
+  s: SibaNewsRow,
+  kennelBySiba: Map<string, string>,
+): string | null | undefined {
+  const kennel = kennelBySiba.get(s.id);
+  if (kennel) return kennel;
+  return s.community_title ?? undefined;
+}
+
+async function fetchExpertFeedItems(): Promise<FeedItem[]> {
+  const { data: expertPosts, error } = await supabase
+    .from("expert_posts")
+    .select("id, body, created_at, author_user_id")
+    .order("created_at", { ascending: false })
+    .limit(24);
+  if (error) return [];
+  if (!expertPosts?.length) return [];
+
+  const authorIds = [
+    ...new Set(
+      expertPosts.map((p: { author_user_id: string }) => p.author_user_id),
+    ),
+  ];
+  const [{ data: users }, { data: sibas }] = await Promise.all([
+    supabase.from("users").select("user_id, nickname").in("user_id", authorIds),
+    supabase
+      .from("sibains")
+      .select("id, siba_user_id, siba_name, photos, siba_icon, created_at")
+      .in("siba_user_id", authorIds)
+      .order("created_at", { ascending: true }),
+  ]);
+
+  const nickByUser = new Map(
+    (users ?? []).map((u: { user_id: string; nickname: string }) => [
+      u.user_id,
+      u.nickname,
+    ]),
+  );
+
+  /** Самая ранняя сиба на пользователя: название питомника и аватар как в обычной ленте. */
+  const kennelNameByUser = new Map<string, string>();
+  const sibaRowByUser = new Map<
+    string,
+    { id: string; photos: string | null; siba_icon: string }
+  >();
+  (sibas ?? []).forEach(
+    (row: {
+      id: string;
+      siba_user_id: string;
+      siba_name: string;
+      photos: string | null;
+      siba_icon: string;
+    }) => {
+      const uid = row.siba_user_id;
+      if (!kennelNameByUser.has(uid) && row.siba_name?.trim()) {
+        kennelNameByUser.set(uid, row.siba_name.trim());
+      }
+      if (!sibaRowByUser.has(uid)) {
+        sibaRowByUser.set(uid, {
+          id: row.id,
+          photos: row.photos,
+          siba_icon: row.siba_icon,
+        });
+      }
+    },
+  );
+
+  return expertPosts.map(
+    (p: { id: string; body: string; created_at: string; author_user_id: string }) => {
+      const row = sibaRowByUser.get(p.author_user_id);
+      return {
+      id: `expert-${p.id}`,
+      date: p.created_at,
+      actorSibaId: row?.id ?? "",
+      actorSibaName:
+        kennelNameByUser.get(p.author_user_id) ??
+        nickByUser.get(p.author_user_id) ??
+        "Питомник",
+      actorSibaAvatar: row
+        ? buildSafeAvatarSrc(row.photos, row.siba_icon)
+        : buildSafeAvatarSrc(null, "sibka"),
+      verb: "публикует",
+      isExpertPost: true,
+      expertPostBody: p.body,
+    };
+    },
+  );
+}
+
 export const fetchNewsFeed = async (authUserId: string) => {
+  const expertItemsPromise = fetchExpertFeedItems();
+
   const { data: followers, error: followersErr } = await supabase
     .from("user_friends")
     .select("user_id")
     .eq("friend_user_id", authUserId);
   if (followersErr) throw followersErr;
   const followerIds = (followers ?? []).map((x: { user_id: string }) => x.user_id);
-  if (!followerIds.length) return [] as FeedItem[];
+  const expertItems = await expertItemsPromise;
+
+  if (!followerIds.length) {
+    return expertItems
+      .sort((a, b) => +new Date(b.date) - +new Date(a.date))
+      .slice(0, 40);
+  }
 
   const { data: sibas, error: sibasErr } = await supabase
     .from("siba_map_markers")
@@ -46,7 +170,12 @@ export const fetchNewsFeed = async (authUserId: string) => {
   const sibaById = new Map<string, SibaNewsRow>(typedSibas.map((s) => [s.id, s]));
 
   const sibaIds = typedSibas.map((s) => s.id);
-  if (!sibaIds.length) return [] as FeedItem[];
+  let kennelTitleBySibaId = await fetchKennelTitleBySibaIdMap(sibaIds);
+  if (!sibaIds.length) {
+    return expertItems
+      .sort((a, b) => +new Date(b.date) - +new Date(a.date))
+      .slice(0, 40);
+  }
 
   const [cafes, parks, groomers] = await Promise.all([
     supabase.from("cafes").select("*"),
@@ -97,7 +226,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: siba.id,
         actorSibaName: siba.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(siba.photos, siba.siba_icon),
-        actorCommunityTitle: siba.community_title,
+        actorCommunityTitle: actorBadgeTitle(siba, kennelTitleBySibaId),
         actorCommunityAvatarUrl: siba.community_avatar_url,
         actorCommunityTgLink: siba.community_tg_link,
         verb: "сегодня посетил",
@@ -116,7 +245,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: siba.id,
         actorSibaName: siba.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(siba.photos, siba.siba_icon),
-        actorCommunityTitle: siba.community_title,
+        actorCommunityTitle: actorBadgeTitle(siba, kennelTitleBySibaId),
         actorCommunityAvatarUrl: siba.community_avatar_url,
         actorCommunityTgLink: siba.community_tg_link,
         verb: "сегодня посетил",
@@ -135,7 +264,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: siba.id,
         actorSibaName: siba.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(siba.photos, siba.siba_icon),
-        actorCommunityTitle: siba.community_title,
+        actorCommunityTitle: actorBadgeTitle(siba, kennelTitleBySibaId),
         actorCommunityAvatarUrl: siba.community_avatar_url,
         actorCommunityTgLink: siba.community_tg_link,
         verb: "сегодня посетил",
@@ -179,7 +308,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: s.id,
         actorSibaName: s.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(s.photos, s.siba_icon),
-        actorCommunityTitle: s.community_title,
+        actorCommunityTitle: actorBadgeTitle(s, kennelTitleBySibaId),
         actorCommunityAvatarUrl: s.community_avatar_url,
         actorCommunityTgLink: s.community_tg_link,
         verb: "добавил кафе",
@@ -197,7 +326,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: s.id,
         actorSibaName: s.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(s.photos, s.siba_icon),
-        actorCommunityTitle: s.community_title,
+        actorCommunityTitle: actorBadgeTitle(s, kennelTitleBySibaId),
         actorCommunityAvatarUrl: s.community_avatar_url,
         actorCommunityTgLink: s.community_tg_link,
         verb: "добавил парк",
@@ -215,7 +344,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: s.id,
         actorSibaName: s.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(s.photos, s.siba_icon),
-        actorCommunityTitle: s.community_title,
+        actorCommunityTitle: actorBadgeTitle(s, kennelTitleBySibaId),
         actorCommunityAvatarUrl: s.community_avatar_url,
         actorCommunityTgLink: s.community_tg_link,
         verb: "добавил грумера",
@@ -270,6 +399,16 @@ export const fetchNewsFeed = async (authUserId: string) => {
     ((allSubsSibas ?? []) as SibaNewsRow[]).map((s) => [s.siba_user_id, s]),
   );
 
+  const subSibaIdsMissingKennel = ((allSubsSibas ?? []) as SibaNewsRow[])
+    .map((s) => s.id)
+    .filter((id) => !kennelTitleBySibaId.has(id));
+  if (subSibaIdsMissingKennel.length) {
+    const moreKennel = await fetchKennelTitleBySibaIdMap(subSibaIdsMissingKennel);
+    moreKennel.forEach((title, id) => {
+      if (!kennelTitleBySibaId.has(id)) kennelTitleBySibaId.set(id, title);
+    });
+  }
+
   const subscriptionItems: FeedItem[] = [];
   friendshipRows.forEach((r, idx) => {
     const from = subByUser.get(r.user_id);
@@ -281,7 +420,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
       actorSibaId: from.id,
       actorSibaName: from.siba_name,
       actorSibaAvatar: buildSafeAvatarSrc(from.photos, from.siba_icon),
-      actorCommunityTitle: from.community_title,
+      actorCommunityTitle: actorBadgeTitle(from, kennelTitleBySibaId),
       actorCommunityAvatarUrl: from.community_avatar_url,
       actorCommunityTgLink: from.community_tg_link,
       verb: "подписался на",
@@ -316,7 +455,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
         actorSibaId: siba.id,
         actorSibaName: siba.siba_name,
         actorSibaAvatar: buildSafeAvatarSrc(siba.photos, siba.siba_icon),
-        actorCommunityTitle: siba.community_title,
+        actorCommunityTitle: actorBadgeTitle(siba, kennelTitleBySibaId),
         actorCommunityAvatarUrl: siba.community_avatar_url,
         actorCommunityTgLink: siba.community_tg_link,
         verb: "выучил команду",
@@ -325,7 +464,10 @@ export const fetchNewsFeed = async (authUserId: string) => {
     },
   );
 
-  return [...visitItems, ...createItems, ...subscriptionItems, ...academyItems]
-    .sort((a, b) => +new Date(b.date) - +new Date(a.date))
-    .slice(0, 40);
+  const rest = [...visitItems, ...createItems, ...subscriptionItems, ...academyItems]
+    .sort((a, b) => +new Date(b.date) - +new Date(a.date));
+  const expertsSorted = [...expertItems].sort(
+    (a, b) => +new Date(b.date) - +new Date(a.date),
+  );
+  return [...expertsSorted, ...rest].slice(0, 50);
 };

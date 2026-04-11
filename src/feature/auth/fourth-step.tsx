@@ -2,7 +2,6 @@ import { YMaps, Map, Placemark, SearchControl } from "@pbe/react-yandex-maps";
 import { useRef, useState, type FC, type FormEvent } from "react";
 import { IconPawButton } from "../../shared/icons/IconPawButton";
 import stls from "./auth.module.sass";
-import type { AuthFormType } from "../../pages/auth-page/types";
 import { Button, IconButton } from "../../shared/ui";
 import { supabase } from "../../shared/api/supabase-сlient";
 import { useNavigate } from "react-router-dom";
@@ -14,42 +13,29 @@ import {
   normalizePromoCode,
 } from "../../shared/api/referrals";
 import { IconRight } from "../../shared/icons";
+import { DEFAULT_MAP_CENTER, getYmapsApiKey } from "./fourth-step.constants";
+import type { FourthStepProps, MapActionTickEvent } from "./fourth-step.types";
+import {
+  buildSignupUserMetadata,
+  buildSibaRow,
+  buildUsersUpsertRow,
+  ensureBreederKennelLinked,
+  uploadKennelLogoToSiba,
+} from "./fourth-step.utils";
 
-const ymapsApiKey = import.meta.env.VITE_YMAPS_API_KEY as string | undefined;
+const ymapsApiKey = getYmapsApiKey();
 
-type MapActionTick = {
-  globalPixelCenter: [number, number];
-  zoom: number;
-};
-
-type MapTargetPayload = {
-  options: {
-    get: (name: "projection") => {
-      fromGlobalPixels: (
-        globalPixelCenter: [number, number],
-        zoom: number,
-      ) => [number, number];
-    };
-  };
-};
-
-interface MapActionTickEvent {
-  get(key: "target"): MapTargetPayload;
-  get(key: "tick"): MapActionTick;
-}
-
-interface FourthStep {
-  setActiveStep: (value: number) => void;
-  formData: AuthFormType;
-  authMethod: "email" | "telegram";
-}
-
-export const FourthStep: FC<FourthStep> = ({
+export const FourthStep: FC<FourthStepProps> = ({
   setActiveStep,
   formData,
   authMethod,
+  accountType = "owner",
+  kennelLogoFile = null,
 }) => {
-  const [coordinates, setCoordinates] = useState([55.75, 37.57]); // Начальные координаты
+  const [coordinates, setCoordinates] = useState<number[]>([
+    DEFAULT_MAP_CENTER[0],
+    DEFAULT_MAP_CENTER[1],
+  ]);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,6 +43,8 @@ export const FourthStep: FC<FourthStep> = ({
 
   const mapRef = useRef<ymaps.Map | undefined>(undefined);
   const navigate = useNavigate();
+
+  const prevStep = accountType === "breeder" ? 2 : 3;
 
   const getLocation = (event: FormEvent<HTMLElement>) => {
     event.preventDefault();
@@ -69,19 +57,19 @@ export const FourthStep: FC<FourthStep> = ({
       (position) => {
         setIsAccept(true);
         setCoordinates([position.coords.latitude, position.coords.longitude]);
-        if (location && position.coords.latitude) {
+        if (position.coords.latitude) {
           mapRef?.current?.setCenter(
             [position.coords.latitude, position.coords.longitude],
             14,
             {
-              duration: 500, // Optional animation duration
-              timingFunction: "ease-in-out", // Optional timing function
+              duration: 500,
+              timingFunction: "ease-in-out",
             },
           );
         }
       },
-      (error) => {
-        setError(error.message);
+      (err) => {
+        setError(err.message);
       },
     );
   };
@@ -107,25 +95,23 @@ export const FourthStep: FC<FourthStep> = ({
         const promoCode = generatePromoCode();
 
         if (authMethod === "email") {
-          const emailRedirectUrl = `http://shiba-inu.moscow${PATH.Login}`;
+          const siteOrigin = (
+            (import.meta.env.VITE_SITE_URL as string | undefined) ||
+            window.location.origin
+          ).replace(/\/$/, "");
+          const emailRedirectUrl = `${siteOrigin}/#${PATH.Login}`;
 
           const { data, error } = await supabase.auth.signUp({
             email: formData.email,
             password: formData.password,
             options: {
-              data: {
-                nickname: formData.nickname,
-                tgname: formData.tgname,
-                is_show_tgname: formData.isShowTgName,
-                siba_name: formData.sibaname,
-                siba_icon: formData.icon,
-                siba_gender: formData.gender,
+              data: buildSignupUserMetadata(
+                formData,
+                accountType,
                 coordinates,
-                invite_code: inviteCode,
-                promo_code: promoCode,
-              },
-              // Redirect after email verification (doesn't affect verification itself,
-              // but fixes UX: no more localhost redirects).
+                inviteCode,
+                promoCode,
+              ),
               emailRedirectTo: emailRedirectUrl,
             },
           });
@@ -161,15 +147,14 @@ export const FourthStep: FC<FourthStep> = ({
 
           const { error: insertError } = await supabase.from("users").upsert(
             [
-              {
-                user_id: sessionUserId,
-                email: formData.email,
-                nickname: formData.nickname,
-                tgname: formData.tgname,
-                is_show_tgname: formData.isShowTgName,
-                promo_code: promoCode,
-                invited_by_code: inviteCode || null,
-              },
+              buildUsersUpsertRow(
+                sessionUserId,
+                formData.email,
+                formData,
+                accountType,
+                promoCode,
+                inviteCode,
+              ),
             ],
             { onConflict: "user_id" },
           );
@@ -179,24 +164,46 @@ export const FourthStep: FC<FourthStep> = ({
             return;
           }
 
-          const { error: insertSibaError } = await supabase
+          const { data: sibaRow, error: insertSibaError } = await supabase
             .from("sibains")
             .upsert(
-              [
-                {
-                  siba_user_id: sessionUserId,
-                  siba_name: formData.sibaname,
-                  siba_icon: formData.icon,
-                  siba_gender: formData.gender,
-                  coordinates: coordinates,
-                },
-              ],
+              [buildSibaRow(sessionUserId, formData, accountType, coordinates)],
               { onConflict: "siba_user_id" },
-            );
+            )
+            .select("id")
+            .single();
 
           if (insertSibaError) {
             setError(insertSibaError.message);
             return;
+          }
+
+          if (accountType === "breeder" && sibaRow?.id) {
+            const { error: kennelErr } = await ensureBreederKennelLinked(
+              sessionUserId,
+              sibaRow.id,
+              formData,
+              coordinates,
+            );
+            if (kennelErr) {
+              setError(kennelErr);
+              return;
+            }
+          }
+
+          if (
+            accountType === "breeder" &&
+            kennelLogoFile &&
+            sibaRow?.id
+          ) {
+            const { error: logoErr } = await uploadKennelLogoToSiba(
+              sessionUserId,
+              sibaRow.id,
+              kennelLogoFile,
+            );
+            if (logoErr) {
+              console.warn("Kennel logo upload failed:", logoErr);
+            }
           }
 
           await linkUsersByInviteCode(sessionUserId, inviteCode);
@@ -208,7 +215,6 @@ export const FourthStep: FC<FourthStep> = ({
           return;
         }
 
-        // Telegram-режим: пользователь уже залогинен (auth via Edge Function).
         const { data: sessionData, error: sessionError } =
           await supabase.auth.getSession();
         if (sessionError) {
@@ -226,15 +232,14 @@ export const FourthStep: FC<FourthStep> = ({
 
         const { error: insertError } = await supabase.from("users").upsert(
           [
-            {
-              user_id: userId,
+            buildUsersUpsertRow(
+              userId,
               email,
-              nickname: formData.nickname,
-              tgname: formData.tgname,
-              is_show_tgname: formData.isShowTgName,
-              promo_code: promoCode,
-              invited_by_code: inviteCode || null,
-            },
+              formData,
+              accountType,
+              promoCode,
+              inviteCode,
+            ),
           ],
           { onConflict: "user_id" },
         );
@@ -244,29 +249,46 @@ export const FourthStep: FC<FourthStep> = ({
           return;
         }
 
-        const { error: insertSibaError } = await supabase
+        const { data: sibaRow, error: insertSibaError } = await supabase
           .from("sibains")
           .upsert(
-            [
-              {
-                siba_user_id: userId,
-                siba_name: formData.sibaname,
-                siba_icon: formData.icon,
-                siba_gender: formData.gender,
-                coordinates: coordinates,
-              },
-            ],
+            [buildSibaRow(userId, formData, accountType, coordinates)],
             { onConflict: "siba_user_id" },
-          );
+          )
+          .select("id")
+          .single();
 
         if (insertSibaError) {
           setError(insertSibaError.message);
           return;
         }
 
+        if (accountType === "breeder" && sibaRow?.id) {
+          const { error: kennelErr } = await ensureBreederKennelLinked(
+            userId,
+            sibaRow.id,
+            formData,
+            coordinates,
+          );
+          if (kennelErr) {
+            setError(kennelErr);
+            return;
+          }
+        }
+
+        if (accountType === "breeder" && kennelLogoFile && sibaRow?.id) {
+          const { error: logoErr } = await uploadKennelLogoToSiba(
+            userId,
+            sibaRow.id,
+            kennelLogoFile,
+          );
+          if (logoErr) {
+            console.warn("Kennel logo upload failed:", logoErr);
+          }
+        }
+
         await linkUsersByInviteCode(userId, inviteCode);
 
-        // Фото пока нет, поэтому дальнейший экран будет ProfilePage (загрузка фото).
         navigate(PATH.Home);
       } else {
         setError("Заполните все поля");
@@ -274,7 +296,6 @@ export const FourthStep: FC<FourthStep> = ({
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка регистрации");
     } finally {
-      // Всегда выключаем loader, даже при ранних return в ветках ошибок.
       setIsLoading(false);
     }
   };
@@ -326,7 +347,7 @@ export const FourthStep: FC<FourthStep> = ({
       )}
       <div style={{ display: "flex", gap: "16px" }}>
         <IconButton
-          onClick={() => setActiveStep(3)}
+          onClick={() => setActiveStep(prevStep)}
           variant="secondary"
           size="large"
           icon={

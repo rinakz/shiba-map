@@ -5,6 +5,7 @@ import {
   SIBA_PHOTOS_BUCKET,
 } from "../../shared/constants/storage";
 import { PATH } from "../../shared/constants/path";
+import type { BreederKennelRow } from "../../shared/api/breeder";
 import type { SibaStatus, ShibaType, ShibaUser } from "../../shared/types";
 
 type SetUser = Dispatch<SetStateAction<Partial<ShibaUser> | undefined>>;
@@ -51,14 +52,71 @@ export const loadMySiba = async (authUserId: string, setMySiba: SetMySiba) => {
   setMySiba(data ?? undefined);
 };
 
+function normalizeAccountType(
+  v: unknown,
+): "owner" | "breeder" | undefined {
+  if (v === "breeder" || (typeof v === "string" && v.toLowerCase() === "breeder")) {
+    return "breeder";
+  }
+  if (v === "owner" || (typeof v === "string" && v.toLowerCase() === "owner")) {
+    return "owner";
+  }
+  return undefined;
+}
+
 export const fetchUserById = async (authUserId: string) => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const sessionUser = sessionData.session?.user;
+  const meta =
+    sessionUser?.id === authUserId
+      ? (sessionUser.user_metadata as Record<string, unknown> | undefined)
+      : undefined;
+  const metaAccountType = normalizeAccountType(meta?.account_type);
+
   const { data, error } = await supabase
     .from("users")
     .select("*")
     .eq("user_id", authUserId)
     .maybeSingle();
   if (error) throw error;
-  return data ?? undefined;
+
+  const row = data as ShibaUser | null;
+
+  // JWT из signUp хранит account_type в user_metadata; в public.users поле могло не записаться.
+  const account_type: "owner" | "breeder" =
+    metaAccountType === "breeder"
+      ? "breeder"
+      : normalizeAccountType(row?.account_type) ?? metaAccountType ?? "owner";
+
+  if (
+    row &&
+    account_type === "breeder" &&
+    row.account_type !== "breeder"
+  ) {
+    void supabase
+      .from("users")
+      .update({ account_type: "breeder" })
+      .eq("user_id", authUserId)
+      .then(({ error: syncErr }) => {
+        if (syncErr) {
+          console.warn("Не удалось синхронизировать account_type в users:", syncErr.message);
+        }
+      });
+  }
+
+  if (!row) {
+    if (sessionUser?.id !== authUserId) return undefined;
+    return {
+      user_id: authUserId,
+      email: sessionUser.email ?? "",
+      nickname: String(meta?.nickname ?? ""),
+      tgname: String(meta?.tgname ?? ""),
+      is_show_tgname: Boolean(meta?.is_show_tgname),
+      account_type,
+    } as ShibaUser;
+  }
+
+  return { ...row, account_type };
 };
 
 export const fetchMySibaByUserId = async (authUserId: string) => {
@@ -207,6 +265,14 @@ export const buildEditDrafts = (
   sibaIcon: mySiba?.siba_icon ?? "default",
 });
 
+export const buildBreederKennelDrafts = (
+  kennel: BreederKennelRow | null | undefined,
+) => ({
+  kennelName: kennel?.name ?? "",
+  kennelPrefix: kennel?.prefix ?? "",
+  kennelAddress: kennel?.address ?? "",
+});
+
 export const processProfileFileChange = (
   event: ChangeEvent<HTMLInputElement>,
   setError: (value: string | null) => void,
@@ -283,9 +349,16 @@ type SubmitProfileParams = {
   setIsEdit: (value: boolean) => void;
   setPhotoFile: (value: File | null) => void;
   setPhotoPreviewUrl: (value: string | null) => void;
+  profileKind: "owner" | "breeder";
+  kennelId?: string | null;
+  kennelNameDraft?: string;
+  kennelPrefixDraft?: string;
+  kennelAddressDraft?: string;
 };
 
-export const submitProfile = async (params: SubmitProfileParams) => {
+export const submitProfile = async (
+  params: SubmitProfileParams,
+): Promise<boolean> => {
   const {
     authUserId,
     mySiba,
@@ -303,6 +376,11 @@ export const submitProfile = async (params: SubmitProfileParams) => {
     setIsEdit,
     setPhotoFile,
     setPhotoPreviewUrl,
+    profileKind,
+    kennelId,
+    kennelNameDraft,
+    kennelPrefixDraft,
+    kennelAddressDraft,
   } = params;
 
   let uploadedPhotoUrl: string | undefined;
@@ -320,12 +398,12 @@ export const submitProfile = async (params: SubmitProfileParams) => {
 
     if (uploadError) {
       setError(`Не удалось загрузить фото профиля: ${uploadError.message}`);
-      return;
+      return false;
     }
 
     if (!uploadData?.path) {
       setError("Не удалось получить путь загруженного файла.");
-      return;
+      return false;
     }
 
     const { data } = supabase.storage
@@ -334,7 +412,7 @@ export const submitProfile = async (params: SubmitProfileParams) => {
 
     if (!data?.publicUrl) {
       setError("Ошибка получения публичного URL фото.");
-      return;
+      return false;
     }
 
     uploadedPhotoUrl = data.publicUrl;
@@ -351,7 +429,59 @@ export const submitProfile = async (params: SubmitProfileParams) => {
 
   if (updateUserError) {
     setError(updateUserError.message);
-    return;
+    return false;
+  }
+
+  if (profileKind === "breeder") {
+    if (kennelId) {
+      const name = (kennelNameDraft ?? "").trim();
+      if (!name) {
+        setError("Укажите название питомника.");
+        return false;
+      }
+      const { error: kennelErr } = await supabase
+        .from("kennels")
+        .update({
+          name,
+          prefix: (kennelPrefixDraft ?? "").trim() || null,
+          address: (kennelAddressDraft ?? "").trim() || null,
+        })
+        .eq("id", kennelId)
+        .eq("created_by", authUserId);
+
+      if (kennelErr) {
+        setError(kennelErr.message);
+        return false;
+      }
+    }
+
+    if (uploadedPhotoUrl) {
+      const { error: photoErr } = await supabase
+        .from("sibains")
+        .update({ photos: uploadedPhotoUrl })
+        .eq("id", mySiba.id);
+
+      if (photoErr) {
+        setError(photoErr.message);
+        return false;
+      }
+    }
+
+    setIsEdit(false);
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
+    setError(null);
+    setUser({
+      ...user,
+      nickname: nicknameDraft,
+      tgname: tgNameDraft,
+      is_show_tgname: isShowTgNameDraft,
+    });
+    setMySiba({
+      ...mySiba,
+      ...(uploadedPhotoUrl ? { photos: uploadedPhotoUrl } : {}),
+    });
+    return true;
   }
 
   const { error: updateSibaError } = await supabase
@@ -366,7 +496,7 @@ export const submitProfile = async (params: SubmitProfileParams) => {
 
   if (updateSibaError) {
     setError(updateSibaError.message);
-    return;
+    return false;
   }
 
   setIsEdit(false);
@@ -386,6 +516,7 @@ export const submitProfile = async (params: SubmitProfileParams) => {
     siba_icon: sibaIconDraft,
     ...(uploadedPhotoUrl ? { photos: uploadedPhotoUrl } : {}),
   });
+  return true;
 };
 
 export const uploadCommunityAvatar = async (

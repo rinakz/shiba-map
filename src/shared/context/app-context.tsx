@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import type { ShibaType, ShibaUser } from "../types";
 import { supabase } from "../api/supabase-сlient";
+import { syncPublicUserFromAuthMetadata } from "../api/sync-public-user-from-auth";
 
 type AppContextType = {
   authUserId: string | null;
@@ -53,8 +54,16 @@ function AppProvider({ children }: PropsWithChildren) {
       });
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setAuthUserId(session?.user?.id ?? null);
+        if (
+          session?.user &&
+          (event === "INITIAL_SESSION" ||
+            event === "SIGNED_IN" ||
+            event === "USER_UPDATED")
+        ) {
+          void syncPublicUserFromAuthMetadata();
+        }
       },
     );
 

@@ -8,4 +8,3 @@ export const PLACES_PHOTOS_BUCKET =
 export const COMMUNITIES_BUCKET =
   (import.meta.env.VITE_SUPABASE_COMMUNITIES_BUCKET as string | undefined) ||
   "communities";
-

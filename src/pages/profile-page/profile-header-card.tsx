@@ -6,6 +6,7 @@ import {
   IconFirstAid,
   IconRight,
 } from "../../shared/icons";
+import { IconCrown } from "../../shared/icons/IconCrown";
 import { IconButton } from "../../shared/ui";
 import type { Community, SibaStatus, ShibaType } from "../../shared/types";
 import {
@@ -47,6 +48,8 @@ type ProfileHeaderCardProps = {
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   setMySiba: React.Dispatch<React.SetStateAction<ShibaType | undefined>>;
   setSibaIns: React.Dispatch<React.SetStateAction<ShibaType[]>>;
+  breederMode?: boolean;
+  breederVerified?: boolean;
 };
 
 export const ProfileHeaderCard = ({
@@ -73,6 +76,8 @@ export const ProfileHeaderCard = ({
   setError,
   setMySiba,
   setSibaIns,
+  breederMode = false,
+  breederVerified = false,
 }: ProfileHeaderCardProps) => {
   const communityTitle = community?.title ?? mySiba?.community_title;
   const communityLink = community?.tg_link ?? mySiba?.community_tg_link;
@@ -112,12 +117,12 @@ export const ProfileHeaderCard = ({
                 type="button"
                 className={stls.healthCardButton}
                 onClick={onOpenHealth}
-                title="Медкнижка"
+                title={breederMode ? "Документы питомника" : "Медкнижка"}
               >
                 <span className={stls.healthCardIcon}>
                   <IconFirstAid color="#E95B47" />
                 </span>
-                {hasHealthAlert && (
+                {hasHealthAlert && !breederMode && (
                   <span className={stls.healthAlertDot}>!</span>
                 )}
               </button>
@@ -176,16 +181,26 @@ export const ProfileHeaderCard = ({
           <div className={stls.nameBlock}>
             <div className={stls.identityRow}>
               <h1 className={stls.sibaName}>{mySiba?.siba_name}</h1>
-              <span className={stls.genderBadge}>{genderLabel}</span>
+              {!breederMode ? (
+                <span className={stls.genderBadge}>{genderLabel}</span>
+              ) : null}
+              {breederMode && breederVerified ? (
+                <span className={stls.breederVerifiedBadge} title="Питомник верифицирован">
+                  <IconCrown color="#FEAE11" size={18} />
+                  Verified Breeder
+                </span>
+              ) : null}
             </div>
-            <ProfileStatusControl
-              mySiba={mySiba}
-              authUserId={authUserId}
-              isEdit={isEdit}
-              setError={setError}
-              setMySiba={setMySiba}
-              setSibaIns={setSibaIns}
-            />
+            {!breederMode ? (
+              <ProfileStatusControl
+                mySiba={mySiba}
+                authUserId={authUserId}
+                isEdit={isEdit}
+                setError={setError}
+                setMySiba={setMySiba}
+                setSibaIns={setSibaIns}
+              />
+            ) : null}
             <div className={stls.communityPanel}>
               <div className={stls.communityPanelTop}>
                 <span className={stls.communityPanelLabel}>Состоит в чате</span>
@@ -221,11 +236,13 @@ export const ProfileHeaderCard = ({
           onSubscriptionsClick={onOpenSubscriptions}
           onSubscribersClick={onOpenSubscribers}
         />
-        <ProfileRoleLore
-          rank={academyRank?.rank}
-          icon={academyRank?.icon}
-          quote={academyRank?.bossQuote}
-        />
+        {!breederMode ? (
+          <ProfileRoleLore
+            rank={academyRank?.rank}
+            icon={academyRank?.icon}
+            quote={academyRank?.bossQuote}
+          />
+        ) : null}
       </div>
     </div>
   );

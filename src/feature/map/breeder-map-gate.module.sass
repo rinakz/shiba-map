@@ -1,0 +1,64 @@
+@use '../../styles/config/Color.module' as colors
+
+.wrap
+    min-height: 60vh
+    display: flex
+    align-items: center
+    justify-content: center
+    padding: 24px 16px 100px
+    box-sizing: border-box
+
+.card
+    max-width: 420px
+    width: 100%
+    background: colors.$white
+    border-radius: 20px
+    padding: 24px 20px
+    display: flex
+    flex-direction: column
+    gap: 16px
+    border: 1px solid colors.$gray-border
+
+.title
+    font-size: 22px
+    margin: 0
+    color: colors.$black
+
+.text
+    margin: 0
+    font-size: 15px
+    line-height: 1.45
+    color: colors.$black
+
+.statusRow
+    display: flex
+    flex-direction: column
+    gap: 8px
+
+.statusBadge
+    display: inline-block
+    align-self: flex-start
+    padding: 6px 12px
+    border-radius: 12px
+    background: rgba(254, 174, 17, 0.25)
+    color: colors.$black
+    font-size: 13px
+    font-weight: 600
+
+.statusHint
+    font-size: 13px
+    color: colors.$gray-border
+
+// Как в map.module.sass (.hiddenFileInput) и breeder-documents (.hiddenInput)
+.hiddenFileInput
+    display: none
+
+.warn
+    margin: 0
+    font-size: 13px
+    color: colors.$red
+
+.err
+    margin: 0
+    font-size: 13px
+    color: colors.$red

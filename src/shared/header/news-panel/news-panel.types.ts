@@ -19,6 +19,8 @@ export type FeedItem = {
   targetSiba?: { id: string; name: string };
   place?: { kind: PlaceKind; place: Place };
   commandName?: string;
+  isExpertPost?: boolean;
+  expertPostBody?: string;
 };
 
 export type SibaNewsRow = {

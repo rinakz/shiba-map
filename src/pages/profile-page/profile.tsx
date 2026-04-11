@@ -16,7 +16,9 @@ import { Siba } from "../../feature/siba/siba";
 import { ProfileAchievements } from "./profile-achievements";
 import { ShibaAcademy } from "./shiba-academy";
 import { KennelSection } from "./kennel-section";
+import { BreederDocumentsSection } from "./breeder-documents-section";
 import {
+  buildBreederKennelDrafts,
   buildEditDrafts,
   deleteAccount,
   openFilePicker,
@@ -25,6 +27,8 @@ import {
   submitProfile,
   getProfileActionErrorMessage,
 } from "./profile.utils";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchKennelForBreederProfile } from "../../shared/api/breeder";
 import { PATH } from "../../shared/constants/path";
 import { getSibaStatus } from "../../shared/utils/siba-status";
 import { ProfileHeaderCard } from "./profile-header-card";
@@ -38,6 +42,7 @@ import { useProfilePageQueries } from "./use-profile-page-queries";
 import { useProfileCommunityManager } from "./use-profile-community-manager";
 
 export const ProfilePage = () => {
+  const queryClient = useQueryClient();
   const isMobile = useMediaQuery("(max-width:600px)");
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,6 +61,9 @@ export const ProfilePage = () => {
   const [sibaNameDraft, setSibaNameDraft] = useState("");
   const [sibaGenderDraft, setSibaGenderDraft] = useState("male");
   const [sibaIconDraft, setSibaIconDraft] = useState("default");
+  const [kennelNameDraft, setKennelNameDraft] = useState("");
+  const [kennelPrefixDraft, setKennelPrefixDraft] = useState("");
+  const [kennelAddressDraft, setKennelAddressDraft] = useState("");
   const [isDeleteDrawerOpen, setIsDeleteDrawerOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -82,6 +90,23 @@ export const ProfilePage = () => {
     mySiba,
     peopleListMode,
   });
+
+  const isBreederProfile =
+    userQuery.data?.account_type === "breeder" ||
+    user?.account_type === "breeder";
+
+  const breederKennelQuery = useQuery({
+    queryKey: ["breeder-kennel", authUserId, mySiba?.id],
+    queryFn: () =>
+      fetchKennelForBreederProfile(authUserId as string, mySiba?.id),
+    enabled: Boolean(authUserId && isBreederProfile),
+  });
+
+  const scrollToBreederDocuments = () => {
+    document
+      .getElementById("breeder-documents")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const {
     community,
@@ -142,6 +167,14 @@ export const ProfilePage = () => {
   }, [mySiba]);
 
   useEffect(() => {
+    if (!isBreederProfile) return;
+    const k = buildBreederKennelDrafts(breederKennelQuery.data);
+    setKennelNameDraft(k.kennelName);
+    setKennelPrefixDraft(k.kennelPrefix);
+    setKennelAddressDraft(k.kennelAddress);
+  }, [isBreederProfile, breederKennelQuery.data]);
+
+  useEffect(() => {
     const shouldOpenCamera = new URLSearchParams(location.search).get("verify");
     if (shouldOpenCamera !== "1") return;
     if (!mySiba?.id) return;
@@ -168,7 +201,7 @@ export const ProfilePage = () => {
 
     setIsSavingProfile(true);
     try {
-      await submitProfile({
+      const ok = await submitProfile({
         authUserId,
         mySiba,
         user,
@@ -185,7 +218,15 @@ export const ProfilePage = () => {
         setIsEdit,
         setPhotoFile,
         setPhotoPreviewUrl,
+        profileKind: isBreederProfile ? "breeder" : "owner",
+        kennelId: breederKennelQuery.data?.id,
+        kennelNameDraft,
+        kennelPrefixDraft,
+        kennelAddressDraft,
       });
+      if (ok && isBreederProfile) {
+        void queryClient.invalidateQueries({ queryKey: ["breeder-kennel"] });
+      }
     } catch (error) {
       setError(getProfileActionErrorMessage(error, "Не удалось сохранить профиль."));
     } finally {
@@ -211,9 +252,16 @@ export const ProfilePage = () => {
     setNicknameDraft(drafts.nickname);
     setTgNameDraft(drafts.tgName);
     setIsShowTgNameDraft(drafts.isShowTgName);
-    setSibaNameDraft(drafts.sibaName);
-    setSibaGenderDraft(drafts.sibaGender);
-    setSibaIconDraft(drafts.sibaIcon);
+    if (isBreederProfile) {
+      const k = buildBreederKennelDrafts(breederKennelQuery.data);
+      setKennelNameDraft(k.kennelName);
+      setKennelPrefixDraft(k.kennelPrefix);
+      setKennelAddressDraft(k.kennelAddress);
+    } else {
+      setSibaNameDraft(drafts.sibaName);
+      setSibaGenderDraft(drafts.sibaGender);
+      setSibaIconDraft(drafts.sibaIcon);
+    }
     setIsEdit(true);
   };
 
@@ -272,12 +320,18 @@ export const ProfilePage = () => {
           onOpenSubscriptions={() => setPeopleListMode("followings")}
           onOpenSubscribers={() => setPeopleListMode("followers")}
           onStartEdit={handleStartEdit}
-          onOpenHealth={() => navigate(PATH.HealthPass)}
+          onOpenHealth={() =>
+            isBreederProfile
+              ? scrollToBreederDocuments()
+              : navigate(PATH.HealthPass)
+          }
           onOpenFilePicker={() => openFilePicker(fileInputRef)}
           onPhotoChange={handleFileChange}
           setError={setError}
           setMySiba={setMySiba}
           setSibaIns={setSibaIns}
+          breederMode={isBreederProfile}
+          breederVerified={Boolean(breederKennelQuery.data?.is_verified)}
         />
         <ProfileOwnerCard
           user={user}
@@ -286,23 +340,49 @@ export const ProfilePage = () => {
         />
         {isEdit && (
           <ProfileEditForm
+            breederMode={isBreederProfile}
             nicknameDraft={nicknameDraft}
             tgNameDraft={tgNameDraft}
             isShowTgNameDraft={isShowTgNameDraft}
             sibaNameDraft={sibaNameDraft}
             sibaGenderDraft={sibaGenderDraft}
             sibaIconDraft={sibaIconDraft}
+            kennelNameDraft={kennelNameDraft}
+            kennelPrefixDraft={kennelPrefixDraft}
+            kennelAddressDraft={kennelAddressDraft}
             onNicknameChange={setNicknameDraft}
             onTgNameChange={setTgNameDraft}
             onShowTgNameChange={setIsShowTgNameDraft}
             onSibaNameChange={setSibaNameDraft}
             onSibaGenderChange={setSibaGenderDraft}
             onSibaIconChange={setSibaIconDraft}
+            onKennelNameChange={setKennelNameDraft}
+            onKennelPrefixChange={setKennelPrefixDraft}
+            onKennelAddressChange={setKennelAddressDraft}
           />
         )}
-        <ProfileAchievements mySiba={mySiba} />
-        <ShibaAcademy sibaId={mySiba?.id} />
-        <KennelSection siba={mySiba} authUserId={authUserId ?? undefined} />
+        {!isBreederProfile ? (
+          <ProfileAchievements mySiba={mySiba} />
+        ) : null}
+        {!isBreederProfile ? <ShibaAcademy sibaId={mySiba?.id} /> : null}
+        <KennelSection
+          siba={mySiba}
+          authUserId={authUserId ?? undefined}
+          accountType={isBreederProfile ? "breeder" : "owner"}
+        />
+        {isBreederProfile && authUserId ? (
+          <div id="breeder-documents">
+            <BreederDocumentsSection
+              authUserId={authUserId}
+              kennel={breederKennelQuery.data ?? null}
+              onUpdated={() =>
+                void queryClient.invalidateQueries({
+                  queryKey: ["breeder-kennel"],
+                })
+              }
+            />
+          </div>
+        ) : null}
         {error && (
           <span className={stls.errorText}>{error}</span>
         )}

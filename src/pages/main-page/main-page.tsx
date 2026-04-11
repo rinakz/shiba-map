@@ -1,8 +1,10 @@
 import { useContext, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircularProgress, Skeleton } from "@mui/material";
 import { AppContext } from "../../shared/context/app-context";
 import { GeneralMap } from "../../feature";
+import { BreederMapGate } from "../../feature/map/breeder-map-gate";
+import { fetchKennelForBreederProfile } from "../../shared/api/breeder";
 import {
   fetchAllSibas,
   fetchMySibaByUserId,
@@ -11,6 +13,7 @@ import {
 } from "../profile-page/profile.utils";
 
 export const MainPage = () => {
+  const queryClient = useQueryClient();
   const { authUserId, isAuthLoading, setUser, setSibaIns, setMySiba } =
     useContext(AppContext);
 
@@ -32,6 +35,18 @@ export const MainPage = () => {
     enabled: Boolean(authUserId),
   });
 
+  const breederKennelQuery = useQuery({
+    queryKey: ["breeder-kennel", authUserId, mySibaQuery.data?.id],
+    queryFn: () =>
+      fetchKennelForBreederProfile(
+        authUserId as string,
+        mySibaQuery.data?.id,
+      ),
+    enabled: Boolean(
+      authUserId && userQuery.data?.account_type === "breeder",
+    ),
+  });
+
   useEffect(() => {
     if (userQuery.data) setUser(userQuery.data);
   }, [userQuery.data, setUser]);
@@ -46,7 +61,11 @@ export const MainPage = () => {
 
   const isPageDataLoading =
     Boolean(authUserId) &&
-    (userQuery.isLoading || sibasQuery.isLoading || mySibaQuery.isLoading);
+    (userQuery.isLoading ||
+      sibasQuery.isLoading ||
+      mySibaQuery.isLoading ||
+      (userQuery.data?.account_type === "breeder" &&
+        breederKennelQuery.isLoading));
 
   if (isAuthLoading || isPageDataLoading) {
     return (
@@ -70,6 +89,24 @@ export const MainPage = () => {
     );
   }
   if (!authUserId) return null;
+
+  const isBreeder = userQuery.data?.account_type === "breeder";
+  const breederMapBlocked =
+    isBreeder &&
+    !breederKennelQuery.isLoading &&
+    !breederKennelQuery.data?.is_verified;
+
+  if (breederMapBlocked) {
+    return (
+      <BreederMapGate
+        authUserId={authUserId}
+        kennel={breederKennelQuery.data ?? null}
+        onVerified={() =>
+          void queryClient.invalidateQueries({ queryKey: ["breeder-kennel"] })
+        }
+      />
+    );
+  }
 
   return <GeneralMap />;
 };

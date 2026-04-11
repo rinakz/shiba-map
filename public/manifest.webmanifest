@@ -1,0 +1,19 @@
+{
+  "name": "Сибинатор",
+  "short_name": "Сибинатор",
+  "description": "Карта и сообщество для владельцев сиба-ину",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/sibka.png",
+      "sizes": "80x80",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

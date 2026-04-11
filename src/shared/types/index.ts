@@ -51,6 +51,9 @@ export type ShibaUser = {
   is_show_tgname: boolean;
   promo_code?: string;
   invited_by_code?: string | null;
+  account_type?: "owner" | "breeder" | null;
+  kennel_city?: string | null;
+  kennel_prefix?: string | null;
   community_id?: string | null;
   community_title?: string | null;
   community_avatar_url?: string | null;

@@ -1,3 +1,5 @@
+export type AccountType = "owner" | "breeder";
+
 export type AuthFormType = {
   nickname: string;
   password: string;
@@ -9,4 +11,6 @@ export type AuthFormType = {
   location: string;
   gender: string;
   email: string;
+  kennelCity: string;
+  kennelPrefix: string;
 };

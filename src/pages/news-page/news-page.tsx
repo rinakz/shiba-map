@@ -10,6 +10,7 @@ import type { FeedItem } from "../../shared/header/news-panel/news-panel.types";
 import stls from "../../feature/map/map.module.sass";
 import pageStls from "./news-page.module.sass";
 import {
+  Button,
   CommunityBadge,
   IconButton,
   MainTabBar,
@@ -19,16 +20,25 @@ import { UserBadge } from "../../shared/ui/user-badge";
 import { IconCalendar as IconFillCalendar } from "../../shared/icons/IconFillCalendar";
 import { IconLike } from "../../shared/icons/IconLike";
 import { IconCrown } from "../../shared/icons/IconCrown";
+import { IconHouse } from "../../shared/icons/IconHouse";
 import { EventCalendar } from "../../shared/header/event-calendar";
 import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import { Siba } from "../../feature/siba/siba";
 import { useEffect } from "react";
-import { fetchAllSibas, profileQueryKeys } from "../profile-page/profile.utils";
+import {
+  fetchAllSibas,
+  fetchUserById,
+  profileQueryKeys,
+} from "../profile-page/profile.utils";
+import { publishExpertPost } from "../../shared/api/breeder";
 import { supabase } from "../../shared/api/supabase-сlient";
 import { useNavigate } from "react-router-dom";
 import { PATH } from "../../shared/constants/path";
 import { getSibaStatus } from "../../shared/utils/siba-status";
 import type { ShibaType } from "../../shared/types";
+
+/** Совпадает с $breeder-feed-accent в news-page.module.sass */
+const BREEDER_FEED_ACCENT = "#5E7C8C";
 
 const formatActivityDate = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", {
@@ -40,6 +50,9 @@ const formatActivityDate = (value: string) =>
   }).format(new Date(value));
 
 const getActivityMeta = (item: FeedItem) => {
+  if (item.isExpertPost) {
+    return { emoji: "", accent: "", typeLabel: "питомник" };
+  }
   if (item.commandName) {
     return { emoji: "🎓", accent: item.commandName, typeLabel: "обучение" };
   }
@@ -64,6 +77,15 @@ export const NewsPage = () => {
   const [selectedSibaId, setSelectedSibaId] = useState<string | null>(null);
   const [likesOpenItemId, setLikesOpenItemId] = useState<string | null>(null);
   const [newsToast, setNewsToast] = useState<string | null>(null);
+  const [expertDraft, setExpertDraft] = useState("");
+  const [expertErr, setExpertErr] = useState<string | null>(null);
+  const [expertPosting, setExpertPosting] = useState(false);
+
+  const userFeedQuery = useQuery({
+    queryKey: authUserId ? profileQueryKeys.user(authUserId) : ["user", "guest"],
+    queryFn: () => fetchUserById(authUserId as string),
+    enabled: Boolean(authUserId),
+  });
 
   const newsQuery = useQuery<FeedItem[]>({
     queryKey: ["news-feed", authUserId],
@@ -279,6 +301,48 @@ export const NewsPage = () => {
           </div>
         </div>
         <div className={pageStls.content}>
+          {userFeedQuery.data?.account_type === "breeder" && (
+            <div className={pageStls.expertComposer}>
+              <div className={pageStls.expertComposerHead}>
+                <span className={pageStls.expertHouseIcon}>
+                  <IconHouse size={22} color={BREEDER_FEED_ACCENT} />
+                </span>
+                <span>Пост питомника</span>
+              </div>
+              <textarea
+                className={pageStls.expertTextarea}
+                rows={3}
+                placeholder="Совет дня, новости питомника, гордость за выпускника…"
+                value={expertDraft}
+                onChange={(e) => setExpertDraft(e.target.value)}
+              />
+              {expertErr ? (
+                <div className={pageStls.expertErr}>{expertErr}</div>
+              ) : null}
+              <Button
+                size="small"
+                loading={expertPosting}
+                onClick={async () => {
+                  setExpertErr(null);
+                  setExpertPosting(true);
+                  const { error } = await publishExpertPost(expertDraft);
+                  setExpertPosting(false);
+                  if (error) {
+                    setExpertErr(error);
+                  } else {
+                    setExpertDraft("");
+                    await queryClient.invalidateQueries({
+                      queryKey: ["news-feed"],
+                    });
+                    setNewsToast("Пост опубликован.");
+                    window.setTimeout(() => setNewsToast(null), 1800);
+                  }
+                }}
+              >
+                Опубликовать
+              </Button>
+            </div>
+          )}
           {newsQuery.isLoading && (
             <>
               <Skeleton variant="rounded" height={112} sx={{ mb: 1.5 }} />
@@ -292,6 +356,97 @@ export const NewsPage = () => {
           {(newsQuery.data ?? []).map((item) => {
             const count = likesByItemCount.get(item.id) ?? 0;
             const activityMeta = getActivityMeta(item);
+
+            const likeRow = (
+              <div className={pageStls.feedActions}>
+                <button
+                  type="button"
+                  onClick={() => toggleLikeMutation.mutate(item.id)}
+                  className={`${pageStls.likeButton} ${
+                    myLikesSet.has(item.id) ? pageStls.likeButtonActive : ""
+                  }`}
+                  title={myLikesSet.has(item.id) ? "Убрать лайк" : "Нравится"}
+                >
+                  <IconLike
+                    color={myLikesSet.has(item.id) ? "#E95B47" : "#74736E"}
+                    size={18}
+                  />
+                </button>
+                <button
+                  type="button"
+                  className={pageStls.likesCount}
+                  onClick={() => setLikesOpenItemId(item.id)}
+                  title="Кто лайкнул"
+                >
+                  нравится • {count}
+                </button>
+              </div>
+            );
+
+            if (item.isExpertPost) {
+              return (
+                <article
+                  key={item.id}
+                  className={`${pageStls.feedCard} ${pageStls.feedCardExpert}`}
+                >
+                  <div className={pageStls.feedCardTop}>
+                    {item.actorSibaId ? (
+                      <button
+                        type="button"
+                        className={pageStls.feedAvatarButton}
+                        onClick={() => setSelectedSibaId(item.actorSibaId)}
+                      >
+                        <img
+                          src={item.actorSibaAvatar}
+                          alt={item.actorSibaName}
+                          className={pageStls.feedAvatar}
+                        />
+                      </button>
+                    ) : (
+                      <div className={pageStls.feedAvatarStatic}>
+                        <img
+                          src={item.actorSibaAvatar}
+                          alt=""
+                          className={pageStls.feedAvatar}
+                        />
+                      </div>
+                    )}
+                    <div className={pageStls.feedBody}>
+                      <div className={pageStls.feedHeadlineRow}>
+                        <div className={pageStls.expertNameRow}>
+                          <span className={pageStls.expertPublishLine}>
+                            <span className={pageStls.feedActor}>
+                              {item.actorSibaName}
+                            </span>
+                            <span className={pageStls.expertPublishVerb}>
+                              {"\u00A0"}
+                              {item.verb}
+                            </span>
+                          </span>
+                          <span className={pageStls.expertChip}>
+                            <IconHouse
+                              size={13}
+                              color={BREEDER_FEED_ACCENT}
+                              className={pageStls.expertChipHouse}
+                            />
+                            Заводчик
+                          </span>
+                        </div>
+                        <div className={pageStls.feedDate}>
+                          {formatActivityDate(item.date)}
+                        </div>
+                      </div>
+                      {item.expertPostBody ? (
+                        <p className={pageStls.expertPostBody}>
+                          {item.expertPostBody}
+                        </p>
+                      ) : null}
+                      {likeRow}
+                    </div>
+                  </div>
+                </article>
+              );
+            }
 
             return (
               <article key={item.id} className={pageStls.feedCard}>
@@ -361,35 +516,7 @@ export const NewsPage = () => {
                         )}
                       </div>
                     </div>
-                    <div className={pageStls.feedActions}>
-                      <button
-                        type="button"
-                        onClick={() => toggleLikeMutation.mutate(item.id)}
-                        className={`${pageStls.likeButton} ${
-                          myLikesSet.has(item.id)
-                            ? pageStls.likeButtonActive
-                            : ""
-                        }`}
-                        title={
-                          myLikesSet.has(item.id) ? "Убрать лайк" : "Нравится"
-                        }
-                      >
-                        <IconLike
-                          color={
-                            myLikesSet.has(item.id) ? "#E95B47" : "#74736E"
-                          }
-                          size={18}
-                        />
-                      </button>
-                      <button
-                        type="button"
-                        className={pageStls.likesCount}
-                        onClick={() => setLikesOpenItemId(item.id)}
-                        title="Кто лайкнул"
-                      >
-                        нравится • {count}
-                      </button>
-                    </div>
+                    {likeRow}
                   </div>
                 </div>
               </article>

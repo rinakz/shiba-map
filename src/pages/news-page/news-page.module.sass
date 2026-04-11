@@ -283,3 +283,114 @@
     display: flex
     flex-direction: column
     gap: 4px
+
+// Посты заводчика: приглушённый сине-серый, рядом с кремовым UI
+$breeder-feed-accent: #5E7C8C
+$breeder-feed-accent-deep: #425A68
+$breeder-feed-wash: #F2F5F7
+$breeder-feed-border: rgba(94, 124, 140, 0.38)
+$breeder-feed-rgba-22: rgba(94, 124, 140, 0.22)
+$breeder-feed-rgba-12: rgba(94, 124, 140, 0.12)
+$breeder-feed-rgba-10: rgba(94, 124, 140, 0.1)
+$breeder-feed-rgba-08: rgba(94, 124, 140, 0.08)
+$breeder-feed-rgba-16: rgba(94, 124, 140, 0.16)
+
+.expertComposer
+    background: linear-gradient(145deg, $breeder-feed-wash 0%, #FFFCF5 100%)
+    border: 1px solid $breeder-feed-border
+    border-radius: 16px
+    padding: 12px
+    display: flex
+    flex-direction: column
+    gap: 10px
+    box-shadow: 0 2px 12px $breeder-feed-rgba-08
+
+.expertComposerHead
+    display: flex
+    align-items: center
+    gap: 8px
+    font-weight: 800
+    font-size: 14px
+    color: $breeder-feed-accent-deep
+
+.expertHouseIcon
+    display: inline-flex
+    color: $breeder-feed-accent
+    flex-shrink: 0
+
+.expertTextarea
+    width: 100%
+    box-sizing: border-box
+    border-radius: 12px
+    border: 1px solid $breeder-feed-rgba-22
+    padding: 10px
+    font-size: 14px
+    font-family: inherit
+    resize: vertical
+    min-height: 72px
+    background: #FFFCF5
+
+    &:focus
+        outline: none
+        border-color: rgba(94, 124, 140, 0.5)
+        box-shadow: 0 0 0 2px $breeder-feed-rgba-12
+
+.expertErr
+    font-size: 13px
+    color: #E95B47
+
+.feedCardExpert
+    border: 2px solid $breeder-feed-border
+    background: linear-gradient(180deg, rgba(242, 245, 247, 0.9) 0%, #FFFCF5 52%)
+    box-shadow: 0 4px 16px $breeder-feed-rgba-10
+
+.feedAvatarStatic
+    flex-shrink: 0
+    display: flex
+    align-items: flex-start
+    padding: 0
+    margin: 0
+
+.expertPublishLine
+    min-width: 0
+    flex: 1
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+
+.expertPublishVerb
+    white-space: nowrap
+
+.expertNameRow
+    display: flex
+    align-items: baseline
+    gap: 8px
+    flex-wrap: wrap
+    min-width: 0
+    flex: 1
+
+.expertChip
+    display: inline-flex
+    align-items: center
+    gap: 4px
+    font-size: 10px
+    font-weight: 800
+    letter-spacing: 0.06em
+    text-transform: uppercase
+    padding: 3px 8px 3px 6px
+    border-radius: 8px
+    background: $breeder-feed-rgba-16
+    color: $breeder-feed-accent-deep
+    border: 1px solid $breeder-feed-rgba-22
+    flex-shrink: 0
+
+.expertChipHouse
+    flex-shrink: 0
+    display: block
+
+.expertPostBody
+    margin: 8px 0 0
+    font-size: 15px
+    line-height: 1.45
+    color: #2E2D30
+    white-space: pre-wrap

@@ -7,3 +7,4 @@ export { ProgressBar } from "./progress-bar";
 export { SibaToast } from "./siba-toast";
 export { CommunityBadge } from "./community-badge";
 export { UserBadge } from "./user-badge";
+export { PeopleListOverlay } from "./people-list-overlay";

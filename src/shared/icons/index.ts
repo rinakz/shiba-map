@@ -4,6 +4,7 @@ export * from "./IconChat";
 export * from "./IconChatDot";
 export * from "./IconCrown";
 export * from "./IconGroomer";
+export * from "./IconHouse";
 export * from "./IconMale";
 export * from "./IconPark";
 export * from "./IconPeople";

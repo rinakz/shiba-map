@@ -6,9 +6,10 @@ import { IconCrown } from "../../shared/icons/IconCrown";
 import { useLocation, useNavigate } from "react-router-dom";
 import colors from "../../styles/config/Color.module.sass";
 import { PATH } from "../../shared/constants/path";
-import type { AuthFormType } from "./types";
+import type { AccountType, AuthFormType } from "./types";
 import { LayoutPage } from "../../shared/ui";
 import {
+  BreederCredentialsStep,
   FirstStep,
   FourthStep,
   SecondStep,
@@ -20,7 +21,7 @@ export const AuthPage = () => {
   const methodParam = new URLSearchParams(location.search).get("method");
   const authMethod = methodParam === "telegram" ? "telegram" : "email";
 
-  const { control, watch } = useForm<AuthFormType>({
+  const { control, watch, setValue } = useForm<AuthFormType>({
     mode: "onSubmit",
     defaultValues: {
       nickname: "",
@@ -33,20 +34,44 @@ export const AuthPage = () => {
       location: "",
       gender: "male",
       email: "",
+      kennelCity: "",
+      kennelPrefix: "",
     },
   });
 
   const [activeStep, setActiveStep] = useState(1);
+  const [accountType, setAccountType] = useState<AccountType>("owner");
+  const [kennelLogoFile, setKennelLogoFile] = useState<File | null>(null);
   const navigate = useNavigate();
 
   const formData = watch();
+  const totalSteps = accountType === "breeder" ? 3 : 4;
+  const stepLabels = Array.from({ length: totalSteps }, (_, i) => i + 1);
+
+  const handleAccountTypeChange = (next: AccountType) => {
+    if (next === accountType) return;
+    setAccountType(next);
+    setKennelLogoFile(null);
+    if (next === "owner") {
+      setValue("kennelCity", "");
+      setValue("kennelPrefix", "");
+    } else {
+      setValue("sibaname", "");
+      setValue("gender", "male");
+      setValue("icon", "default");
+    }
+  };
+
+  const showPrivacyFooter =
+    (accountType === "owner" && activeStep === 3) ||
+    (accountType === "breeder" && activeStep === 2);
 
   return (
     <LayoutPage>
       <div className={stls.pageContainer}>
         <div className={stls.loginContainer}>
           <div style={{ width: "84px", height: "84px", display: "flex" }}>
-            <img style={{ width: "inherit" }} src="logo.png" />
+            <img style={{ width: "inherit" }} src="logo.png" alt="" />
           </div>
           <div className={stls.formContainer}>
             <div
@@ -56,11 +81,11 @@ export const AuthPage = () => {
                 style={{ display: "flex", gap: "8px", alignItems: "center" }}
               >
                 <IconCrown />
-                <h1 style={{ fontSize: "40px" }}>Регистрация</h1>
+                <h1 className={stls.authTitle}>Регистрация</h1>
               </div>
               <Box className={stls.stepperContainer}>
                 <Stepper>
-                  {[1, 2, 3, 4].map((label) => (
+                  {stepLabels.map((label) => (
                     <Step
                       className={stls.step}
                       style={{
@@ -83,9 +108,13 @@ export const AuthPage = () => {
                   control={control}
                   setActiveStep={setActiveStep}
                   formData={formData}
+                  accountType={accountType}
+                  onAccountTypeChange={handleAccountTypeChange}
+                  kennelLogoFile={kennelLogoFile}
+                  onKennelLogoChange={setKennelLogoFile}
                 />
               )}
-              {activeStep === 2 && (
+              {activeStep === 2 && accountType === "owner" && (
                 <SecondStep
                   control={control}
                   setActiveStep={setActiveStep}
@@ -93,23 +122,34 @@ export const AuthPage = () => {
                   authMethod={authMethod}
                 />
               )}
-              {activeStep === 3 && (
+              {activeStep === 2 && accountType === "breeder" && (
+                <BreederCredentialsStep
+                  control={control}
+                  setActiveStep={setActiveStep}
+                  formData={formData}
+                  authMethod={authMethod}
+                />
+              )}
+              {activeStep === 3 && accountType === "owner" && (
                 <ThirdStep
                   control={control}
                   setActiveStep={setActiveStep}
                   formData={formData}
                 />
               )}
-              {activeStep === 4 && (
+              {((activeStep === 3 && accountType === "breeder") ||
+                (activeStep === 4 && accountType === "owner")) && (
                 <FourthStep
                   setActiveStep={setActiveStep}
                   formData={formData}
                   authMethod={authMethod}
+                  accountType={accountType}
+                  kennelLogoFile={kennelLogoFile}
                 />
               )}
             </form>
           </div>{" "}
-          {activeStep === 3 ? (
+          {showPrivacyFooter ? (
             <div>
               Нажимая кнопку, вы соглашаетесь с{" "}
               <span style={{ color: colors.yellow, cursor: "pointer" }}>

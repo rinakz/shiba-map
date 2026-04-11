@@ -1,3 +1,75 @@
+.authTitle
+    font-size: 40px
+    text-transform: uppercase
+    margin: 0
+
+.accountSegment
+    display: flex
+    width: 100%
+    padding: 4px
+    border-radius: 20px
+    background: rgba(255, 252, 245, 0.85)
+    border: 1px solid #A3A19E
+    gap: 4px
+    box-sizing: border-box
+
+.accountSegmentTab
+    flex: 1
+    border: none
+    border-radius: 16px
+    padding: 12px 10px
+    font-size: 15px
+    font-weight: 600
+    cursor: pointer
+    background: transparent
+    color: #99A1AF
+    transition: background 0.2s ease, color 0.2s ease
+
+.accountSegmentTabActive
+    background: #FF6B4E
+    color: #FFFCF5
+
+.accountFieldsFade
+    animation: authAccountFade 0.28s ease-out
+
+@keyframes authAccountFade
+    from
+        opacity: 0
+        transform: translateY(6px)
+    to
+        opacity: 1
+        transform: translateY(0)
+
+.kennelLogoInput
+    display: none
+
+.kennelLogoRow
+    display: flex
+    align-items: center
+    gap: 16px
+    flex-wrap: wrap
+
+.kennelLogoPreview
+    width: 72px
+    height: 72px
+    border-radius: 16px
+    border: 1px dashed #A3A19E
+    overflow: hidden
+    display: flex
+    align-items: center
+    justify-content: center
+    background: #FFFCF5
+    img
+        width: 100%
+        height: 100%
+        object-fit: cover
+
+.kennelLogoPlaceholder
+    font-size: 11px
+    color: #99A1AF
+    text-align: center
+    padding: 4px
+
 .stepperContainer
     .step
         width: 28px

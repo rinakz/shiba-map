@@ -1,0 +1,94 @@
+@use '../../styles/config/Color.module' as colors
+
+.section
+    margin-top: 20px
+    padding: 16px
+    background: colors.$white
+    border-radius: 16px
+    border: 1px solid colors.$gray-border
+
+.title
+    margin: 0 0 6px
+    font-size: 18px
+    color: colors.$black
+
+.sub
+    margin: 0 0 14px
+    font-size: 13px
+    color: #74736E
+    line-height: 1.4
+
+.grid
+    display: grid
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr))
+    gap: 12px
+
+.tile
+    border: 1px dashed colors.$gray-border
+    border-radius: 14px
+    padding: 10px
+    background: #FFFCF5
+    cursor: pointer
+    display: flex
+    flex-direction: column
+    gap: 8px
+    align-items: stretch
+    text-align: left
+
+.tileLabel
+    font-size: 12px
+    font-weight: 700
+    color: colors.$black
+
+.tileEmpty
+    font-size: 12px
+    color: #99A1AF
+    padding: 24px 0
+    text-align: center
+
+.thumb
+    width: 100%
+    height: 100px
+    object-fit: cover
+    border-radius: 10px
+
+.awardsBlock
+    grid-column: 1 / -1
+    border: 1px dashed colors.$gray-border
+    border-radius: 14px
+    padding: 10px
+    background: #FFFCF5
+
+.awardsRow
+    display: flex
+    flex-wrap: wrap
+    gap: 8px
+    align-items: center
+    margin-top: 8px
+
+.awardThumb
+    width: 72px
+    height: 72px
+    padding: 0
+    border: none
+    border-radius: 10px
+    overflow: hidden
+    cursor: pointer
+    img
+        width: 100%
+        height: 100%
+        object-fit: cover
+
+.hiddenInput
+    display: none
+
+.err
+    margin: 10px 0 0
+    font-size: 13px
+    color: colors.$red
+
+.fullscreenImg
+    display: block
+    width: 100%
+    max-height: 85vh
+    object-fit: contain
