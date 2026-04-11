@@ -96,9 +96,22 @@ export const ProfilePage = () => {
     user?.account_type === "breeder";
 
   const breederKennelQuery = useQuery({
-    queryKey: ["breeder-kennel", authUserId, mySiba?.id],
+    queryKey: [
+      "breeder-kennel",
+      authUserId,
+      mySiba?.id,
+      user?.kennel_name,
+      user?.kennel_city,
+      mySiba?.siba_name,
+    ],
     queryFn: () =>
-      fetchKennelForBreederProfile(authUserId as string, mySiba?.id),
+      fetchKennelForBreederProfile(authUserId as string, mySiba?.id, {
+        kennel_name: user?.kennel_name,
+        kennel_prefix: user?.kennel_prefix,
+        kennel_city: user?.kennel_city,
+        siba_name: mySiba?.siba_name,
+        siba_coordinates: mySiba?.coordinates,
+      }),
     enabled: Boolean(authUserId && isBreederProfile),
   });
 
@@ -332,6 +345,11 @@ export const ProfilePage = () => {
           setSibaIns={setSibaIns}
           breederMode={isBreederProfile}
           breederVerified={Boolean(breederKennelQuery.data?.is_verified)}
+          breederKennelName={
+            breederKennelQuery.data?.name?.trim() ||
+            user?.kennel_name?.trim() ||
+            null
+          }
         />
         <ProfileOwnerCard
           user={user}
@@ -369,6 +387,17 @@ export const ProfilePage = () => {
           siba={mySiba}
           authUserId={authUserId ?? undefined}
           accountType={isBreederProfile ? "breeder" : "owner"}
+          breederRepairHint={
+            isBreederProfile
+              ? {
+                  kennel_name: user?.kennel_name,
+                  kennel_prefix: user?.kennel_prefix,
+                  kennel_city: user?.kennel_city,
+                  siba_name: mySiba?.siba_name,
+                  siba_coordinates: mySiba?.coordinates,
+                }
+              : null
+          }
         />
         {isBreederProfile && authUserId ? (
           <div id="breeder-documents">

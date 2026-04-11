@@ -40,8 +40,64 @@ export async function fetchKennelRepresentativeAvatarMap(
   return map;
 }
 
+/**
+ * У строк из `sibains` нет `account_type`. Без него в генеалогическом древе владельца
+ * остаётся анкета заводчика (она же в `siba_kennels`). Тип подставляем из view / users и
+ * убираем всех заводчиков — в древе только «обычные» сибы.
+ */
+async function withAccountTypesExcludingBreeders(
+  list: ShibaType[],
+): Promise<ShibaType[]> {
+  if (!list.length) return list;
+
+  const ids = list.map((s) => String(s.id));
+
+  const { data: markers } = await supabase
+    .from("siba_map_markers")
+    .select("id, account_type")
+    .in("id", ids);
+
+  const fromMarkers = new Map<string, string | null | undefined>();
+  for (const row of markers ?? []) {
+    const m = row as { id: string; account_type: string | null };
+    fromMarkers.set(String(m.id), m.account_type);
+  }
+
+  const needUser = list.filter((s) => !fromMarkers.has(String(s.id)));
+  const userIds = [
+    ...new Set(
+      needUser
+        .map((s) => s.siba_user_id)
+        .filter((u): u is string => Boolean(u && String(u).trim())),
+    ),
+  ];
+
+  const fromUsers = new Map<string, string | null>();
+  if (userIds.length) {
+    const { data: usersRows } = await supabase
+      .from("users")
+      .select("user_id, account_type")
+      .in("user_id", userIds);
+    for (const row of usersRows ?? []) {
+      const u = row as { user_id: string; account_type: string | null };
+      fromUsers.set(u.user_id, u.account_type ?? null);
+    }
+  }
+
+  return list
+    .map((s) => {
+      const sid = String(s.id);
+      const account_type = fromMarkers.has(sid)
+        ? (fromMarkers.get(sid) ?? null)
+        : (fromUsers.get(s.siba_user_id) ?? null);
+      return { ...s, account_type };
+    })
+    .filter((s) => s.account_type !== "breeder");
+}
+
 export async function fetchSibasByKennelId(
   kennelId: string,
+  opts?: { excludeSibaId?: string | null; excludeSibaUserId?: string | null },
 ): Promise<ShibaType[]> {
   const { data: links, error: linksErr } = await supabase
     .from("siba_kennels")
@@ -55,7 +111,16 @@ export async function fetchSibasByKennelId(
     .select("*")
     .in("id", ids);
   if (sibasErr) return [];
-  return (sibas ?? []) as ShibaType[];
+  let list = (sibas ?? []) as ShibaType[];
+  const exId = opts?.excludeSibaId?.trim();
+  if (exId) {
+    list = list.filter((s) => String(s.id) !== exId);
+  }
+  const exUser = opts?.excludeSibaUserId?.trim();
+  if (exUser) {
+    list = list.filter((s) => s.siba_user_id !== exUser);
+  }
+  return withAccountTypesExcludingBreeders(list);
 }
 
 export async function fetchMyKennelForSiba(
@@ -113,6 +178,12 @@ export async function fetchBreederKennelCatalogWithAvatars(
 export function buildBreederInviteShareText(): string {
   const url = `${window.location.origin}${window.location.pathname}#/auth`;
   return `Привет! Зарегистрируйся как заводчик в Сибинаторе и пройди верификацию питомника — после проверки документов тебя смогут выбрать владельцы: ${url}`;
+}
+
+/** Приглашение для владельцев щенков / выпускников (не для других заводчиков). */
+export function buildGraduateOwnerInviteShareText(): string {
+  const url = `${window.location.origin}${window.location.pathname}#/auth`;
+  return `Привет! Зарегистрируйся в Сибинаторе, добавь анкету своей сибы и в разделе «Питомник» привяжи её к нашему питомнику — так мы останемся на связи в приложении: ${url}`;
 }
 
 export function dispatchOpenSibaFromKennel(sibaId: string) {

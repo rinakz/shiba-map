@@ -5,6 +5,7 @@ import type { ClusterItem } from "./general-map.utils";
 import { IconCafe } from "../../shared/icons/IconCafe";
 import { IconPark } from "../../shared/icons/IconPark";
 import { IconGroomer } from "../../shared/icons/IconGroomer";
+import { IconHouse } from "../../shared/icons/IconHouse";
 import { UserBadge } from "../../shared/ui/user-badge";
 import stls from "./cluster-items-overlay.module.sass";
 import {
@@ -46,6 +47,7 @@ export const ClusterItemsOverlay = ({
           const s = sibaIns.find((x) => x.id === item.id);
           if (!s) return null;
           const status = getSibaStatus(s);
+          const isBreeder = s.account_type === "breeder";
           return (
             <div
               key={`siba-${item.id}`}
@@ -54,14 +56,20 @@ export const ClusterItemsOverlay = ({
             >
               <div
                 className={`${stls.thumb} ${
-                  s.want_to_walk ? stls.thumbWalk : ""
+                  !isBreeder && s.want_to_walk ? stls.thumbWalk : ""
                 }`}
               >
-                <img
-                  alt={s.siba_name}
-                  src={s.photos ?? `/${s.siba_icon}.png`}
-                  className={stls.thumbImage}
-                />
+                {isBreeder ? (
+                  <span className={stls.thumbHouse} aria-hidden>
+                    <IconHouse color="#5E7C8C" size={36} />
+                  </span>
+                ) : (
+                  <img
+                    alt={s.siba_name}
+                    src={s.photos ?? `/${s.siba_icon}.png`}
+                    className={stls.thumbImage}
+                  />
+                )}
               </div>
               <div className={stls.meta}>
                 <UserBadge

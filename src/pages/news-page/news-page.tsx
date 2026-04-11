@@ -294,7 +294,7 @@ export const NewsPage = () => {
                   Лидеры Сиба-мира
                 </div>
                 <div className={pageStls.leaderboardSubtitle}>
-                  Весь мир и Битва Чатов
+                  Сибы, заводчики и чаты
                 </div>
               </div>
             </button>

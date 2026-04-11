@@ -1,12 +1,15 @@
 import type { Community, ShibaType } from "../../shared/types";
 
-export type LeaderboardTab = "world" | "chats";
+export type LeaderboardTab = "world" | "breeders" | "chats";
 
-export type WorldLeaderboardRow = ShibaType & {
+/** Строка рейтинга сибы / питомника (вкладки «Весь мир» и «Заводчики»). */
+export type LeaderboardSibaRow = ShibaType & {
   place: number;
   points: number;
-  rankTitle: string;
+  rankTitle?: string;
 };
+
+export type SibaLeaderboardSubtitle = "owner" | "breeder";
 
 export type CommunityMembershipRow = {
   user_id: string;

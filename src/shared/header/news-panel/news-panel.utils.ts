@@ -79,7 +79,10 @@ async function fetchExpertFeedItems(): Promise<FeedItem[]> {
     ),
   ];
   const [{ data: users }, { data: sibas }] = await Promise.all([
-    supabase.from("users").select("user_id, nickname").in("user_id", authorIds),
+    supabase
+      .from("users")
+      .select("user_id, nickname, kennel_name, account_type")
+      .in("user_id", authorIds),
     supabase
       .from("sibains")
       .select("id, siba_user_id, siba_name, photos, siba_icon, created_at")
@@ -96,6 +99,17 @@ async function fetchExpertFeedItems(): Promise<FeedItem[]> {
 
   /** Самая ранняя сиба на пользователя: название питомника и аватар как в обычной ленте. */
   const kennelNameByUser = new Map<string, string>();
+  (users ?? []).forEach(
+    (u: {
+      user_id: string;
+      kennel_name?: string | null;
+      account_type?: string | null;
+    }) => {
+      if (u.account_type === "breeder" && u.kennel_name?.trim()) {
+        kennelNameByUser.set(u.user_id, u.kennel_name.trim());
+      }
+    },
+  );
   const sibaRowByUser = new Map<
     string,
     { id: string; photos: string | null; siba_icon: string }

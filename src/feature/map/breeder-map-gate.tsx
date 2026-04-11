@@ -1,5 +1,7 @@
-import { useRef, useState, type ChangeEvent, type FC } from "react";
+import cn from "classnames";
+import { useId, useState, type ChangeEvent, type FC } from "react";
 import { Button } from "../../shared/ui";
+import btnStyles from "../../shared/ui/button/button.module.sass";
 import stls from "./breeder-map-gate.module.sass";
 import type { BreederKennelRow } from "../../shared/api/breeder";
 import { uploadBreederVerificationDocument } from "../../shared/api/breeder";
@@ -15,7 +17,7 @@ export const BreederMapGate: FC<Props> = ({
   kennel,
   onVerified,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const verifyFileInputId = useId();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -29,10 +31,6 @@ export const BreederMapGate: FC<Props> = ({
 
   const statusLabel =
     status === "pending" || hasDoc ? "На проверке" : "Нужен документ";
-
-  const handlePickClick = () => {
-    fileInputRef.current?.click();
-  };
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -66,29 +64,47 @@ export const BreederMapGate: FC<Props> = ({
         </p>
         <div className={stls.statusRow}>
           <span className={stls.statusBadge}>{statusLabel}</span>
-          {hasDoc && (
-            <span className={stls.statusHint}>
-              После проверки модератором карта откроется автоматически.
-            </span>
-          )}
         </div>
-        <Button
-          size="large"
-          loading={loading}
-          disabled={!kennel?.id}
-          style={{ width: "100%" }}
-          onClick={handlePickClick}
-        >
-          Загрузить документ
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/heic,image/heif,image/webp,.pdf,application/pdf"
-          className={stls.hiddenFileInput}
-          aria-label="Выбрать файл документа для верификации питомника"
-          onChange={handleFileChange}
-        />
+        {!kennel?.id ? (
+          <Button
+            type="button"
+            size="large"
+            style={{ width: "100%" }}
+            onClick={() =>
+              setError(
+                "Сначала должна быть запись питомника. Откройте профиль → «Питомник», сохраните данные, затем вернитесь на карту.",
+              )
+            }
+          >
+            Загрузить документ
+          </Button>
+        ) : loading ? (
+          <Button type="button" size="large" loading style={{ width: "100%" }}>
+            Загрузить документ
+          </Button>
+        ) : (
+          <>
+            <input
+              id={verifyFileInputId}
+              type="file"
+              accept="image/jpeg,image/png,image/heic,image/heif,image/webp,.pdf,application/pdf"
+              className={stls.hiddenFileInput}
+              aria-label="Выбрать файл документа для верификации питомника"
+              onChange={handleFileChange}
+            />
+            <label
+              htmlFor={verifyFileInputId}
+              className={cn(
+                btnStyles.button,
+                btnStyles.primary,
+                btnStyles.large,
+                stls.filePickLabel,
+              )}
+            >
+              <span className={btnStyles.iconContainer}>Загрузить документ</span>
+            </label>
+          </>
+        )}
         {!kennel?.id && (
           <p className={stls.warn}>
             Питомник не найден в каталоге. Заполните профиль в разделе

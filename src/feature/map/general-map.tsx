@@ -26,6 +26,8 @@ import {
   onMapActionTickComplete,
   requestBrowserLocation,
   getSibaMarkerHref,
+  breederMapHouseMarkerHref,
+  ensurePulsingSibaMarkerHref,
   type ClusterItem,
   type MapActionTickEvent,
   type ClusterEventUnknown,
@@ -88,6 +90,50 @@ export const GeneralMap = () => {
   const [isMapActionMenuOpen, setIsMapActionMenuOpen] = useState(false);
 
   const clusterEventsAttachedRef = useRef(false);
+  const [pulsingWalkHrefByIcon, setPulsingWalkHrefByIcon] = useState<
+    Record<string, string>
+  >({});
+
+  useEffect(() => {
+    const icons = new Set<string>();
+    for (const el of sibaIns) {
+      if (el.account_type === "breeder") continue;
+      if (!el.coordinates) continue;
+      if (!el.photos && !el.is_verified) continue;
+      if (getSibaStatus(el) !== "walk") continue;
+      icons.add(el.siba_icon || "default");
+    }
+    const list = [...icons];
+    if (!list.length) return;
+    let cancelled = false;
+    void (async () => {
+      const updates: Record<string, string> = {};
+      await Promise.all(
+        list.map(async (ic) => {
+          try {
+            updates[ic] = await ensurePulsingSibaMarkerHref(ic);
+          } catch {
+            updates[ic] = getSibaMarkerHref(ic);
+          }
+        }),
+      );
+      if (cancelled) return;
+      setPulsingWalkHrefByIcon((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const [k, v] of Object.entries(updates)) {
+          if (next[k] !== v) {
+            next[k] = v;
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sibaIns]);
 
   const handleClusterClick = (e: unknown) => {
     const items = extractClusterItems({
@@ -229,13 +275,15 @@ export const GeneralMap = () => {
                     // фото ИЛИ приглашение по промокоду (computed `is_verified` из view).
                     .filter((el: ShibaType) => {
                       if (!el.coordinates) return false;
-                      return Boolean(el.photos) || Boolean(el.is_verified);
+                      return !!(el.photos || el.is_verified);
                     })
                     .map((el: ShibaType) => {
                       const normalized = normalizeCoords(el.coordinates);
                       if (!normalized) return null;
                       const status = getSibaStatus(el);
                       const isWalkStatus = status === "walk";
+                      const isBreederMarker = el.account_type === "breeder";
+                      const walkIconKey = el.siba_icon || "default";
 
                       const displayCoords = jitterCoords(
                         normalized,
@@ -252,16 +300,19 @@ export const GeneralMap = () => {
                           key={el.id}
                           options={{
                             iconLayout: "default#image",
-                            iconImageHref: getSibaMarkerHref(
-                              el?.siba_icon,
-                              isWalkStatus,
-                            ),
-                            // Визуально выделяем "хочу гулять" увеличенным маркером.
-                            iconImageSize: isWalkStatus
-                              ? [64, 64]
-                              : isGreenStatus(status)
-                                ? [48, 48]
-                                : [42, 42],
+                            iconImageHref: isBreederMarker
+                              ? breederMapHouseMarkerHref
+                              : isWalkStatus
+                                ? (pulsingWalkHrefByIcon[walkIconKey] ??
+                                  getSibaMarkerHref(el?.siba_icon))
+                                : getSibaMarkerHref(el?.siba_icon),
+                            iconImageSize: isBreederMarker
+                              ? [40, 40]
+                              : isWalkStatus
+                                ? [64, 64]
+                                : isGreenStatus(status)
+                                  ? [48, 48]
+                                  : [42, 42],
                           }}
                           properties={{
                             hintContent: (() => {

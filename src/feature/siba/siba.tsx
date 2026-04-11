@@ -8,7 +8,16 @@ import { supabase } from "../../shared/api/supabase-сlient";
 import stls from "../siba/siba.module.sass";
 import { ProgressBar } from "../../shared/ui";
 import { PeopleListOverlay } from "../../shared/ui/people-list-overlay";
-import { IconCafe, IconGroomer, IconPark, IconPeople, IconTg, IconRight } from "../../shared/icons";
+import {
+  IconCafe,
+  IconGroomer,
+  IconPark,
+  IconPeople,
+  IconTg,
+  IconRight,
+} from "../../shared/icons";
+import { IconVerification } from "../../shared/icons/IconVerification";
+import { fetchPublicKennelForBreederSiba } from "../../shared/api/breeder";
 import { Button } from "../../shared/ui";
 import Skeleton from "@mui/material/Skeleton";
 import {
@@ -44,6 +53,7 @@ export const Siba = ({ id }: SibaProps) => {
 
   const siba = sibaIns.find((el: ShibaType) => el.id == id);
   const status = siba ? getSibaStatus(siba) : null;
+  const isBreederView = siba?.account_type === "breeder";
 
   const { data: sibaUser, isLoading: isSibaUserLoading } = useQuery<ShibaUser | undefined>({
     queryKey: ["public-profile", siba?.siba_user_id ?? "unknown"],
@@ -145,9 +155,15 @@ export const Siba = ({ id }: SibaProps) => {
         ? followingsListQuery.isLoading
         : false;
 
+  const publicBreederKennelQuery = useQuery({
+    queryKey: ["breeder-kennel-public", siba?.id],
+    queryFn: () => fetchPublicKennelForBreederSiba(siba!.id),
+    enabled: Boolean(isBreederView && siba?.id),
+  });
+
   const academyProgressQuery = useQuery<{ learned_skill_ids: string[] | null } | null>({
     queryKey: ["siba-academy", siba?.id ?? "none"],
-    enabled: Boolean(siba?.id),
+    enabled: Boolean(siba?.id && !isBreederView),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("siba_academy_progress")
@@ -195,9 +211,14 @@ export const Siba = ({ id }: SibaProps) => {
   const isSibaLoading =
     !siba ||
     isSibaUserLoading ||
-    academyProgressQuery.isLoading ||
+    (!isBreederView && academyProgressQuery.isLoading) ||
     followersCountQuery.isLoading ||
     followingsCountQuery.isLoading;
+
+  const profileDisplayName =
+    isBreederView && publicBreederKennelQuery.data?.name?.trim()
+      ? publicBreederKennelQuery.data.name.trim()
+      : (siba?.siba_name ?? "");
 
   if (isSibaLoading) {
     return (
@@ -217,10 +238,12 @@ export const Siba = ({ id }: SibaProps) => {
             <div
               className={cn(
                 stls.avatarFrame,
-                statusToneClass,
+                !isBreederView ? statusToneClass : undefined,
                 {
-                  [stls.wantToWalk]: isGreenStatus(status),
-                  [stls.avatarPulse]: isGreenStatus(status),
+                  [stls.wantToWalk]:
+                    !isBreederView && isGreenStatus(status),
+                  [stls.avatarPulse]:
+                    !isBreederView && isGreenStatus(status),
                 },
               )}
             >
@@ -234,17 +257,28 @@ export const Siba = ({ id }: SibaProps) => {
               <div className={stls.titleRow}>
                 <div className={stls.nameBlock}>
                   <div className={stls.identityRow}>
-                    <h1 className={stls.sibaName}>{siba?.siba_name ?? ""}</h1>
-                    <span className={stls.genderBadge}>
-                      {siba?.siba_gender === "male" ? "♂" : "♀"}
-                    </span>
+                    <h1 className={stls.sibaName}>{profileDisplayName}</h1>
+                    {!isBreederView ? (
+                      <span className={stls.genderBadge}>
+                        {siba?.siba_gender === "male" ? "♂" : "♀"}
+                      </span>
+                    ) : null}
+                    {isBreederView && publicBreederKennelQuery.data?.is_verified ? (
+                      <span
+                        className={stls.breederVerifiedBadge}
+                        title="Питомник верифицирован"
+                      >
+                        <IconVerification color="#FEAE11" size={18} />
+                        Verified Breeder
+                      </span>
+                    ) : null}
                   </div>
-                  {status && (
+                  {!isBreederView && status ? (
                     <span className={cn(stls.statusCapsule, statusCapsuleToneClass)}>
                       <span className={cn(stls.statusDot, statusDotToneClass)} />
                       {SHIBA_STATUSES.find((item) => item.id === status)?.label}
                     </span>
-                  )}
+                  ) : null}
                   <div className={stls.communityPanel}>
                     <div className={stls.communityPanelTop}>
                       <span className={stls.communityPanelLabel}>Состоит в чате</span>
@@ -294,7 +328,7 @@ export const Siba = ({ id }: SibaProps) => {
                   </button>
                 </div>
               </div>
-              {academyRank && (
+              {!isBreederView && academyRank ? (
                 <div className={stls.roleLoreSection}>
                   <div className={stls.roleLoreCard}>
                     <div className={stls.roleLoreTitle}>
@@ -303,7 +337,7 @@ export const Siba = ({ id }: SibaProps) => {
                     <div className={stls.roleLoreQuote}>{academyRank.bossQuote}</div>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
         </div>
         <div className={stls.ownerCard}>
@@ -326,47 +360,54 @@ export const Siba = ({ id }: SibaProps) => {
             </Button>
           )}
         </div>
-        <KennelSection siba={siba} authUserId={authUserId ?? undefined} editable={false} />
-        <div className={stls.achievements}>
-          {knownCommands.length > 0 && (
-            <div className={stls.commandsSection}>
-              <div className={stls.sectionTitle}>Знает команды</div>
-              <div className={stls.commandsGrid}>
-                {knownCommands.map((skill) => (
-                  <div key={skill.id} className={stls.commandCard}>
-                    <span className={stls.commandIcon}>{skill.icon}</span>
-                    <span className={stls.commandName}>{skill.name}</span>
-                  </div>
-                ))}
+        <KennelSection
+          siba={siba}
+          authUserId={authUserId ?? undefined}
+          editable={false}
+          accountType={isBreederView ? "breeder" : "owner"}
+        />
+        {!isBreederView ? (
+          <div className={stls.achievements}>
+            {knownCommands.length > 0 && (
+              <div className={stls.commandsSection}>
+                <div className={stls.sectionTitle}>Знает команды</div>
+                <div className={stls.commandsGrid}>
+                  {knownCommands.map((skill) => (
+                    <div key={skill.id} className={stls.commandCard}>
+                      <span className={stls.commandIcon}>{skill.icon}</span>
+                      <span className={stls.commandName}>{skill.name}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+            <div className={stls.sectionTitle}>Достижения</div>
+            <div className={stls.progressContainer}>
+              <div className={stls.progressTitle}>
+                <IconCafe />
+                <p>Кафе</p>
+              </div>
+              <ProgressBar value={siba?.cafe ?? 0} color="#7A7B7B" />
+              <span>{getAchievementPercent(siba?.cafe ?? 0)}%</span>
             </div>
-          )}
-          <div className={stls.sectionTitle}>Достижения</div>
-          <div className={stls.progressContainer}>
-            <div className={stls.progressTitle}>
-              <IconCafe />
-              <p>Кафе</p>
+            <div className={stls.progressContainer}>
+              <div className={stls.progressTitle}>
+                <IconPark />
+                <p>Парки </p>
+              </div>
+              <ProgressBar value={siba?.park ?? 0} color="#2BB26E" />
+              <span>{getAchievementPercent(siba?.park ?? 0)}%</span>
             </div>
-            <ProgressBar value={siba?.cafe ?? 0} color="#7A7B7B" />
-            <span>{getAchievementPercent(siba?.cafe ?? 0)}%</span>
+            <div className={stls.progressContainer}>
+              <div className={stls.progressTitle}>
+                <IconGroomer />
+                <p>Грумер </p>
+              </div>
+              <ProgressBar value={siba?.groomer ?? 0} color="#333944" />
+              <span>{getAchievementPercent(siba?.groomer ?? 0)}%</span>
+            </div>
           </div>
-          <div className={stls.progressContainer}>
-            <div className={stls.progressTitle}>
-              <IconPark />
-              <p>Парки </p>
-            </div>
-            <ProgressBar value={siba?.park ?? 0} color="#2BB26E" />
-            <span>{getAchievementPercent(siba?.park ?? 0)}%</span>
-          </div>
-          <div className={stls.progressContainer}>
-            <div className={stls.progressTitle}>
-              <IconGroomer />
-              <p>Грумер </p>
-            </div>
-            <ProgressBar value={siba?.groomer ?? 0} color="#333944" />
-            <span>{getAchievementPercent(siba?.groomer ?? 0)}%</span>
-          </div>
-        </div>
+        ) : null}
       </div>
       <PeopleListOverlay
         open={Boolean(listMode)}

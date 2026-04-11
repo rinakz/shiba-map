@@ -29,6 +29,8 @@ export type ShibaType = {
   community_tg_link?: string | null;
   // Computed on the server in `public.siba_map_markers` (photo OR invited_by_code).
   is_verified?: boolean | null;
+  /** Из users.account_type; для маркера заводчика на карте — иконка питомника. */
+  account_type?: "owner" | "breeder" | string | null;
 };
 
 export type Community = {
@@ -52,6 +54,7 @@ export type ShibaUser = {
   promo_code?: string;
   invited_by_code?: string | null;
   account_type?: "owner" | "breeder" | null;
+  kennel_name?: string | null;
   kennel_city?: string | null;
   kennel_prefix?: string | null;
   community_id?: string | null;

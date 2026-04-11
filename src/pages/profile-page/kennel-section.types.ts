@@ -1,3 +1,4 @@
+import type { BreederKennelRepairHint } from "../../shared/api/breeder";
 import type { ShibaType } from "../../shared/types";
 
 export type Kennel = {
@@ -17,4 +18,6 @@ export type KennelSectionProps = {
   authUserId: string | undefined;
   editable?: boolean;
   accountType?: "owner" | "breeder" | null;
+  /** Если в каталоге нет kennels, создать из этих полей (заводчик). */
+  breederRepairHint?: BreederKennelRepairHint | null;
 };

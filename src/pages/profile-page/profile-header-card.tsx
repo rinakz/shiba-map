@@ -6,7 +6,7 @@ import {
   IconFirstAid,
   IconRight,
 } from "../../shared/icons";
-import { IconCrown } from "../../shared/icons/IconCrown";
+import { IconVerification } from "../../shared/icons/IconVerification";
 import { IconButton } from "../../shared/ui";
 import type { Community, SibaStatus, ShibaType } from "../../shared/types";
 import {
@@ -50,6 +50,8 @@ type ProfileHeaderCardProps = {
   setSibaIns: React.Dispatch<React.SetStateAction<ShibaType[]>>;
   breederMode?: boolean;
   breederVerified?: boolean;
+  /** Название питомника из каталога kennels (не кличка сибы в sibains). */
+  breederKennelName?: string | null;
 };
 
 export const ProfileHeaderCard = ({
@@ -78,11 +80,16 @@ export const ProfileHeaderCard = ({
   setSibaIns,
   breederMode = false,
   breederVerified = false,
+  breederKennelName = null,
 }: ProfileHeaderCardProps) => {
   const communityTitle = community?.title ?? mySiba?.community_title;
   const communityLink = community?.tg_link ?? mySiba?.community_tg_link;
   const genderLabel =
     mySiba?.siba_gender === "male" ? "♂" : "♀";
+  const profileTitleName =
+    breederMode && breederKennelName?.trim()
+      ? breederKennelName.trim()
+      : (mySiba?.siba_name ?? "");
 
   return (
     <div className={stls.sibaInfoContainer}>
@@ -180,13 +187,13 @@ export const ProfileHeaderCard = ({
         <div className={stls.titleRow}>
           <div className={stls.nameBlock}>
             <div className={stls.identityRow}>
-              <h1 className={stls.sibaName}>{mySiba?.siba_name}</h1>
+              <h1 className={stls.sibaName}>{profileTitleName}</h1>
               {!breederMode ? (
                 <span className={stls.genderBadge}>{genderLabel}</span>
               ) : null}
               {breederMode && breederVerified ? (
                 <span className={stls.breederVerifiedBadge} title="Питомник верифицирован">
-                  <IconCrown color="#FEAE11" size={18} />
+                  <IconVerification color="#FEAE11" size={18} />
                   Verified Breeder
                 </span>
               ) : null}

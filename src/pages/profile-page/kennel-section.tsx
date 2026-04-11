@@ -4,7 +4,10 @@ import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import Skeleton from "@mui/material/Skeleton";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { buildSafeAvatarSrc } from "../../shared/header/news-panel/news-panel.utils";
-import { fetchKennelForBreederProfile } from "../../shared/api/breeder";
+import {
+  fetchKennelForBreederProfile,
+  fetchPublicKennelForBreederSiba,
+} from "../../shared/api/breeder";
 import type { ShibaType } from "../../shared/types";
 import { IconTree } from "../../shared/icons/IconTree";
 import { IconEdit } from "../../shared/icons";
@@ -19,6 +22,7 @@ import {
 import type { KennelSectionProps, KennelWithAvatar } from "./kennel-section.types";
 import {
   buildBreederInviteShareText,
+  buildGraduateOwnerInviteShareText,
   dispatchOpenSibaFromKennel,
   fetchBreederKennelCatalogWithAvatars,
   fetchKennelRepresentativeAvatarMap,
@@ -33,6 +37,7 @@ export const KennelSection: FC<KennelSectionProps> = ({
   authUserId,
   editable = true,
   accountType = "owner",
+  breederRepairHint = null,
 }) => {
   const queryClient = useQueryClient();
   const isBreeder = accountType === "breeder";
@@ -51,10 +56,35 @@ export const KennelSection: FC<KennelSectionProps> = ({
   });
 
   const breederKennelQuery = useQuery({
-    queryKey: ["breeder-kennel", authUserId, siba?.id],
-    queryFn: () =>
-      fetchKennelForBreederProfile(authUserId as string, siba?.id),
-    enabled: Boolean(authUserId && isBreeder),
+    queryKey: isBreeder
+      ? editable
+        ? [
+            "breeder-kennel",
+            authUserId,
+            siba?.id,
+            breederRepairHint?.kennel_name,
+            breederRepairHint?.kennel_city,
+            breederRepairHint?.siba_name,
+          ]
+        : ["breeder-kennel-public", siba?.id]
+      : ["breeder-kennel", "off"],
+    queryFn: async () => {
+      if (!isBreeder || !siba?.id) return null;
+      if (!editable) {
+        return fetchPublicKennelForBreederSiba(siba.id);
+      }
+      if (!authUserId) return null;
+      return fetchKennelForBreederProfile(
+        authUserId,
+        siba.id,
+        breederRepairHint ?? undefined,
+      );
+    },
+    enabled: Boolean(
+      isBreeder &&
+        siba?.id &&
+        (editable ? Boolean(authUserId) : true),
+    ),
   });
 
   const myKennelQuery = useQuery({
@@ -79,10 +109,22 @@ export const KennelSection: FC<KennelSectionProps> = ({
     },
   });
 
+  /** Анкета заводчика в списке siba_kennels — не «выпускник»; user_id для сравнения ненадёжен. */
+  const excludeRepSibaId = isBreeder && siba?.id ? String(siba.id) : null;
+
   const relatedSibasQuery = useQuery({
-    queryKey: kennelSectionQueryKeys.kennelSibas(displayKennel?.id),
+    queryKey: kennelSectionQueryKeys.kennelSibas(
+      displayKennel?.id,
+      excludeRepSibaId,
+    ),
     enabled: Boolean(displayKennel?.id),
-    queryFn: () => fetchSibasByKennelId(displayKennel!.id),
+    queryFn: () =>
+      fetchSibasByKennelId(
+        displayKennel!.id,
+        excludeRepSibaId
+          ? { excludeSibaId: excludeRepSibaId }
+          : undefined,
+      ),
   });
 
   const detailSibasQuery = useQuery({
@@ -131,6 +173,12 @@ export const KennelSection: FC<KennelSectionProps> = ({
 
   const copyInviteBreeder = useCallback(() => {
     void navigator.clipboard.writeText(buildBreederInviteShareText());
+    setToastText("Текст со ссылкой скопирован в буфер");
+    window.setTimeout(() => setToastText(null), 2400);
+  }, []);
+
+  const copyInviteGraduate = useCallback(() => {
+    void navigator.clipboard.writeText(buildGraduateOwnerInviteShareText());
     setToastText("Текст со ссылкой скопирован в буфер");
     window.setTimeout(() => setToastText(null), 2400);
   }, []);
@@ -209,10 +257,10 @@ export const KennelSection: FC<KennelSectionProps> = ({
                 Суммарный уровень стаи: <strong>{totalLevels}</strong>
               </div>
             ) : null}
-            {isBreeder && displayKennel?.id ? (
+            {editable && isBreeder && displayKennel?.id ? (
               <div style={{ marginTop: 12 }}>
-                <Button size="small" variant="secondary" onClick={copyInviteBreeder}>
-                  Пригласить заводчика (скопировать текст)
+                <Button size="small" variant="secondary" onClick={copyInviteGraduate}>
+                  Пригласить выпускника (скопировать текст)
                 </Button>
               </div>
             ) : null}
@@ -268,6 +316,7 @@ export const KennelSection: FC<KennelSectionProps> = ({
       treeTitle,
       totalLevels,
       copyInviteBreeder,
+      copyInviteGraduate,
     ],
   );
 

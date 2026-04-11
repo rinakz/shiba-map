@@ -11,36 +11,27 @@ import {
 import { AppContext } from "../../shared/context/app-context";
 import { IconButton, MainTabBar } from "../../shared/ui";
 import { UserBadge } from "../../shared/ui/user-badge";
-import { IconCrown, IconGlobe, IconRight, IconTg } from "../../shared/icons";
+import { IconCrown, IconRight, IconTg } from "../../shared/icons";
 import { fetchAllSibas } from "../profile-page/profile.utils";
-import {
-  getSibaStatus,
-  SIBA_STATUS_LABEL,
-} from "../../shared/utils/siba-status";
-import { getShibaRank } from "../profile-page/shiba-academy.data";
+import { getSibaStatus, SIBA_STATUS_LABEL } from "../../shared/utils/siba-status";
 import { Siba } from "../../feature/siba/siba";
 import { PATH } from "../../shared/constants/path";
 import stls from "./leaderboard-page.module.sass";
-
-type LeaderboardTab = "world" | "chats";
-
-type CommunityRow = {
-  id: string;
-  title: string;
-  avatarUrl: string | null;
-  tgLink: string;
-  participants: number;
-  energy: number;
-  gapToLeader: number;
-  isLeader: boolean;
-};
-
-const crownColorByPlace = (place: number) => {
-  if (place === 1) return "#FEAE11";
-  if (place === 2) return "#C4CAD4";
-  if (place === 3) return "#CD7F32";
-  return "#E7E1D2";
-};
+import {
+  LEADERBOARD_BREEDERS_EMPTY_HINT,
+  LEADERBOARD_PAGE_SUBTITLE,
+  LEADERBOARD_PAGE_TITLE,
+  LEADERBOARD_QUERY_KEYS,
+  LEADERBOARD_TABS,
+} from "./leaderboard-page.constants";
+import type { LeaderboardSibaRow, LeaderboardTab, SibaLeaderboardSubtitle } from "./leaderboard-page.types";
+import {
+  buildBreederLeaderboard,
+  buildChatLeaderboard,
+  buildWorldLeaderboard,
+  chatEnergyBarPercent,
+  crownColorByPlace,
+} from "./leaderboard-page.utils";
 
 export const LeaderboardPage = () => {
   const { authUserId } = useContext(AppContext);
@@ -54,80 +45,54 @@ export const LeaderboardPage = () => {
   >(null);
 
   const sibasQuery = useQuery({
-    queryKey: ["leaderboard", "sibas"],
+    queryKey: LEADERBOARD_QUERY_KEYS.sibas,
     queryFn: fetchAllSibas,
     enabled: Boolean(authUserId),
   });
 
   const communitiesQuery = useQuery({
-    queryKey: ["leaderboard", "communities"],
+    queryKey: LEADERBOARD_QUERY_KEYS.communities,
     enabled: Boolean(authUserId),
     queryFn: fetchAllCommunities,
   });
   const membershipsQuery = useQuery({
-    queryKey: ["leaderboard", "community-memberships"],
+    queryKey: LEADERBOARD_QUERY_KEYS.memberships,
     enabled: Boolean(authUserId),
     queryFn: fetchCommunityMemberships,
   });
 
-  const worldLeaderboard = useMemo(() => {
-    return [...(sibasQuery.data ?? [])]
-      .sort((a, b) => {
-        const levelDiff = (b.level ?? 0) - (a.level ?? 0);
-        if (levelDiff !== 0) return levelDiff;
-        return (b.followers ?? 0) - (a.followers ?? 0);
-      })
-      .map((siba, index) => ({
-        ...siba,
-        place: index + 1,
-        points: (siba.level ?? 0) * 100 + (siba.followers ?? 0) * 5,
-        rankTitle: getShibaRank(siba.level ?? 0).rank?.rank ?? "Новичок",
-      }));
-  }, [sibasQuery.data]);
+  const worldLeaderboard = useMemo(
+    () => buildWorldLeaderboard(sibasQuery.data ?? []),
+    [sibasQuery.data],
+  );
 
-  const myWorldPlace = useMemo(() => {
-    return (
-      worldLeaderboard.find((item) => item.siba_user_id === authUserId) ?? null
-    );
-  }, [authUserId, worldLeaderboard]);
+  const breederLeaderboard = useMemo(
+    () => buildBreederLeaderboard(sibasQuery.data ?? []),
+    [sibasQuery.data],
+  );
 
-  const chatLeaderboard = useMemo<CommunityRow[]>(() => {
-    const communities = communitiesQuery.data ?? [];
-    const memberships = membershipsQuery.data ?? [];
-    const sibas = sibasQuery.data ?? [];
-    const sibaByUser = new Map(sibas.map((siba) => [siba.siba_user_id, siba]));
-    const sorted = communities
-      .map((community) => {
-        const members = memberships.filter(
-          (membership) => membership.community_id === community.id,
-        );
-        const energy = members.reduce((sum, membership) => {
-          const siba = sibaByUser.get(membership.user_id);
-          return sum + (siba?.level ?? 0) * 100 + (siba?.followers ?? 0) * 5;
-        }, 0);
-        return {
-          id: community.id,
-          title: community.title,
-          avatarUrl: community.avatar_url ?? null,
-          tgLink: community.tg_link,
-          participants: members.length,
-          energy,
-        };
-      })
-      .sort((a, b) => b.energy - a.energy);
-    const leaderEnergy = sorted[0]?.energy ?? 0;
+  const myWorldPlace = useMemo(
+    () =>
+      worldLeaderboard.find((item) => item.siba_user_id === authUserId) ?? null,
+    [authUserId, worldLeaderboard],
+  );
 
-    return sorted.map((group, index) => ({
-      id: group.id,
-      title: group.title,
-      avatarUrl: group.avatarUrl,
-      tgLink: group.tgLink,
-      participants: group.participants,
-      energy: group.energy,
-      gapToLeader: index === 0 ? 0 : Math.max(leaderEnergy - group.energy, 0),
-      isLeader: index === 0,
-    }));
-  }, [communitiesQuery.data, membershipsQuery.data, sibasQuery.data]);
+  const myBreederPlace = useMemo(
+    () =>
+      breederLeaderboard.find((item) => item.siba_user_id === authUserId) ??
+      null,
+    [authUserId, breederLeaderboard],
+  );
+
+  const chatLeaderboard = useMemo(
+    () =>
+      buildChatLeaderboard(
+        communitiesQuery.data ?? [],
+        membershipsQuery.data ?? [],
+        sibasQuery.data ?? [],
+      ),
+    [communitiesQuery.data, membershipsQuery.data, sibasQuery.data],
+  );
 
   const myCommunity = useMemo(() => {
     const myMembership = (membershipsQuery.data ?? []).find(
@@ -139,9 +104,12 @@ export const LeaderboardPage = () => {
     return index >= 0 ? { ...chatLeaderboard[index], place: index + 1 } : null;
   }, [authUserId, chatLeaderboard, membershipsQuery.data]);
 
-  const renderWorld = () => (
+  const renderSibaLeaderboard = (
+    rows: LeaderboardSibaRow[],
+    subtitle: SibaLeaderboardSubtitle,
+  ) => (
     <div className={stls.list}>
-      {worldLeaderboard.map((item) => {
+      {rows.map((item) => {
         const isTop = item.place <= 3;
         const status = getSibaStatus(item);
         return (
@@ -183,7 +151,11 @@ export const LeaderboardPage = () => {
                 )}
               </div>
               <div className={stls.status}>
-                {status ? SIBA_STATUS_LABEL[status] : item.rankTitle}
+                {subtitle === "breeder"
+                  ? `Питомник · ${item.followers ?? 0} подписчиков`
+                  : status
+                    ? SIBA_STATUS_LABEL[status]
+                    : (item.rankTitle ?? "Новичок")}
               </div>
             </div>
             <div className={stls.points}>
@@ -196,16 +168,22 @@ export const LeaderboardPage = () => {
     </div>
   );
 
+  const renderWorld = () => renderSibaLeaderboard(worldLeaderboard, "owner");
+
+  const renderBreeders = () =>
+    breederLeaderboard.length ? (
+      renderSibaLeaderboard(breederLeaderboard, "breeder")
+    ) : (
+      <p className={stls.emptyHint}>{LEADERBOARD_BREEDERS_EMPTY_HINT}</p>
+    );
+
   const renderChats = () => {
     const leaderEnergy = chatLeaderboard[0]?.energy ?? 1;
     return (
       <div className={stls.list}>
         {chatLeaderboard.map((chat, index) => {
           const place = index + 1;
-          const progress = Math.max(
-            8,
-            Math.round((chat.energy / leaderEnergy) * 100),
-          );
+          const progress = chatEnergyBarPercent(chat.energy, leaderEnergy);
           const isMyCommunity = myCommunity?.id === chat.id;
           const canAssign = Boolean(authUserId && !myCommunity);
           return (
@@ -277,7 +255,7 @@ export const LeaderboardPage = () => {
                         communityId: chat.id,
                       });
                       await queryClient.invalidateQueries({
-                        queryKey: ["leaderboard", "community-memberships"],
+                        queryKey: LEADERBOARD_QUERY_KEYS.memberships,
                       });
                     } finally {
                       setAssigningCommunityId(null);
@@ -322,32 +300,31 @@ export const LeaderboardPage = () => {
         <div>
           <div className={stls.titleWrap}>
             <IconCrown />
-            <h1 className={stls.title}>Лидеры Сиба-мира</h1>
+            <h1 className={stls.title}>{LEADERBOARD_PAGE_TITLE}</h1>
           </div>
-          <div className={stls.subtle}>Топ сиб и сообществ</div>
+          <div className={stls.subtle}>{LEADERBOARD_PAGE_SUBTITLE}</div>
         </div>
       </div>
 
       <div className={stls.tabs}>
-        <button
-          type="button"
-          className={cn(stls.tab, tab === "world" && stls.tabActive)}
-          onClick={() => setTab("world")}
-        >
-          <IconGlobe />
-          Весь мир
-        </button>
-        <button
-          type="button"
-          className={cn(stls.tab, tab === "chats" && stls.tabActive)}
-          onClick={() => setTab("chats")}
-        >
-          <IconTg />
-          Чаты
-        </button>
+        {LEADERBOARD_TABS.map(({ key, label, Icon }) => (
+          <button
+            key={key}
+            type="button"
+            className={cn(stls.tab, tab === key && stls.tabActive)}
+            onClick={() => setTab(key)}
+          >
+            <Icon />
+            {label}
+          </button>
+        ))}
       </div>
 
-      {tab === "world" ? renderWorld() : renderChats()}
+      {tab === "world"
+        ? renderWorld()
+        : tab === "breeders"
+          ? renderBreeders()
+          : renderChats()}
 
       {tab === "world" && myWorldPlace && (
         <div className={stls.myPlaceBar}>
@@ -359,6 +336,21 @@ export const LeaderboardPage = () => {
           </div>
           <div className={stls.points}>
             <div className={stls.pointsValue}>{myWorldPlace.points}</div>
+            <div className={stls.pointsLabel}>баллов</div>
+          </div>
+        </div>
+      )}
+
+      {tab === "breeders" && myBreederPlace && (
+        <div className={stls.myPlaceBar}>
+          <div>
+            <div className={stls.myPlaceText}>Мой питомник в рейтинге</div>
+            <div className={stls.myPlaceValue}>
+              #{myBreederPlace.place} • {myBreederPlace.siba_name}
+            </div>
+          </div>
+          <div className={stls.points}>
+            <div className={stls.pointsValue}>{myBreederPlace.points}</div>
             <div className={stls.pointsLabel}>баллов</div>
           </div>
         </div>

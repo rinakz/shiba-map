@@ -534,10 +534,45 @@ export const placeIconHrefByKind = {
   groomer: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderToStaticMarkup(React.createElement(IconGroomer)))}`,
 } as const;
 
-const pulsingSibaMarkerCache = new Map<string, string>();
+/** Как маркеры мест (кафе/парк): круг цвета питомника, глиф белый (#FFFCF5 как в IconCafe). */
+const BREEDER_MAP_MARKER_COLOR = "#5E7C8C";
+const BREEDER_MAP_GLYPH = "#FFFCF5";
 
-const buildPulsingSibaIconSvg = (iconPath: string, pulseColor = "#4ADE80") => `
-  <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+const breederMapHouseSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
+  <rect width="40" height="40" rx="20" fill="${BREEDER_MAP_MARKER_COLOR}"/>
+  <g transform="translate(8,8)" fill="${BREEDER_MAP_GLYPH}">
+    <path d="M12 14.9918C10.3432 14.9918 9 16.335 9 17.9918V23.9918H15V17.9918C15 16.335 13.6568 14.9918 12 14.9918Z"/>
+    <path d="M17 17.9922V23.9922H21C22.6568 23.9922 24 22.649 24 20.9922V11.8712C24.0002 11.3517 23.7983 10.8525 23.437 10.4792L14.939 1.29218C13.4396 -0.330162 10.9089 -0.429771 9.28655 1.06967C9.20949 1.14092 9.13523 1.21512 9.06403 1.29218L0.581016 10.4762C0.208734 10.851 -0.000140554 11.3579 7.09607e-08 11.8862V20.9922C7.09607e-08 22.649 1.34316 23.9922 3 23.9922H6.99998V17.9922C7.01869 15.2654 9.22027 13.0386 11.8784 12.9745C14.6255 12.9082 16.9791 15.1729 17 17.9922Z"/>
+  </g>
+</svg>`;
+
+export const breederMapHouseMarkerHref = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(breederMapHouseSvg)}`;
+
+/** Абсолютный URL к файлу из `public/` (для fetch PNG перед встраиванием в маркер). */
+const resolvePublicRootAssetUrl = (rootRelativePath: string): string => {
+  const path = rootRelativePath.startsWith("/") ? rootRelativePath.slice(1) : rootRelativePath;
+  if (typeof window === "undefined") {
+    return `/${path}`;
+  }
+  const base = import.meta.env.BASE_URL || "/";
+  return new URL(path, new URL(base, window.location.origin)).href;
+};
+
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onloadend = () => resolve(r.result as string);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+
+const escapeXmlAttr = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+
+/** PNG встроен в SVG data-URL — Яндекс.Карты не подгружают внешние http(s) внутри такого SVG. */
+const buildPulsingSibaIconSvg = (pngDataUrl: string, pulseColor = "#2BB26E") => {
+  const src = escapeXmlAttr(pngDataUrl);
+  return `
+  <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="64" height="64" viewBox="0 0 64 64">
     <circle cx="32" cy="32" r="18" fill="none" stroke="${pulseColor}" stroke-width="4" opacity="0.55">
       <animate attributeName="r" values="18;30;18" dur="1.8s" repeatCount="indefinite" />
       <animate attributeName="opacity" values="0.55;0;0.55" dur="1.8s" repeatCount="indefinite" />
@@ -546,24 +581,43 @@ const buildPulsingSibaIconSvg = (iconPath: string, pulseColor = "#4ADE80") => `
       <animate attributeName="r" values="18;26;18" dur="1.8s" begin="0.45s" repeatCount="indefinite" />
       <animate attributeName="opacity" values="0.35;0;0.35" dur="1.8s" begin="0.45s" repeatCount="indefinite" />
     </circle>
-    <rect x="8" y="8" width="48" height="48" rx="16" fill="white" stroke="${pulseColor}" stroke-width="3" />
-    <image href="${iconPath}" x="8" y="8" width="48" height="48" preserveAspectRatio="xMidYMid meet" />
+    <image xlink:href="${src}" href="${src}" x="8" y="8" width="48" height="48" preserveAspectRatio="xMidYMid meet" />
   </svg>
 `;
+};
 
-export const getSibaMarkerHref = (iconName: string | null | undefined, pulse = false) => {
+const pulsingSibaHrefPromises = new Map<string, Promise<string>>();
+
+/**
+ * Маркер «хочу гулять»: подгружает PNG с сайта и встраивает base64 в SVG (иначе иконка не рисуется на карте).
+ */
+export const ensurePulsingSibaMarkerHref = (
+  iconName: string | null | undefined,
+): Promise<string> => {
+  const safe = iconName || "default";
+  let p = pulsingSibaHrefPromises.get(safe);
+  if (!p) {
+    p = (async () => {
+      const url = resolvePublicRootAssetUrl(`/${safe}.png`);
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`siba icon ${safe}: ${res.status}`);
+      }
+      const blob = await res.blob();
+      const dataUrl = await blobToDataUrl(blob);
+      const svg = buildPulsingSibaIconSvg(dataUrl);
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    })();
+    pulsingSibaHrefPromises.set(safe, p);
+    void p.catch(() => pulsingSibaHrefPromises.delete(safe));
+  }
+  return p;
+};
+
+/** Путь к PNG в `public/` — для обычных маркеров и как запасной вариант до сборки пульса. */
+export const getSibaMarkerHref = (iconName: string | null | undefined) => {
   const safeIconName = iconName || "default";
-  const iconPath = `/${safeIconName}.png`;
-  if (!pulse) return iconPath;
-
-  const cached = pulsingSibaMarkerCache.get(iconPath);
-  if (cached) return cached;
-
-  const href = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-    buildPulsingSibaIconSvg(iconPath),
-  )}`;
-  pulsingSibaMarkerCache.set(iconPath, href);
-  return href;
+  return `/${safeIconName}.png`;
 };
 
 // Hazards

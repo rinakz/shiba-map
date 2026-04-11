@@ -10,8 +10,12 @@ export const kennelSectionQueryKeys = {
     ["siba-kennel", sibaId] as const,
   repAvatar: (kennelId: string | undefined) =>
     ["kennel-rep-avatar", kennelId] as const,
-  kennelSibas: (kennelId: string | undefined) =>
-    ["kennel-sibas", kennelId] as const,
+  /** Второй сегмент: id анкеты-представителя питомника — её не показываем среди выпускников. */
+  kennelSibas: (
+    kennelId: string | undefined,
+    excludeRepSibaId?: string | null,
+  ) =>
+    ["kennel-sibas", kennelId, excludeRepSibaId ?? ""] as const,
   kennelSibasDrawer: (kennelId: string | undefined) =>
     ["kennel-sibas", kennelId, "drawer"] as const,
 };

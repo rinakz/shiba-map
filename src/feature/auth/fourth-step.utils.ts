@@ -19,9 +19,11 @@ export function buildSignupUserMetadata(
     account_type: accountType,
   };
   if (accountType === "breeder") {
+    const kennelTitle = formData.sibaname.trim();
     return {
       ...base,
-      siba_name: formData.sibaname,
+      siba_name: kennelTitle,
+      kennel_name: kennelTitle,
       siba_icon: "default",
       siba_gender: "male",
       kennel_city: formData.kennelCity,
@@ -59,6 +61,8 @@ export function buildUsersUpsertRow(
       accountType === "breeder"
         ? formData.kennelPrefix.trim() || null
         : null,
+    kennel_name:
+      accountType === "breeder" ? formData.sibaname.trim() || null : null,
   };
 }
 
@@ -69,9 +73,11 @@ export function buildSibaRow(
   coordinates: number[],
 ) {
   if (accountType === "breeder") {
+    const kennelTitle = formData.sibaname.trim();
     return {
       siba_user_id: sessionUserId,
-      siba_name: formData.sibaname,
+      // Должно совпадать с kennels.name из ensureBreederKennelLinked (публичное имя карточки).
+      siba_name: kennelTitle,
       siba_icon: "default",
       siba_gender: "male",
       coordinates,
@@ -86,6 +92,13 @@ export function buildSibaRow(
   };
 }
 
+function isUniqueViolation(err: { message?: string; code?: string } | null) {
+  if (!err) return false;
+  if (err.code === "23505" || String(err.code) === "23505") return true;
+  const m = (err.message ?? "").toLowerCase();
+  return m.includes("duplicate") || m.includes("unique");
+}
+
 /** Каталог питомников: kennels + siba_kennels (siba_id хранится как text = sibains.id). */
 export async function ensureBreederKennelLinked(
   userId: string,
@@ -93,20 +106,24 @@ export async function ensureBreederKennelLinked(
   formData: AuthFormType,
   coordinates: number[],
 ): Promise<{ error: string | null }> {
-  const { data: existingLink, error: linkSelectErr } = await supabase
+  const sibaKey = String(sibaId).trim();
+  if (!sibaKey) return { error: "Нет id анкеты сибы для привязки питомника." };
+
+  const { data: linkRows, error: linkSelectErr } = await supabase
     .from("siba_kennels")
     .select("kennel_id")
-    .eq("siba_id", sibaId)
-    .maybeSingle();
+    .eq("siba_id", sibaKey)
+    .limit(1);
 
   if (linkSelectErr) {
     return { error: linkSelectErr.message };
   }
-  if (existingLink?.kennel_id) {
+  const linkedId = linkRows?.[0] as { kennel_id?: string } | undefined;
+  if (linkedId?.kennel_id) {
     return { error: null };
   }
 
-  const name = formData.sibaname.trim();
+  const name = formData.sibaname.trim(); // «Название питомника» на шаге регистрации заводчика
   const city = formData.kennelCity.trim();
   const prefix = formData.kennelPrefix.trim();
   const address = [city, prefix].filter(Boolean).join(" · ") || null;
@@ -114,39 +131,67 @@ export async function ensureBreederKennelLinked(
   const coordsPayload =
     coordinates.length >= 2 ? (coordinates as [number, number]) : null;
 
-  const { data: existingKennel, error: findErr } = await supabase
+  const { data: kennelRows, error: findErr } = await supabase
     .from("kennels")
     .select("id")
     .eq("created_by", userId)
     .eq("name", name)
-    .maybeSingle();
+    .limit(1);
 
   if (findErr) {
     return { error: findErr.message };
   }
 
-  let kennelId = existingKennel?.id as string | undefined;
+  let kennelId = (kennelRows?.[0] as { id?: string } | undefined)?.id;
 
   if (!kennelId) {
-    const { data: inserted, error: insErr } = await supabase
+    const extended = {
+      name,
+      prefix: prefix || null,
+      coordinates: coordsPayload,
+      address,
+      created_by: userId,
+      is_verified: false,
+      verification_status: "none",
+    };
+    const firstInsert = await supabase
       .from("kennels")
-      .insert([
-        {
-          name,
-          prefix: prefix || null,
-          coordinates: coordsPayload,
-          address,
-          created_by: userId,
-          is_verified: false,
-          verification_status: "none",
-        },
-      ])
+      .insert([extended])
       .select("id")
       .single();
+    const insErr = firstInsert.error;
+    let inserted = firstInsert.data;
 
     if (insErr) {
-      return { error: insErr.message };
+      const minimal = {
+        name,
+        coordinates: coordsPayload,
+        address,
+        created_by: userId,
+      };
+      const retry = await supabase
+        .from("kennels")
+        .insert([minimal])
+        .select("id")
+        .single();
+      if (retry.error) {
+        return {
+          error: retry.error.message || insErr.message,
+        };
+      }
+      inserted = retry.data;
+      if (inserted?.id) {
+        void supabase
+          .from("kennels")
+          .update({
+            prefix: prefix || null,
+            is_verified: false,
+            verification_status: "none",
+          })
+          .eq("id", inserted.id);
+      }
     }
+
     if (!inserted?.id) {
       return { error: "Не удалось создать питомник в каталоге." };
     }
@@ -154,13 +199,22 @@ export async function ensureBreederKennelLinked(
   }
 
   const { error: linkErr } = await supabase.from("siba_kennels").insert({
-    siba_id: sibaId,
+    siba_id: sibaKey,
     kennel_id: kennelId,
   });
 
-  if (linkErr) {
+  if (linkErr && !isUniqueViolation(linkErr)) {
     return { error: linkErr.message };
   }
+
+  const { error: userKennelErr } = await supabase
+    .from("users")
+    .update({ kennel_name: name })
+    .eq("user_id", userId);
+  if (userKennelErr) {
+    console.warn("ensureBreederKennelLinked: users.kennel_name", userKennelErr.message);
+  }
+
   return { error: null };
 }
 

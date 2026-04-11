@@ -36,11 +36,25 @@ export const MainPage = () => {
   });
 
   const breederKennelQuery = useQuery({
-    queryKey: ["breeder-kennel", authUserId, mySibaQuery.data?.id],
+    queryKey: [
+      "breeder-kennel",
+      authUserId,
+      mySibaQuery.data?.id,
+      userQuery.data?.kennel_name,
+      userQuery.data?.kennel_city,
+      mySibaQuery.data?.siba_name,
+    ],
     queryFn: () =>
       fetchKennelForBreederProfile(
         authUserId as string,
         mySibaQuery.data?.id,
+        {
+          kennel_name: userQuery.data?.kennel_name,
+          kennel_prefix: userQuery.data?.kennel_prefix,
+          kennel_city: userQuery.data?.kennel_city,
+          siba_name: mySibaQuery.data?.siba_name,
+          siba_coordinates: mySibaQuery.data?.coordinates,
+        },
       ),
     enabled: Boolean(
       authUserId && userQuery.data?.account_type === "breeder",

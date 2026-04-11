@@ -47,6 +47,13 @@ export async function syncPublicUserFromAuthMetadata(): Promise<void> {
         ? promoRaw.trim()
         : generatePromoCode();
 
+    const breederKennelTitle = (() => {
+      if (account_type !== "breeder") return null;
+      const kn = String(meta.kennel_name ?? "").trim();
+      if (kn) return kn;
+      return String(meta.siba_name ?? "").trim() || null;
+    })();
+
     const { error: upErr } = await supabase.from("users").upsert(
       [
         {
@@ -66,6 +73,7 @@ export async function syncPublicUserFromAuthMetadata(): Promise<void> {
             account_type === "breeder"
               ? String(meta.kennel_prefix ?? "").trim() || null
               : null,
+          kennel_name: breederKennelTitle,
         },
       ],
       { onConflict: "user_id" },
@@ -80,12 +88,16 @@ export async function syncPublicUserFromAuthMetadata(): Promise<void> {
   }
 
   if (account_type === "breeder" && existing.account_type !== "breeder") {
+    const kn = String(meta.kennel_name ?? "").trim();
+    const kennel_name =
+      kn || String(meta.siba_name ?? "").trim() || null;
     const { error: updErr } = await supabase
       .from("users")
       .update({
         account_type: "breeder",
         kennel_city: String(meta.kennel_city ?? "").trim() || null,
         kennel_prefix: String(meta.kennel_prefix ?? "").trim() || null,
+        kennel_name,
       })
       .eq("user_id", user.id);
 

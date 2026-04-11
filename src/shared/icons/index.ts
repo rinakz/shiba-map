@@ -16,6 +16,7 @@ export * from "./IconSibkaWhite";
 export * from "./IconSibkaBlack";
 export * from "./IconRight";
 export * from "./IconTg";
+export * from "./IconVerification";
 export * from "./IconPawButton";
 export * from "./IconCalendar";
 export * from "./IconVaccine";

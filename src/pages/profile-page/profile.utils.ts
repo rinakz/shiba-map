@@ -106,6 +106,11 @@ export const fetchUserById = async (authUserId: string) => {
 
   if (!row) {
     if (sessionUser?.id !== authUserId) return undefined;
+    const isBreeder = account_type === "breeder";
+    const kennelTitleMeta =
+      isBreeder &&
+      (String(meta?.kennel_name ?? "").trim() ||
+        String(meta?.siba_name ?? "").trim());
     return {
       user_id: authUserId,
       email: sessionUser.email ?? "",
@@ -113,10 +118,25 @@ export const fetchUserById = async (authUserId: string) => {
       tgname: String(meta?.tgname ?? ""),
       is_show_tgname: Boolean(meta?.is_show_tgname),
       account_type,
+      ...(isBreeder
+        ? {
+            kennel_name: kennelTitleMeta || null,
+            kennel_city: String(meta?.kennel_city ?? "").trim() || null,
+            kennel_prefix: String(meta?.kennel_prefix ?? "").trim() || null,
+          }
+        : {}),
     } as ShibaUser;
   }
 
-  return { ...row, account_type };
+  const mergedKennelName =
+    account_type === "breeder"
+      ? (row.kennel_name?.trim() ||
+          String(meta?.kennel_name ?? "").trim() ||
+          String(meta?.siba_name ?? "").trim() ||
+          null)
+      : (row.kennel_name ?? null);
+
+  return { ...row, account_type, kennel_name: mergedKennelName };
 };
 
 export const fetchMySibaByUserId = async (authUserId: string) => {
@@ -418,12 +438,18 @@ export const submitProfile = async (
     uploadedPhotoUrl = data.publicUrl;
   }
 
+  const breederKennelTitle =
+    profileKind === "breeder" && kennelId && (kennelNameDraft ?? "").trim()
+      ? (kennelNameDraft ?? "").trim()
+      : undefined;
+
   const { error: updateUserError } = await supabase
     .from("users")
     .update({
       nickname: nicknameDraft,
       tgname: tgNameDraft,
       is_show_tgname: isShowTgNameDraft,
+      ...(breederKennelTitle ? { kennel_name: breederKennelTitle } : {}),
     })
     .eq("user_id", authUserId);
 
@@ -453,6 +479,16 @@ export const submitProfile = async (
         setError(kennelErr.message);
         return false;
       }
+
+      const { error: sibaSyncErr } = await supabase
+        .from("sibains")
+        .update({ siba_name: name })
+        .eq("id", mySiba.id);
+
+      if (sibaSyncErr) {
+        setError(sibaSyncErr.message);
+        return false;
+      }
     }
 
     if (uploadedPhotoUrl) {
@@ -476,9 +512,13 @@ export const submitProfile = async (
       nickname: nicknameDraft,
       tgname: tgNameDraft,
       is_show_tgname: isShowTgNameDraft,
+      ...(breederKennelTitle ? { kennel_name: breederKennelTitle } : {}),
     });
     setMySiba({
       ...mySiba,
+      ...(kennelId && (kennelNameDraft ?? "").trim()
+        ? { siba_name: (kennelNameDraft ?? "").trim() }
+        : {}),
       ...(uploadedPhotoUrl ? { photos: uploadedPhotoUrl } : {}),
     });
     return true;
