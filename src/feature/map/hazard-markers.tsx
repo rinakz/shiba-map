@@ -1,6 +1,6 @@
 import { Placemark } from "@pbe/react-yandex-maps";
 import type { Hazard } from "./general-map.utils";
-import { hazardIconHrefByKind } from "./general-map.utils";
+import { HAZARD_MAP_ICON_SIZE, hazardIconHrefByKind } from "./general-map.utils";
 
 type Props = {
   hazards: Hazard[];
@@ -24,7 +24,7 @@ export const HazardMarkers = ({ hazards }: Props) => {
           options={{
             iconLayout: "default#image",
             iconImageHref: hazardIconHrefByKind[h.kind],
-            iconImageSize: [40, 40],
+            iconImageSize: HAZARD_MAP_ICON_SIZE,
           }}
         />
       ))}

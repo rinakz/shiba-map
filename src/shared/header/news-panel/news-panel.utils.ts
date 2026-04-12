@@ -3,6 +3,22 @@ import { supabase } from "../../api/supabase-сlient";
 import type { Place, PlaceKind } from "../../../feature/map/place-types";
 import type { FeedItem, SibaNewsRow } from "./news-panel.types";
 
+export const formatFeedTimeAgo = (value: string) => {
+  const publishedAt = new Date(value).getTime();
+  if (Number.isNaN(publishedAt)) return "";
+
+  const diffMs = Date.now() - publishedAt;
+  const safeDiffMs = Math.max(0, diffMs);
+  const minutes = Math.floor(safeDiffMs / (60 * 1000));
+  const hours = Math.floor(safeDiffMs / (60 * 60 * 1000));
+  const days = Math.floor(safeDiffMs / (24 * 60 * 60 * 1000));
+
+  if (minutes < 1) return "только что";
+  if (minutes < 60) return `${minutes} мин.`;
+  if (hours < 24) return `${hours} ч.`;
+  return `${days} д.`;
+};
+
 export const buildSafeAvatarSrc = (photo: string | null, icon: string) => {
   if (!photo) return `/${icon}.png`;
   const trimmed = photo.trim();
@@ -69,7 +85,7 @@ async function fetchExpertFeedItems(): Promise<FeedItem[]> {
     .from("expert_posts")
     .select("id, body, created_at, author_user_id")
     .order("created_at", { ascending: false })
-    .limit(24);
+    .limit(80);
   if (error) return [];
   if (!expertPosts?.length) return [];
 
@@ -170,9 +186,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
   const expertItems = await expertItemsPromise;
 
   if (!followerIds.length) {
-    return expertItems
-      .sort((a, b) => +new Date(b.date) - +new Date(a.date))
-      .slice(0, 40);
+    return expertItems.sort((a, b) => +new Date(b.date) - +new Date(a.date));
   }
 
   const { data: sibas, error: sibasErr } = await supabase
@@ -184,11 +198,9 @@ export const fetchNewsFeed = async (authUserId: string) => {
   const sibaById = new Map<string, SibaNewsRow>(typedSibas.map((s) => [s.id, s]));
 
   const sibaIds = typedSibas.map((s) => s.id);
-  let kennelTitleBySibaId = await fetchKennelTitleBySibaIdMap(sibaIds);
+  const kennelTitleBySibaId = await fetchKennelTitleBySibaIdMap(sibaIds);
   if (!sibaIds.length) {
-    return expertItems
-      .sort((a, b) => +new Date(b.date) - +new Date(a.date))
-      .slice(0, 40);
+    return expertItems.sort((a, b) => +new Date(b.date) - +new Date(a.date));
   }
 
   const [cafes, parks, groomers] = await Promise.all([
@@ -213,19 +225,19 @@ export const fetchNewsFeed = async (authUserId: string) => {
       .select("id,cafe_id,siba_id,visited_at")
       .in("siba_id", sibaIds)
       .order("visited_at", { ascending: false })
-      .limit(20),
+      .limit(120),
     supabase
       .from("siba_park_visits")
       .select("id,place_id,siba_id,visited_at")
       .in("siba_id", sibaIds)
       .order("visited_at", { ascending: false })
-      .limit(20),
+      .limit(120),
     supabase
       .from("siba_groomer_visits")
       .select("id,place_id,siba_id,visited_at")
       .in("siba_id", sibaIds)
       .order("visited_at", { ascending: false })
-      .limit(20),
+      .limit(120),
   ]);
 
   const visitItems: FeedItem[] = [];
@@ -293,19 +305,19 @@ export const fetchNewsFeed = async (authUserId: string) => {
       .select("*")
       .in("created_by", followerIds)
       .order("created_at", { ascending: false })
-      .limit(10),
+      .limit(60),
     supabase
       .from("parks")
       .select("*")
       .in("created_by", followerIds)
       .order("created_at", { ascending: false })
-      .limit(10),
+      .limit(60),
     supabase
       .from("groomers")
       .select("*")
       .in("created_by", followerIds)
       .order("created_at", { ascending: false })
-      .limit(10),
+      .limit(60),
   ]);
 
   const sibaByUser = new Map<string, SibaNewsRow>(
@@ -378,7 +390,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
       .or(
         `user_id.in.(${followerIds.join(",")}),friend_user_id.in.(${followerIds.join(",")})`,
       )
-      .limit(60);
+      .limit(200);
     if (!withCreated.error) {
       return (withCreated.data ?? []) as Array<{
         user_id: string;
@@ -392,7 +404,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
       .or(
         `user_id.in.(${followerIds.join(",")}),friend_user_id.in.(${followerIds.join(",")})`,
       )
-      .limit(60);
+      .limit(200);
     if (withoutCreated.error) throw withoutCreated.error;
     return (withoutCreated.data ?? []) as Array<{
       user_id: string;
@@ -450,7 +462,7 @@ export const fetchNewsFeed = async (authUserId: string) => {
     .select("siba_id,learned_skill_ids,updated_at")
     .in("siba_id", sibaIds)
     .order("updated_at", { ascending: false })
-    .limit(30);
+    .limit(120);
   if (academyErr) throw academyErr;
   const skillNameById = new Map(shibaSkills.map((skill) => [skill.id, skill.name]));
   const academyItems: FeedItem[] = [];
@@ -483,5 +495,5 @@ export const fetchNewsFeed = async (authUserId: string) => {
   const expertsSorted = [...expertItems].sort(
     (a, b) => +new Date(b.date) - +new Date(a.date),
   );
-  return [...expertsSorted, ...rest].slice(0, 50);
+  return [...expertsSorted, ...rest];
 };

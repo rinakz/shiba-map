@@ -356,6 +356,9 @@ export const KennelSection: FC<KennelSectionProps> = ({
     );
   };
 
+  const shouldRenderKennelSection =
+    editable || kennelLoading || Boolean(displayKennel);
+
   const selector = (
     <div className={stls.drawerContent}>
       {!detailKennel ? (
@@ -472,7 +475,7 @@ export const KennelSection: FC<KennelSectionProps> = ({
 
   return (
     <>
-      {content}
+      {shouldRenderKennelSection ? content : null}
       {isMobile ? (
         <SwipeableDrawer
           anchor="bottom"

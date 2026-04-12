@@ -3,47 +3,43 @@ import cn from "classnames";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import { AppContext } from "../../shared/context/app-context";
-import type { SibaStatus, ShibaType, ShibaUser } from "../../shared/types";
+import type { ShibaType, ShibaUser } from "../../shared/types";
 import { supabase } from "../../shared/api/supabase-сlient";
 import stls from "../siba/siba.module.sass";
-import { ProgressBar } from "../../shared/ui";
 import { PeopleListOverlay } from "../../shared/ui/people-list-overlay";
-import {
-  IconCafe,
-  IconGroomer,
-  IconPark,
-  IconPeople,
-  IconTg,
-  IconRight,
-} from "../../shared/icons";
+import { IconCrown, IconPeople, IconTg, IconRight } from "../../shared/icons";
 import { IconVerification } from "../../shared/icons/IconVerification";
 import { fetchPublicKennelForBreederSiba } from "../../shared/api/breeder";
 import { Button } from "../../shared/ui";
 import Skeleton from "@mui/material/Skeleton";
-import {
-  getAchievementPercent,
-  getShibaRank,
-  shibaSkills,
-} from "../../pages/profile-page/shiba-academy.data";
+import { getShibaRank } from "../../pages/profile-page/shiba-academy.data";
 import { KennelSection } from "../../pages/profile-page/kennel-section";
+import { VisitStatsSummary } from "../../pages/profile-page/visit-stats-summary";
 import {
   fetchFollowersList,
   fetchFollowingsList,
 } from "../../pages/profile-page/profile.utils";
+import {
+  fetchSibasByKennelId,
+  sumSibaLevels,
+} from "../../pages/profile-page/kennel-section.utils";
+import { SibaLocationMap } from "./siba-location-map";
 import { getSibaStatus, isGreenStatus, SHIBA_STATUSES } from "../../shared/utils/siba-status";
+import {
+  NESTED_SIBA_DIALOG_PAPER_SX,
+  NESTED_SIBA_DRAWER_PAPER_SX,
+} from "./siba.constants";
+import {
+  friendsListFromMode,
+  friendsListTitle,
+  getSibaStatusStyleClasses,
+  mapLearnedSkillsToKnownCommands,
+  profileDisplayNameFromContext,
+  visitStatsTotal,
+} from "./siba.utils";
 
 type SibaProps = {
   id: string;
-};
-
-const statusClassSuffix: Record<SibaStatus, string> = {
-  walk: "Walk",
-  training: "Training",
-  angry: "Angry",
-  heat: "Heat",
-  sick: "Sick",
-  girls_only: "GirlsOnly",
-  boys_only: "BoysOnly",
 };
 
 export const Siba = ({ id }: SibaProps) => {
@@ -134,20 +130,14 @@ export const Siba = ({ id }: SibaProps) => {
     queryFn: () => fetchFollowingsList(siba!.siba_user_id),
   });
 
-  const listData =
-    listMode === "followers"
-      ? (followersListQuery.data ?? [])
-      : listMode === "followings"
-      ? (followingsListQuery.data ?? [])
-      : [];
-  const statusToneClass = status ? stls[`status${statusClassSuffix[status]}`] : undefined;
-  const statusCapsuleToneClass = status
-    ? stls[`statusCapsule${statusClassSuffix[status]}`]
-    : undefined;
-  const statusDotToneClass = status
-    ? stls[`statusDot${statusClassSuffix[status]}`]
-    : undefined;
-  const listTitle = listMode === "followers" ? "Подписчики" : "Подписки";
+  const listData = friendsListFromMode(
+    listMode,
+    followersListQuery.data ?? [],
+    followingsListQuery.data ?? [],
+  );
+  const { statusToneClass, statusCapsuleToneClass, statusDotToneClass } =
+    getSibaStatusStyleClasses(stls, status);
+  const listTitle = friendsListTitle(listMode);
   const isPeopleListLoading =
     listMode === "followers"
       ? followersListQuery.isLoading
@@ -159,6 +149,21 @@ export const Siba = ({ id }: SibaProps) => {
     queryKey: ["breeder-kennel-public", siba?.id],
     queryFn: () => fetchPublicKennelForBreederSiba(siba!.id),
     enabled: Boolean(isBreederView && siba?.id),
+  });
+
+  const breederGraduateLevelSumQuery = useQuery({
+    queryKey: [
+      "breeder-graduate-level-sum",
+      siba?.id,
+      publicBreederKennelQuery.data?.id,
+    ],
+    enabled: Boolean(
+      isBreederView && siba?.id && publicBreederKennelQuery.data?.id,
+    ),
+    queryFn: () =>
+      fetchSibasByKennelId(publicBreederKennelQuery.data!.id, {
+        excludeSibaId: String(siba!.id),
+      }).then((list) => sumSibaLevels(list)),
   });
 
   const academyProgressQuery = useQuery<{ learned_skill_ids: string[] | null } | null>({
@@ -176,10 +181,16 @@ export const Siba = ({ id }: SibaProps) => {
   });
   const learnedSkillIds = academyProgressQuery.data?.learned_skill_ids ?? [];
   const academyRank = getShibaRank(learnedSkillIds.length).rank;
-  const knownCommands = learnedSkillIds
-    .map((skillId) => shibaSkills.find((skill) => skill.id === skillId))
-    .filter((skill): skill is (typeof shibaSkills)[number] => Boolean(skill))
-    .slice(0, 8);
+  const knownCommands = mapLearnedSkillsToKnownCommands(learnedSkillIds);
+
+  const visitTotal = visitStatsTotal(siba);
+  const hasVisitStats = visitTotal > 0;
+
+  const profileLevelDisplay = isBreederView
+    ? breederGraduateLevelSumQuery.isLoading
+      ? null
+      : (breederGraduateLevelSumQuery.data ?? 0)
+    : (siba?.level ?? 0);
 
   const handleSubscribe = async () => {
     if (!authUserId || !siba?.siba_user_id) return;
@@ -215,10 +226,11 @@ export const Siba = ({ id }: SibaProps) => {
     followersCountQuery.isLoading ||
     followingsCountQuery.isLoading;
 
-  const profileDisplayName =
-    isBreederView && publicBreederKennelQuery.data?.name?.trim()
-      ? publicBreederKennelQuery.data.name.trim()
-      : (siba?.siba_name ?? "");
+  const profileDisplayName = profileDisplayNameFromContext({
+    isBreederView,
+    kennelName: publicBreederKennelQuery.data?.name,
+    sibaName: siba?.siba_name,
+  });
 
   if (isSibaLoading) {
     return (
@@ -268,7 +280,7 @@ export const Siba = ({ id }: SibaProps) => {
                         className={stls.breederVerifiedBadge}
                         title="Питомник верифицирован"
                       >
-                        <IconVerification color="#FEAE11" size={18} />
+                        <IconVerification color="#2BB26E" size={18} />
                         Verified Breeder
                       </span>
                     ) : null}
@@ -279,11 +291,11 @@ export const Siba = ({ id }: SibaProps) => {
                       {SHIBA_STATUSES.find((item) => item.id === status)?.label}
                     </span>
                   ) : null}
-                  <div className={stls.communityPanel}>
-                    <div className={stls.communityPanelTop}>
-                      <span className={stls.communityPanelLabel}>Состоит в чате</span>
-                    </div>
-                    {siba?.community_title ? (
+                  {siba?.community_title ? (
+                    <div className={stls.communityPanel}>
+                      <div className={stls.communityPanelTop}>
+                        <span className={stls.communityPanelLabel}>Состоит в чате</span>
+                      </div>
                       <a
                         className={stls.communityPanelTitle}
                         href={siba?.community_tg_link ?? undefined}
@@ -292,19 +304,27 @@ export const Siba = ({ id }: SibaProps) => {
                       >
                         {siba.community_title}
                       </a>
-                    ) : (
-                      <div className={stls.communityPanelEmpty}>
-                        Пока не состоит ни в одной стае
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <div className={stls.profileStatsSection}>
                 <div className={stls.profileStatsGrid}>
                   <div className={stls.profileStatCell}>
-                    <span className={stls.profileStatLabel}>⭐ Level</span>
-                    <span className={stls.profileStatValue}>{siba?.level ?? 0}</span>
+                    <span
+                      className={stls.profileStatLabelRow}
+                      title={
+                        isBreederView
+                          ? "Сколько уровней в сумме набрали все сибы питомника, привязанные в приложении"
+                          : undefined
+                      }
+                    >
+                      <IconCrown color="#FEAE11" size={14} />
+                      {isBreederView ? "Ур. у щенков" : "Level"}
+                    </span>
+                    <span className={stls.profileStatValue}>
+                      {profileLevelDisplay === null ? "…" : profileLevelDisplay}
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -344,10 +364,12 @@ export const Siba = ({ id }: SibaProps) => {
           <div className={stls.ownerMain}>
             <IconPeople /> {sibaUser?.nickname}
           </div>
-          <div className={stls.ownerInfo}>
-            <IconTg />
-            {sibaUser?.is_show_tgname ? sibaUser?.tgname : "Информация скрыта"}
-          </div>
+          {sibaUser?.is_show_tgname && sibaUser?.tgname?.trim() ? (
+            <div className={stls.ownerInfo}>
+              <IconTg />
+              {sibaUser.tgname.trim()}
+            </div>
+          ) : null}
           {canSubscribe && !isSubscribedQuery.data && (
             <Button
               size="medium"
@@ -366,9 +388,9 @@ export const Siba = ({ id }: SibaProps) => {
           editable={false}
           accountType={isBreederView ? "breeder" : "owner"}
         />
-        {!isBreederView ? (
-          <div className={stls.achievements}>
-            {knownCommands.length > 0 && (
+        {!isBreederView && (knownCommands.length > 0 || hasVisitStats) ? (
+          <div className={cn(stls.achievements, stls.achievementsCompact)}>
+            {knownCommands.length > 0 ? (
               <div className={stls.commandsSection}>
                 <div className={stls.sectionTitle}>Знает команды</div>
                 <div className={stls.commandsGrid}>
@@ -380,34 +402,19 @@ export const Siba = ({ id }: SibaProps) => {
                   ))}
                 </div>
               </div>
-            )}
-            <div className={stls.sectionTitle}>Достижения</div>
-            <div className={stls.progressContainer}>
-              <div className={stls.progressTitle}>
-                <IconCafe />
-                <p>Кафе</p>
-              </div>
-              <ProgressBar value={siba?.cafe ?? 0} color="#7A7B7B" />
-              <span>{getAchievementPercent(siba?.cafe ?? 0)}%</span>
-            </div>
-            <div className={stls.progressContainer}>
-              <div className={stls.progressTitle}>
-                <IconPark />
-                <p>Парки </p>
-              </div>
-              <ProgressBar value={siba?.park ?? 0} color="#2BB26E" />
-              <span>{getAchievementPercent(siba?.park ?? 0)}%</span>
-            </div>
-            <div className={stls.progressContainer}>
-              <div className={stls.progressTitle}>
-                <IconGroomer />
-                <p>Грумер </p>
-              </div>
-              <ProgressBar value={siba?.groomer ?? 0} color="#333944" />
-              <span>{getAchievementPercent(siba?.groomer ?? 0)}%</span>
-            </div>
+            ) : null}
+            <VisitStatsSummary
+              cafe={siba?.cafe ?? 0}
+              park={siba?.park ?? 0}
+              groomer={siba?.groomer ?? 0}
+              compact
+            />
           </div>
         ) : null}
+        <SibaLocationMap
+          coordinates={siba?.coordinates}
+          sibaIcon={siba?.siba_icon}
+        />
       </div>
       <PeopleListOverlay
         open={Boolean(listMode)}
@@ -427,15 +434,7 @@ export const Siba = ({ id }: SibaProps) => {
           onOpen={() => {}}
           onClose={() => setSelectedNestedSibaId(null)}
           PaperProps={{
-            sx: {
-              height: "auto",
-              maxHeight: "90dvh",
-              overflowY: "auto",
-              overscrollBehavior: "contain",
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
-              padding: "12px",
-            },
+            sx: { ...NESTED_SIBA_DRAWER_PAPER_SX },
           }}
         >
           {selectedNestedSibaId && <Siba id={selectedNestedSibaId} />}
@@ -447,12 +446,7 @@ export const Siba = ({ id }: SibaProps) => {
           fullWidth
           maxWidth="sm"
           PaperProps={{
-            sx: {
-              borderRadius: 2,
-              maxHeight: "90dvh",
-              overflowY: "auto",
-              padding: "12px",
-            },
+            sx: { ...NESTED_SIBA_DIALOG_PAPER_SX },
           }}
         >
           {selectedNestedSibaId && <Siba id={selectedNestedSibaId} />}

@@ -14,7 +14,6 @@ import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { Siba } from "../../feature/siba/siba";
 import { ProfileAchievements } from "./profile-achievements";
-import { ShibaAcademy } from "./shiba-academy";
 import { KennelSection } from "./kennel-section";
 import { BreederDocumentsSection } from "./breeder-documents-section";
 import {
@@ -338,6 +337,7 @@ export const ProfilePage = () => {
               ? scrollToBreederDocuments()
               : navigate(PATH.HealthPass)
           }
+          onOpenAcademy={() => navigate(PATH.ShibaAcademy)}
           onOpenFilePicker={() => openFilePicker(fileInputRef)}
           onPhotoChange={handleFileChange}
           setError={setError}
@@ -382,7 +382,6 @@ export const ProfilePage = () => {
         {!isBreederProfile ? (
           <ProfileAchievements mySiba={mySiba} />
         ) : null}
-        {!isBreederProfile ? <ShibaAcademy sibaId={mySiba?.id} /> : null}
         <KennelSection
           siba={mySiba}
           authUserId={authUserId ?? undefined}

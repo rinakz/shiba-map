@@ -534,6 +534,13 @@ export const placeIconHrefByKind = {
   groomer: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderToStaticMarkup(React.createElement(IconGroomer)))}`,
 } as const;
 
+/** Цвет круга маркера на карте — для названия места и подписей в ленте. */
+export const placeMarkerAccentByKind: Record<PlaceKind, string> = {
+  cafe: "#7A7B7B",
+  park: "#2BB26E",
+  groomer: "#333944",
+};
+
 /** Как маркеры мест (кафе/парк): круг цвета питомника, глиф белый (#FFFCF5 как в IconCafe). */
 const BREEDER_MAP_MARKER_COLOR = "#5E7C8C";
 const BREEDER_MAP_GLYPH = "#FFFCF5";
@@ -620,6 +627,18 @@ export const getSibaMarkerHref = (iconName: string | null | undefined) => {
   return `/${safeIconName}.png`;
 };
 
+/** Абсолютный URL иконки сибы для Яндекс.Карт (маркер не всегда грузит относительные пути). */
+export const getSibaMarkerAbsoluteHref = (
+  iconName: string | null | undefined,
+): string => {
+  const rel = getSibaMarkerHref(iconName).replace(/^\//, "");
+  if (typeof window === "undefined") {
+    return `/${rel}`;
+  }
+  const base = import.meta.env.BASE_URL || "/";
+  return new URL(rel, new URL(base, window.location.origin)).href;
+};
+
 // Hazards
 export type HazardKind = "reagents" | "salute" | "doghunters";
 export type Hazard = {
@@ -637,17 +656,30 @@ export const hazardEmojiByKind: Record<HazardKind, string> = {
   salute: "🎆",
 };
 
-const svgEmoji = (emoji: string) =>
-  `<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'>
-    <circle cx='24' cy='24' r='22' fill='white' stroke='#E7E1D2' stroke-width='2'/>
-    <text x='50%' y='52%' dominant-baseline='middle' text-anchor='middle' font-size='28'>${emoji}</text>
+const PULSE_RED = "#E95B47";
+
+/** Пульс и эмодзи в одних координатах (32,32), без transform — стабильнее в растеризации карт. */
+const svgHazardPulsing = (emoji: string) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" overflow="visible">
+    <circle cx="32" cy="32" r="16" fill="none" stroke="${PULSE_RED}" stroke-width="3.5" opacity="0.55">
+      <animate attributeName="r" values="16;28;16" dur="1.8s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.55;0;0.55" dur="1.8s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="32" cy="32" r="16" fill="none" stroke="${PULSE_RED}" stroke-width="2.5" opacity="0.38">
+      <animate attributeName="r" values="16;24;16" dur="1.8s" begin="0.45s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.38;0;0.38" dur="1.8s" begin="0.45s" repeatCount="indefinite" />
+    </circle>
+    <text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-size="22" style="font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',system-ui,sans-serif">${emoji}</text>
   </svg>`;
 
 export const hazardIconHrefByKind: Record<HazardKind, string> = {
-  doghunters: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgEmoji(hazardEmojiByKind.doghunters))}`,
-  reagents: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgEmoji(hazardEmojiByKind.reagents))}`,
-  salute: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgEmoji(hazardEmojiByKind.salute))}`,
+  doghunters: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgHazardPulsing(hazardEmojiByKind.doghunters))}`,
+  reagents: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgHazardPulsing(hazardEmojiByKind.reagents))}`,
+  salute: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgHazardPulsing(hazardEmojiByKind.salute))}`,
 };
+
+/** Размер маркера опасности: 1:1 с viewBox SVG 64×64 (как пульсирующая сиба), без лишнего масштаба. */
+export const HAZARD_MAP_ICON_SIZE: [number, number] = [64, 64];
 
 export const fetchActiveHazards = async (): Promise<Hazard[]> => {
   const nowIso = new Date().toISOString();
@@ -747,7 +779,21 @@ export const savePlaceVisit = async ({
     throw new Error("Не удалось определить вашу сибу. Попробуйте ещё раз.");
   }
 
-  const { table, filterColumn, counterField } = getPlaceVisitConfig(kind);
+  const { data: visitUserRow, error: visitUserErr } = await supabase
+    .from("users")
+    .select("account_type")
+    .eq("user_id", authUserId)
+    .maybeSingle();
+  if (visitUserErr) {
+    throw new Error(visitUserErr.message);
+  }
+  const visitAccountType = (visitUserRow as { account_type?: string | null } | null)
+    ?.account_type;
+  if (visitAccountType === "breeder") {
+    throw new Error("Заводчики не отмечаются в местах.");
+  }
+
+  const { table, filterColumn } = getPlaceVisitConfig(kind);
   const { data: latestVisit, error: latestVisitError } = await supabase
     .from(table)
     .select("visited_at")
@@ -781,17 +827,15 @@ export const savePlaceVisit = async ({
     throw new Error(visitError.message);
   }
 
-  const nextCounterValue = (effectiveMySiba[counterField] ?? 0) + 1;
-  const { error: updateError } = await supabase
-    .from("sibains")
-    .update({ [counterField]: nextCounterValue })
-    .eq("id", effectiveMySiba.id);
+  const { data: refreshed, error: refreshErr } = await supabase
+    .from("siba_map_markers")
+    .select("*")
+    .eq("id", effectiveMySiba.id)
+    .maybeSingle();
 
-  if (updateError) {
-    throw new Error(updateError.message);
+  if (!refreshErr && refreshed) {
+    setMySiba(refreshed as ShibaType);
   }
-
-  setMySiba({ ...effectiveMySiba, [counterField]: nextCounterValue });
 
   return {
     sibaId: effectiveMySiba.id,

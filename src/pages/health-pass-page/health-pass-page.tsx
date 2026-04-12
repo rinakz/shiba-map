@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import Skeleton from "@mui/material/Skeleton";
 import { Button, IconButton, Input, LayoutPage, SibaToast } from "../../shared/ui";
 import { IconPDF, IconRight } from "../../shared/icons";
 import { useNavigate } from "react-router-dom";
@@ -12,8 +11,7 @@ import { confirmPdfGeneration, generateHealthPassPdf } from "./pdfGenerator";
 import { DRUG_OPTIONS, getCycleDays, isDrugOption } from "../profile-page/health-section.utils";
 import type { DrugOption } from "../profile-page/health-section.types";
 import { MEDICAL_TAGS, buildChartPath } from "./health-pass.utils";
-
- 
+import { HealthPassPageSkeleton } from "./health-pass-page-skeleton";
 
 export const HealthPassPage = () => {
   const navigate = useNavigate();
@@ -69,10 +67,8 @@ export const HealthPassPage = () => {
     (drug === "Свой вариант" && customDrug.trim() !== (parasite.custom_drug_name ?? "")) ||
     currentCycleDays !== (parasite.cycle_days ?? 30);
 
-  if (health.isLoading && !health.weightQuery.data) {
-    return (
-      <LayoutPage><div className={stls.page}><Skeleton variant="rounded" height={80} /><Skeleton variant="rounded" height={220} /></div></LayoutPage>
-    );
+  if (mySiba?.id && health.isLoading) {
+    return <HealthPassPageSkeleton />;
   }
 
   return (

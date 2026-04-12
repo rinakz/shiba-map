@@ -25,6 +25,10 @@ export const IconButton: FC<ButtonProps> = ({
     type={type}
     {...props}
   >
-    {loading ? <CircularProgress /> : icon}
+    {loading ? (
+      <CircularProgress size={22} sx={{ color: "inherit" }} />
+    ) : (
+      icon
+    )}
   </button>
 );

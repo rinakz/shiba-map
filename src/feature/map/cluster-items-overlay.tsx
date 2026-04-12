@@ -2,10 +2,10 @@ import { Dialog, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import type { Place } from "./place-types";
 import type { ShibaType } from "../../shared/types";
 import type { ClusterItem } from "./general-map.utils";
-import { IconCafe } from "../../shared/icons/IconCafe";
-import { IconPark } from "../../shared/icons/IconPark";
-import { IconGroomer } from "../../shared/icons/IconGroomer";
-import { IconHouse } from "../../shared/icons/IconHouse";
+import {
+  breederMapHouseMarkerHref,
+  placeIconHrefByKind,
+} from "./general-map.utils";
 import { UserBadge } from "../../shared/ui/user-badge";
 import stls from "./cluster-items-overlay.module.sass";
 import {
@@ -56,13 +56,15 @@ export const ClusterItemsOverlay = ({
             >
               <div
                 className={`${stls.thumb} ${
-                  !isBreeder && s.want_to_walk ? stls.thumbWalk : ""
-                }`}
+                  isBreeder ? stls.thumbMarker : ""
+                } ${!isBreeder && s.want_to_walk ? stls.thumbWalk : ""}`}
               >
                 {isBreeder ? (
-                  <span className={stls.thumbHouse} aria-hidden>
-                    <IconHouse color="#5E7C8C" size={36} />
-                  </span>
+                  <img
+                    src={breederMapHouseMarkerHref}
+                    alt=""
+                    className={stls.thumbMarkerImg}
+                  />
                 ) : (
                   <img
                     alt={s.siba_name}
@@ -106,14 +108,18 @@ export const ClusterItemsOverlay = ({
             className={stls.row}
             onClick={() => onOpenPlace(item.kind, place)}
           >
-            <div className={stls.thumb}>
-              {item.kind === "cafe" ? (
-                <IconCafe />
-              ) : item.kind === "park" ? (
-                <IconPark />
-              ) : (
-                <IconGroomer />
-              )}
+            <div className={`${stls.thumb} ${stls.thumbMarker}`}>
+              <img
+                src={
+                  item.kind === "cafe"
+                    ? placeIconHrefByKind.cafe
+                    : item.kind === "park"
+                      ? placeIconHrefByKind.park
+                      : placeIconHrefByKind.groomer
+                }
+                alt=""
+                className={stls.thumbMarkerImg}
+              />
             </div>
             <div className={stls.meta}>
               <span className={stls.name}>{place.name}</span>

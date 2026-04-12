@@ -1,11 +1,19 @@
+=surfaceCream
+    border-radius: 20px
+    border: 1px solid rgba(231, 225, 210, 0.95)
+    background: rgba(255, 252, 245, 0.94)
+    box-shadow: 0 8px 22px rgba(103, 100, 94, 0.07)
+
 .profileContainer
     margin-top: 0
     display: flex
     flex-direction: column
     align-items: center
     width: 100%
-    gap: 38px
-    min-width: 300px
+    max-width: 100%
+    min-width: 0
+    box-sizing: border-box
+    gap: 20px
 
 .sibaInfoContainer
     display: flex
@@ -13,6 +21,8 @@
     gap: 14px
     align-items: center
     width: 100%
+    max-width: 100%
+    min-width: 0
 
 .avatarFrame
     display: flex
@@ -29,7 +39,7 @@
     border-color: #2BB26E
 
 .statusTraining
-    border-color: #FACC15
+    border-color: #C9A86A
 
 .statusAngry
     border-color: #F87171
@@ -68,6 +78,8 @@
 
 .characterCard
     width: 100%
+    max-width: 100%
+    min-width: 0
     display: flex
     flex-direction: column
     gap: 16px
@@ -106,44 +118,44 @@
     gap: 6px
     padding: 5px 12px
     border-radius: 14px
-    background: rgba(254, 174, 17, 0.28)
+    background: rgba(43, 178, 110, 0.12)
+    border: 1px solid rgba(43, 178, 110, 0.32)
     font-size: 10px
     font-weight: 800
     letter-spacing: 0.06em
     text-transform: uppercase
-    color: #333944
+    color: #2F6F4B
 
 .communityPanel
     width: -webkit-fill-available
     display: flex
     flex-direction: column
-    gap: 8px
-    padding: 14px
-    border-radius: 20px
-    background: rgba(255, 252, 245, 0.78)
-    border: 1px solid #E7E1D2
+    gap: 6px
+    padding: 10px 12px
+    border-radius: 14px
+    +surfaceCream
 
 .communityPanelTop
     display: flex
     align-items: center
     justify-content: space-between
-    gap: 12px
+    gap: 8px
 
 .communityPanelLabel
-    font-size: 12px
+    font-size: 11px
     color: #74736E
     text-transform: uppercase
     letter-spacing: 0.04em
 
 .communityPanelTitle
-    font-size: 20px
-    line-height: 1.2
+    font-size: 16px
+    line-height: 1.15
     font-weight: 800
     color: #333944
     text-decoration: none
 
 .communityPanelEmpty
-    font-size: 14px
+    font-size: 12px
     color: #74736E
 
 .profileStatsSection
@@ -164,13 +176,10 @@
     align-items: center
     justify-content: center
     gap: 6px
-    min-height: 40px
-    padding: 8px 4px
-    border-radius: 18px
-    background: linear-gradient(180deg, rgba(255, 252, 245, 0.98) 0%, rgba(248, 244, 236, 0.94) 100%)
-    border: 1px solid #E7E1D2
+    min-height: 48px
+    padding: 10px 6px
     text-align: center
-    box-shadow: 0 8px 18px rgba(103, 100, 94, 0.05)
+    +surfaceCream
 
 .profileStatButton
     appearance: none
@@ -183,6 +192,16 @@
     font-size: 12px
     color: #74736E
 
+.profileStatLabelRow
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    gap: 5px
+    font-size: 11px
+    line-height: 1.2
+    color: #74736E
+    text-align: center
+
 .profileStatValue
     font-size: 24px
     line-height: 1
@@ -192,33 +211,47 @@
 .roleLoreSection
     display: flex
     flex-direction: column
-    gap: 10px
+    gap: 8px
+    width: 100%
+    max-width: 100%
 
 .roleLoreCard
     display: flex
     flex-direction: column
     gap: 10px
-    padding: 16px
-    border-radius: 22px
+    padding: 12px 14px
+    border-radius: 16px
     background: rgba(255, 252, 245, 0.96)
-    border: 1px solid rgba(233, 91, 71, 0.16)
-    box-shadow: 0 12px 24px rgba(233, 91, 71, 0.06)
+    border: 1px solid rgba(233, 91, 71, 0.22)
+    box-shadow: 0 8px 20px rgba(233, 91, 71, 0.07)
 
 .roleLoreTitle
-    text-align: center
-    font-size: 24px
-    line-height: 1.2
+    align-self: center
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    flex-wrap: wrap
+    gap: 6px
+    max-width: 100%
+    padding: 6px 12px
+    border-radius: 999px
+    font-size: 15px
+    line-height: 1.25
     font-weight: 800
     color: #E95B47
+    background: rgba(233, 91, 71, 0.1)
+    border: 1px solid rgba(233, 91, 71, 0.2)
 
 .roleLoreQuote
-    padding: 14px 16px
-    border-radius: 18px
-    background: rgba(244, 240, 232, 0.95)
+    padding: 8px 10px
+    border-radius: 12px
+    background: rgba(255, 255, 255, 0.65)
     color: #5C5B55
-    font-size: 15px
+    font-size: 13px
     line-height: 1.45
     text-align: center
+    border: 1px solid rgba(231, 225, 210, 0.8)
+    font-style: italic
 
 .statusCapsule
     display: inline-flex
@@ -235,7 +268,7 @@
     border-color: #2BB26E
 
 .statusCapsuleTraining
-    border-color: #FACC15
+    border-color: #C9A86A
 
 .statusCapsuleAngry
     border-color: #F87171
@@ -274,7 +307,7 @@
     background: #2BB26E
 
 .statusDotTraining
-    background: #FACC15
+    background: #C9A86A
 
 .statusDotAngry
     background: #F87171
@@ -293,48 +326,80 @@
 
 .ownerCard
     display: flex
-    flex-direction: column
+    flex-direction: row
+    align-items: center
+    justify-content: space-between
     width: -webkit-fill-available
+    max-width: 100%
+    min-width: 0
+    box-sizing: border-box
     gap: 8px
-    background: #FEAE11
-    border-radius: 20px
-    padding: 12px
-    align-items: flex-start
-    flex-wrap: wrap
-    box-shadow: 0px 4px 8px 0px #67645E1A
+    padding: 10px 12px
+    flex-wrap: nowrap
+    +surfaceCream
+    border: 1px solid rgba(233, 91, 71, 0.12)
 
 .ownerMain
-    display: flex
+    display: inline-flex
     align-items: center
-    gap: 8px
+    gap: 6px
+    font-weight: 700
+    font-size: 14px
+    color: #333944
+    white-space: nowrap
 
 .ownerInfo
-    display: flex
+    display: inline-flex
     align-items: center
-    gap: 8px
-    flex-wrap: wrap
-    min-height: 32px
+    gap: 6px
+    min-height: 0
+    font-size: 13px
+    color: #333944
+    opacity: 0.92
+    white-space: nowrap
+
+.ownerCard :global(button)
+    margin-left: auto
 
 .progressContainer
     display: flex
-    gap: 8px
-    background: #FEAE11
-    padding: 8px
-    border-radius: 30px
+    gap: 10px
+    padding: 12px 14px
     align-items: center
-    box-shadow: 0px 4px 8px 0px #67645E1A
+    width: 100%
+    +surfaceCream
 
 .achievements
     display: flex
     flex-direction: column
     width: 100%
-    gap: 12px
+    max-width: 100%
+    min-width: 0
+    gap: 8px
+
+.achievementsCompact
+    .sectionTitle
+        font-size: 14px
+        font-weight: 700
+        margin: 0
+    .commandsSection
+        gap: 6px
+    .commandsGrid
+        gap: 8px
+    .commandCard
+        padding: 7px 11px
+        border-radius: 14px
+        font-size: 12px
+        box-shadow: none
+    .commandIcon
+        font-size: 14px
 
 .commandsSection
     display: flex
     flex-direction: column
     gap: 8px
     width: 100%
+    min-width: 0
 
 .sectionTitle
     color: #333944
@@ -350,13 +415,15 @@
     display: inline-flex
     align-items: center
     gap: 6px
-    padding: 6px 10px
-    border-radius: 14px
-    background: #FFF4DE
+    padding: 8px 12px
+    border-radius: 16px
+    background: rgba(255, 252, 245, 0.96)
+    border: 1px solid rgba(231, 225, 210, 0.9)
     color: #333944
     font-size: 12px
     line-height: 1
     max-width: 100%
+    box-shadow: 0 4px 12px rgba(103, 100, 94, 0.05)
 
 .commandIcon
     font-size: 14px
@@ -375,3 +442,30 @@
     span
         color: #74736E
         font-size: 14px
+
+.visitStatRow
+    display: flex
+    align-items: center
+    justify-content: space-between
+    gap: 12px
+    width: 100%
+    padding: 12px 14px
+    +surfaceCream
+
+.visitStatMain
+    display: flex
+    align-items: center
+    gap: 10px
+    min-width: 0
+
+.visitStatLabel
+    font-size: 14px
+    font-weight: 700
+    color: #5C5B55
+
+.visitStatCount
+    font-size: 15px
+    font-weight: 800
+    flex-shrink: 0
+    line-height: 1.3
+    text-align: right

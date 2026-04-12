@@ -1,5 +1,5 @@
-import cn from "classnames";
 import { IconPeople, IconTg } from "../../shared/icons";
+import cn from "classnames";
 import type { ShibaUser } from "../../shared/types";
 import stls from "./profile.module.sass";
 
@@ -19,10 +19,12 @@ export const ProfileOwnerCard = ({
       <div className={stls.ownerMain}>
         <IconPeople /> {user?.nickname}
       </div>
-      <div className={stls.ownerInfo}>
-        <IconTg />
-        {user?.is_show_tgname ? user?.tgname : "Информация скрыта"}
-      </div>
+      {user?.is_show_tgname && user?.tgname?.trim() ? (
+        <div className={stls.ownerInfo}>
+          <IconTg />
+          {user.tgname.trim()}
+        </div>
+      ) : null}
       <div className={stls.promoRow}>
         Мой промокод:
         <span

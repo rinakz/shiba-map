@@ -67,8 +67,6 @@ export type ShibaRank = {
   bossQuote: string;
 };
 
-const ACHIEVEMENT_TARGET_PER_KIND = 20;
-
 export const shibaRanks: ShibaRank[] = [
   { id: "stubborn_fox", rank: "Упрямый Лис", icon: "🦊", minCommands: 0, bossQuote: "🤨 \"Сидеть? Нет, я постою. Вон там. В другой комнате.\"" },
   { id: "selective_hearing", rank: "Избирательный Слух", icon: "👂", minCommands: 3, bossQuote: "🎧 \"Слышу. Но ты сначала покажи, что у тебя в руке.\"" },
@@ -97,34 +95,15 @@ export const getShibaRank = (completedCount: number) => {
   return { rank: current, percent };
 };
 
-export const getAchievementPercent = (count: number) => {
-  const safeCount = Number.isFinite(count) ? Math.max(0, count) : 0;
-  return Math.min(100, Math.round((safeCount / ACHIEVEMENT_TARGET_PER_KIND) * 100));
-};
-
-export const getSibaLevel = (params: {
-  cafe: number;
-  park: number;
-  groomer: number;
-  completedCommands: number;
-}) => {
-  const cafePercent = getAchievementPercent(params.cafe);
-  const parkPercent = getAchievementPercent(params.park);
-  const groomerPercent = getAchievementPercent(params.groomer);
-  const achievementsPercent = Math.round((cafePercent + parkPercent + groomerPercent) / 3);
-  const academyPercent = getShibaRank(params.completedCommands).percent;
-  const totalPercent = Math.round((achievementsPercent + academyPercent) / 2);
-  const level = totalPercent === 0 ? 0 : Math.max(1, Math.round(totalPercent / 10));
-
-  return {
-    level,
-    totalPercent,
-    achievementsPercent,
-    academyPercent,
-    cafePercent,
-    parkPercent,
-    groomerPercent,
-  };
+/** Склонение «N посещений» для блока мест в профиле. */
+export const visitsWordRu = (n: number): string => {
+  const abs = Math.abs(Math.trunc(n));
+  const d10 = abs % 10;
+  const d100 = abs % 100;
+  if (d100 >= 11 && d100 <= 14) return "посещений";
+  if (d10 === 1) return "посещение";
+  if (d10 >= 2 && d10 <= 4) return "посещения";
+  return "посещений";
 };
 
 export const SKILL_TABS: Array<{ key: SkillLevel; title: string }> = [

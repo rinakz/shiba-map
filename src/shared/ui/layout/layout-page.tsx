@@ -1,9 +1,9 @@
-import { type ReactElement } from "react";
+import type { ReactNode } from "react";
 import stls from "./layoutPage.module.sass";
 import useWindowSize from "../../hooks/use-window-size";
 
 type TypeLayoutPageProps = {
-  children: ReactElement;
+  children: ReactNode;
   classNames?: string;
   column?: boolean;
   style?: object;

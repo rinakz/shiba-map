@@ -87,8 +87,6 @@ export const GeneralMap = () => {
   const [pendingHazardCoords, setPendingHazardCoords] = useState<
     [number, number] | null
   >(null);
-  const [isMapActionMenuOpen, setIsMapActionMenuOpen] = useState(false);
-
   const clusterEventsAttachedRef = useRef(false);
   const [pulsingWalkHrefByIcon, setPulsingWalkHrefByIcon] = useState<
     Record<string, string>
@@ -433,20 +431,8 @@ export const GeneralMap = () => {
       )}
       {isVerified && (
         <MapAddMenu
-          isOpen={isMapActionMenuOpen}
-          onOpen={() => setIsMapActionMenuOpen(true)}
-          onClose={() => {
-            setIsMapActionMenuOpen(false);
-            setAddingHazardKind(null);
-          }}
-          onAddPlace={() => {
-            setIsMapActionMenuOpen(false);
-            setIsPlacePickerOpen(true);
-          }}
-          onAddHazard={() => {
-            setIsMapActionMenuOpen(false);
-            setIsHazardPickerOpen(true);
-          }}
+          onAddPlace={() => setIsPlacePickerOpen(true)}
+          onAddHazard={() => setIsHazardPickerOpen(true)}
         />
       )}
       <ClusterItemsOverlay
@@ -469,6 +455,7 @@ export const GeneralMap = () => {
       />
       {isMobile ? (
         <SwipeableDrawer
+          elevation={0}
           anchor="bottom"
           open={isOpenSiba}
           onClose={() => {
@@ -485,6 +472,9 @@ export const GeneralMap = () => {
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
               padding: "12px",
+              background: "#FFFCF5",
+              boxShadow: "none",
+              border: "none",
             },
           }}
         >
@@ -504,6 +494,7 @@ export const GeneralMap = () => {
           PaperProps={{
             sx: {
               borderRadius: 2,
+              padding: "12px",
             },
           }}
         >
@@ -513,6 +504,7 @@ export const GeneralMap = () => {
         </Dialog>
       )}
       <SwipeableDrawer
+        elevation={0}
         anchor="bottom"
         open={isPlacePickerOpen}
         onOpen={() => {}}
@@ -525,6 +517,8 @@ export const GeneralMap = () => {
             borderTopRightRadius: 16,
             p: 2,
             background: "#FFFCF5",
+            boxShadow: "none",
+            border: "none",
           },
         }}
       >
@@ -536,6 +530,7 @@ export const GeneralMap = () => {
         />
       </SwipeableDrawer>
       <SwipeableDrawer
+        elevation={0}
         anchor="bottom"
         open={isHazardPickerOpen}
         onOpen={() => {}}
@@ -548,6 +543,8 @@ export const GeneralMap = () => {
             borderTopRightRadius: 16,
             p: 2,
             background: "#FFFCF5",
+            boxShadow: "none",
+            border: "none",
           },
         }}
       >
@@ -595,6 +592,7 @@ export const GeneralMap = () => {
         </div>
       </SwipeableDrawer>
       <SwipeableDrawer
+        elevation={0}
         anchor="bottom"
         open={Boolean(isPlaceFormOpen)}
         onOpen={() => {}}
@@ -609,6 +607,8 @@ export const GeneralMap = () => {
             borderTopRightRadius: 16,
             padding: "12px",
             background: "#FFFCF5",
+            boxShadow: "none",
+            border: "none",
           },
         }}
       >
@@ -620,6 +620,7 @@ export const GeneralMap = () => {
         )}
       </SwipeableDrawer>
       <SwipeableDrawer
+        elevation={0}
         anchor="bottom"
         open={Boolean(selectedPlace)}
         onOpen={() => {}}
@@ -634,6 +635,8 @@ export const GeneralMap = () => {
             borderTopRightRadius: 16,
             padding: "12px",
             background: "#FFFCF5",
+            boxShadow: "none",
+            border: "none",
           },
         }}
       >

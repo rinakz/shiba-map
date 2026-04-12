@@ -9,7 +9,7 @@ type Props = {
 
 export const PlaceKindPicker = ({ onPick }: Props) => {
   return (
-    <div className={stls.placePickerCard}>
+    <div className={stls.placePickerDrawerInner}>
       <button
         type="button"
         className={stls.placePickerItem}

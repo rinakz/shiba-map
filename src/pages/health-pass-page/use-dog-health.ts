@@ -164,7 +164,13 @@ export const useDogHealth = (siba?: ShibaType) => {
     onSuccess: refresh,
   });
 
-  const isLoading = weightQuery.isLoading || vaccQuery.isLoading || treatmentsQuery.isLoading || aidQuery.isLoading || medicalIdQuery.isLoading;
+  const isLoading =
+    weightQuery.isLoading ||
+    vaccQuery.isLoading ||
+    treatmentsQuery.isLoading ||
+    parasiteSettingsQuery.isLoading ||
+    aidQuery.isLoading ||
+    medicalIdQuery.isLoading;
 
   const hasUrgent = useMemo(() => {
     const now = new Date().getTime();

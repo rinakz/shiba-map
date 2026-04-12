@@ -33,7 +33,7 @@ export const Button: FC<ButtonProps> = ({
     {...props}
   >
     {loading ? (
-      <CircularProgress size="small" color="primary" />
+      <CircularProgress size={20} sx={{ color: "#FFFCF5" }} />
     ) : (
       <span className={styles.iconContainer}>
         {children}

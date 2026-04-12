@@ -9,7 +9,7 @@ import { AppContext } from "../context/app-context";
 import { isNotOpenHeaderPaths } from "../constants";
 import { PATH } from "../constants/path";
 import { IconButton } from "../ui";
-import { IconGraduation } from "../icons";
+import { IconGraduationCap } from "../icons";
 
 export function Header() {
   const navigate = useNavigate();
@@ -60,9 +60,10 @@ export function Header() {
             <div className={stls.actions}>
               <IconButton
                 className={stls.knowledgeCta}
-                size="small"
-                variant="secondary"
-                icon={<IconGraduation color="#B56A42" size={28} />}
+                size="large"
+                variant="primary"
+                title="База знаний"
+                icon={<IconGraduationCap size={24} />}
                 onClick={() => navigate(PATH.Knowledge)}
               />
             </div>

@@ -12,6 +12,7 @@ import { AuthPage, LeaderboardPage, LoginPage, MainPage, ProfilePage } from "../
 import { NewsPage } from "../pages/news-page/news-page";
 import { KnowledgePage } from "../pages/knowledge-page/knowledge-page";
 import { HealthPassPage } from "../pages/health-pass-page/health-pass-page";
+import { ShibaAcademyPage } from "../pages/shiba-academy-page/shiba-academy-page";
 import { ProtectedRoute } from "./protected-route";
 export const Routes: FC = () => {
   const { authUserId, isAuthLoading } = useContext(AppContext);
@@ -77,6 +78,14 @@ export const Routes: FC = () => {
             element={
               <ProtectedRoute isAuth={Boolean(authUserId)}>
                 <HealthPassPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={PATH.ShibaAcademy}
+            element={
+              <ProtectedRoute isAuth={Boolean(authUserId)}>
+                <ShibaAcademyPage />
               </ProtectedRoute>
             }
           />

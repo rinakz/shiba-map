@@ -6,7 +6,15 @@ import { Siba } from "../../../feature/siba/siba";
 import { PlaceDetail } from "../../../feature/map/place-detail";
 import type { Place, PlaceKind } from "../../../feature/map/place-types";
 import type { FeedItem, NewsPanelProps } from "./news-panel.types";
-import { fetchNewsFeed } from "./news-panel.utils";
+import { fetchNewsFeed, formatFeedTimeAgo } from "./news-panel.utils";
+import {
+  placeIconHrefByKind,
+  placeMarkerAccentByKind,
+} from "../../../feature/map/general-map.utils";
+import { IconGraduationCap } from "../../../shared/icons/IconGraduationCap";
+
+const COMMAND_ICON_BG = "#5E7C8C";
+const COMMAND_ICON_FG = "#FFFCF5";
 
 export const NewsPanel = ({ authUserId, open, onClose }: NewsPanelProps) => {
   const isMobile = useMediaQuery("(max-width:600px)");
@@ -39,7 +47,7 @@ export const NewsPanel = ({ authUserId, open, onClose }: NewsPanelProps) => {
         {(newsQuery.data ?? []).map((item) => (
           <div
             key={item.id}
-            style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 0" }}
+            style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "8px 0" }}
           >
             <img
               src={item.actorSibaAvatar}
@@ -47,17 +55,53 @@ export const NewsPanel = ({ authUserId, open, onClose }: NewsPanelProps) => {
               style={{ width: 32, height: 32, borderRadius: 16, cursor: "pointer" }}
               onClick={() => setSelectedSibaId(item.actorSibaId)}
             />
-            <div style={{ color: "#333944", lineHeight: 1.3 }}>
+            <div
+              style={{
+                color: "#333944",
+                lineHeight: 1.3,
+                display: "flex",
+                gap: 8,
+                alignItems: "flex-start",
+                minWidth: 0,
+                flex: 1,
+              }}
+            >
+              {item.place ? (
+                <img
+                  src={placeIconHrefByKind[item.place.kind]}
+                  alt=""
+                  width={28}
+                  height={28}
+                  style={{ flexShrink: 0, objectFit: "contain" }}
+                />
+              ) : item.commandName ? (
+                <span
+                  style={{
+                    width: 28,
+                    height: 28,
+                    minWidth: 28,
+                    borderRadius: 999,
+                    background: COMMAND_ICON_BG,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <IconGraduationCap size={16} color={COMMAND_ICON_FG} />
+                </span>
+              ) : null}
+              <div style={{ minWidth: 0 }}>
               <span
-                style={{ cursor: "pointer", fontWeight: 600 }}
+                style={{ cursor: "pointer", fontWeight: 800, fontSize: 15 }}
                 onClick={() => setSelectedSibaId(item.actorSibaId)}
               >
                 {item.actorSibaName}
               </span>{" "}
-              <span>{item.verb}</span>{" "}
+              <span style={{ fontSize: 15 }}>{item.verb}</span>{" "}
               {item.targetSiba && (
                 <span
-                  style={{ cursor: "pointer", fontWeight: 600 }}
+                  style={{ cursor: "pointer", fontWeight: 800, fontSize: 15 }}
                   onClick={() => setSelectedSibaId(item.targetSiba!.id)}
                 >
                   {item.targetSiba!.name}
@@ -65,15 +109,33 @@ export const NewsPanel = ({ authUserId, open, onClose }: NewsPanelProps) => {
               )}{" "}
               {item.place && (
                 <span
-                  style={{ cursor: "pointer", textDecoration: "underline" }}
+                  role="button"
+                  tabIndex={0}
+                  style={{
+                    cursor: "pointer",
+                    fontWeight: 800,
+                    fontSize: 15,
+                    color: placeMarkerAccentByKind[item.place!.kind],
+                  }}
                   onClick={() => setSelectedPlace(item.place!)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedPlace(item.place!);
+                    }
+                  }}
                 >
                   {item.place!.place.name}
                 </span>
               )}
-              {item.commandName && <span style={{ fontWeight: 600 }}>{item.commandName}</span>}
-              <div style={{ color: "#74736E", fontSize: 12 }}>
-                {new Date(item.date).toLocaleString()}
+              {item.commandName && (
+                <span
+                  style={{ fontWeight: 800, fontSize: 15, color: COMMAND_ICON_BG }}
+                >
+                  {item.commandName}
+                </span>
+              )}
+              <div style={{ color: "#74736E", fontSize: 12 }}>{formatFeedTimeAgo(item.date)}</div>
               </div>
             </div>
           </div>

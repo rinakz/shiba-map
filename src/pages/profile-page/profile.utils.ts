@@ -259,6 +259,20 @@ export const fetchHealthAlert = async (sibaId: string) => {
   ].some((x) => x <= 14);
 };
 
+export type SibaKennelLinkRow = {
+  kennel_id: string;
+  siba_id: string;
+};
+
+/** Связи питомник ↔ сиба (для рейтинга заводчиков и древа). */
+export const fetchSibaKennelLinks = async (): Promise<SibaKennelLinkRow[]> => {
+  const { data, error } = await supabase
+    .from("siba_kennels")
+    .select("kennel_id, siba_id");
+  if (error) throw error;
+  return (data ?? []) as SibaKennelLinkRow[];
+};
+
 export const fetchAllSibas = async () => {
   // Prefer safer public view with computed verification (photo OR promo).
   const { data: viewData, error: viewError } = await supabase

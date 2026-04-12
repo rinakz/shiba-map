@@ -5,6 +5,7 @@ import { supabase } from "../../shared/api/supabase-сlient";
 import { PLACES_PHOTOS_BUCKET } from "../../shared/constants/storage";
 import { useContext } from "react";
 import { AppContext } from "../../shared/context/app-context";
+import type { ShibaType } from "../../shared/types";
 
 type CafeFormProps = {
   coordinates: number[];
@@ -12,7 +13,8 @@ type CafeFormProps = {
 };
 
 export const CafeForm = ({ coordinates, onClose }: CafeFormProps) => {
-  const { authUserId, mySiba, setMySiba } = useContext(AppContext);
+  const { authUserId, mySiba, setMySiba, user } = useContext(AppContext);
+  const isBreederAccount = user?.account_type === "breeder";
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [withVisit, setWithVisit] = useState(false);
@@ -67,7 +69,16 @@ export const CafeForm = ({ coordinates, onClose }: CafeFormProps) => {
         .single();
       if (cafeErr) throw cafeErr;
 
-      if (withVisit && mySiba?.id) {
+      if (mySiba?.id) {
+        const { data: refreshedAfterPlace } = await supabase
+          .from("siba_map_markers")
+          .select("*")
+          .eq("id", mySiba.id)
+          .maybeSingle();
+        if (refreshedAfterPlace) setMySiba(refreshedAfterPlace as ShibaType);
+      }
+
+      if (withVisit && mySiba?.id && !isBreederAccount) {
         await supabase.from("siba_cafe_visits").insert([
           {
             cafe_id: cafe.id,
@@ -75,9 +86,12 @@ export const CafeForm = ({ coordinates, onClose }: CafeFormProps) => {
             visited_at: new Date().toISOString(),
           },
         ]);
-        const nextCafe = (mySiba.cafe ?? 0) + 1;
-        await supabase.from("sibains").update({ cafe: nextCafe }).eq("id", mySiba.id);
-        setMySiba({ ...mySiba, cafe: nextCafe });
+        const { data: refreshed } = await supabase
+          .from("siba_map_markers")
+          .select("*")
+          .eq("id", mySiba.id)
+          .maybeSingle();
+        if (refreshed) setMySiba(refreshed as ShibaType);
       }
       onClose();
     } catch (e) {
@@ -93,10 +107,12 @@ export const CafeForm = ({ coordinates, onClose }: CafeFormProps) => {
       <Input label="Название" value={name} onChange={(e) => setName(e.target.value)} />
       <Input label="Адрес" value={address} onChange={(e) => setAddress(e.target.value)} />
       <input type="file" accept="image/*" onChange={onPhotoChange} />
-      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <Checkbox checked={withVisit} onChange={(e) => setWithVisit(e.target.checked)} />
-        Мой питомец был здесь
-      </label>
+      {!isBreederAccount ? (
+        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Checkbox checked={withVisit} onChange={(e) => setWithVisit(e.target.checked)} />
+          Мой питомец был здесь
+        </label>
+      ) : null}
       {error && <span style={{ fontSize: 12, color: "#E95B47" }}>{error}</span>}
       <div style={{ display: "flex", gap: 10 }}>
         <Button variant="secondary" onClick={onClose} disabled={isSaving}>

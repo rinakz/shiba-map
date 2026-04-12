@@ -20,7 +20,7 @@ export const ProfileRoleLore = ({
         <div className={stls.roleLoreTitle}>
           {icon?.trim()} {title}
         </div>
-        <div className={stls.roleLoreQuote}> {loreQuote}</div>
+        <div className={stls.roleLoreQuote}>{loreQuote}</div>
       </div>
     </div>
   );

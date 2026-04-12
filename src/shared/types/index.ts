@@ -23,6 +23,7 @@ export type ShibaType = {
   followers?: number | null;
   followings?: number | null;
   level?: number | null;
+  experience_points?: number | null;
   community_id?: string | null;
   community_title?: string | null;
   community_avatar_url?: string | null;

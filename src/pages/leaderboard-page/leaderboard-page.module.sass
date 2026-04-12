@@ -53,6 +53,9 @@
     svg
         width: 20px
         height: 20px
+        flex-shrink: 0
+    svg path
+        fill: currentColor
     &:hover
         transform: translateY(-1px)
 
@@ -60,6 +63,35 @@
     background: #E95B47
     border-color: #E95B47
     color: #FFFCF5
+    svg
+        color: #FFFCF5
+    svg path
+        fill: #FFFCF5
+
+.errorBanner
+    margin-bottom: 14px
+    padding: 12px 14px
+    border-radius: 16px
+    border: 1px solid #FECACA
+    background: #FEF2F2
+    color: #991B1B
+    font-size: 14px
+    line-height: 1.4
+
+.errorRetry
+    margin-top: 10px
+    padding: 8px 14px
+    border-radius: 12px
+    border: 1px solid #E95B47
+    background: #FFFCF5
+    color: #E95B47
+    font-weight: 600
+    cursor: pointer
+
+.skeletonList
+    display: flex
+    flex-direction: column
+    gap: 12px
 
 .list
     display: flex
@@ -144,7 +176,7 @@
 
 .points
     text-align: right
-    min-width: 78px
+    min-width: 86px
 
 .pointsValue
     font-size: 18px
@@ -154,6 +186,19 @@
 .pointsLabel
     font-size: 11px
     color: #74736E
+
+.pointsLabelStack
+    display: flex
+    flex-direction: column
+    align-items: flex-end
+    gap: 1px
+
+.pointsLabelMuted
+    font-size: 10px
+    line-height: 1.15
+    color: #74736E
+    max-width: 92px
+    text-align: right
 
 .crownCorner
     position: absolute
@@ -210,6 +255,17 @@
     font-weight: 700
     color: #333944
     text-decoration: none
+
+.chatActionMuted
+    display: inline-flex
+    align-items: center
+    border-radius: 999px
+    padding: 8px 12px
+    font-weight: 700
+    font-size: 13px
+    color: #2F7A51
+    background: rgba(43, 178, 110, 0.12)
+    border: 1px solid rgba(43, 178, 110, 0.28)
 
 .leaderBadge
     display: inline-flex

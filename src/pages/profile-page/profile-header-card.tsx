@@ -5,6 +5,7 @@ import {
   IconEdit,
   IconFirstAid,
   IconRight,
+  IconTrophyOutlined,
 } from "../../shared/icons";
 import { IconVerification } from "../../shared/icons/IconVerification";
 import { IconButton } from "../../shared/ui";
@@ -43,6 +44,7 @@ type ProfileHeaderCardProps = {
   onOpenSubscribers: () => void;
   onStartEdit: () => void;
   onOpenHealth: () => void;
+  onOpenAcademy: () => void;
   onOpenFilePicker: () => void;
   onPhotoChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
@@ -73,6 +75,7 @@ export const ProfileHeaderCard = ({
   onOpenSubscribers,
   onStartEdit,
   onOpenHealth,
+  onOpenAcademy,
   onOpenFilePicker,
   onPhotoChange,
   setError,
@@ -109,7 +112,7 @@ export const ProfileHeaderCard = ({
             <IconButton
               size="medium"
               variant="secondary"
-              icon={<IconEdit />}
+              icon={<span className={stls.topActionIcon}><IconEdit /></span>}
               onClick={onStartEdit}
             />
             {isHealthLoading ? (
@@ -120,19 +123,31 @@ export const ProfileHeaderCard = ({
                 className={stls.healthCardSkeleton}
               />
             ) : (
-              <button
-                type="button"
-                className={stls.healthCardButton}
-                onClick={onOpenHealth}
-                title={breederMode ? "Документы питомника" : "Медкнижка"}
-              >
-                <span className={stls.healthCardIcon}>
-                  <IconFirstAid color="#E95B47" />
-                </span>
-                {hasHealthAlert && !breederMode && (
-                  <span className={stls.healthAlertDot}>!</span>
-                )}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className={stls.healthCardButton}
+                  onClick={onOpenAcademy}
+                  title="Академия Сиб"
+                >
+                  <span className={stls.healthCardIcon}>
+                    <IconTrophyOutlined color="#E95B47" size={20} />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className={stls.healthCardButton}
+                  onClick={onOpenHealth}
+                  title={breederMode ? "Документы питомника" : "Медкнижка"}
+                >
+                  <span className={stls.healthCardIcon}>
+                    <IconFirstAid color="#E95B47" />
+                  </span>
+                  {hasHealthAlert && !breederMode && (
+                    <span className={stls.healthAlertDot}>!</span>
+                  )}
+                </button>
+              </>
             )}
           </div>
         </div>

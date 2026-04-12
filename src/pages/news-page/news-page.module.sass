@@ -2,26 +2,39 @@
     min-height: calc(100vh - 112px)
     background: #F6F1E5
 
+// Как .mapContainer, но без горизонтального паддинга — отступы задаём в .pageInner под тулбар хедера (MUI px 2.5 / 4)
+.newsRoot
+    display: flex
+    flex-direction: column
+    justify-content: space-between
+    position: relative
+    margin-top: 112px
+    width: 100%
+    box-sizing: border-box
+
 .pageInner
     min-height: calc(100vh - 112px)
-    padding-top: 0
+    padding-top: 14px
+    box-sizing: border-box
+    // Совпадает с Toolbar в header.tsx: px={{ xs: 2.5, sm: 2.5, md: 4 }} при theme spacing 8
+    padding-left: max(20px, env(safe-area-inset-left))
+    padding-right: max(20px, env(safe-area-inset-right))
+    @media (min-width: 900px)
+        padding-left: max(32px, env(safe-area-inset-left))
+        padding-right: max(32px, env(safe-area-inset-right))
 
 .content
     display: flex
     flex-direction: column
     gap: 12px
-    padding: 12px
+    padding: 12px 0
 
-.stickyHeader
-    position: sticky
-    top: 0
-    z-index: 3
+.newsTop
     display: flex
     flex-direction: column
     gap: 12px
-    padding: 12px 12px 10px
-    background: linear-gradient(180deg, rgba(246, 241, 229, 0.98) 0%, rgba(246, 241, 229, 0.94) 100%)
-    backdrop-filter: blur(10px)
+    padding: 12px 0 10px
+    background: transparent
 
 .headerRow
     display: flex
@@ -96,6 +109,24 @@
     color: #74736E
     font-size: 13px
 
+.walkingSkeletonItem
+    display: inline-flex
+    flex-direction: column
+    align-items: center
+    gap: 6px
+    min-width: 64px
+    flex-shrink: 0
+
+.walkingSkeletonAvatar
+    width: 56px
+    height: 56px
+    flex-shrink: 0
+
+.walkingSkeletonName
+    width: 52px
+    height: 12px
+    border-radius: 6px
+
 .topRow
     display: flex
     align-items: center
@@ -130,9 +161,13 @@
 .feedCard
     background: rgba(255, 252, 245, 0.98)
     border: 1px solid #E7E1D2
-    border-radius: 22px
+    border-radius: 20px
     padding: 14px
     box-shadow: 0 6px 16px rgba(103, 100, 94, 0.05)
+    margin-bottom: 14px
+
+.feedCard:last-child
+    margin-bottom: 0
 
 .feedCardTop
     display: flex
@@ -158,11 +193,59 @@
     min-width: 0
     flex: 1
 
-.feedHeadlineRow
+.feedNameBlock
     display: flex
+    flex-direction: column
+    gap: 4px
+    min-width: 0
     align-items: flex-start
-    justify-content: space-between
-    gap: 12px
+
+.feedNameRow
+    display: flex
+    align-items: center
+    gap: 6px
+    flex-wrap: wrap
+    min-width: 0
+
+.feedTimeBelow
+    font-size: 13px
+    color: #9A9894
+    font-weight: 500
+    line-height: 1.2
+
+.feedGroupMoreLink
+    border: none
+    background: none
+    padding: 0
+    margin: 0
+    font: inherit
+    font-weight: 700
+    color: #5E7C8C
+    cursor: pointer
+    text-decoration: none
+    display: inline
+    &:hover
+        color: #425A68
+
+.feedGroupItemTime
+    color: #9A9894
+    font-size: 12px
+    font-weight: 500
+
+.groupSheetRow
+    padding: 10px 0
+    border-bottom: 1px solid rgba(231, 225, 210, 0.7)
+    font-size: 14px
+    line-height: 1.45
+    color: #333944
+    &:last-child
+        border-bottom: none
+
+.expertHouseInline
+    display: inline-flex
+    align-items: center
+    flex-shrink: 0
+    opacity: 0.92
 
 .feedActorButton
     border: none
@@ -188,19 +271,57 @@
 
 .feedContentRow
     display: flex
-    align-items: flex-start
+    align-items: center
     gap: 10px
 
 .feedEmojiBadge
-    width: 34px
-    height: 34px
-    min-width: 34px
-    border-radius: 12px
+    width: 28px
+    height: 28px
+    min-width: 28px
+    border-radius: 10px
     background: rgba(255, 244, 222, 0.95)
     display: inline-flex
     align-items: center
     justify-content: center
-    font-size: 18px
+    font-size: 15px
+
+.feedCommandIconWrap
+    width: 28px
+    height: 28px
+    min-width: 28px
+    border-radius: 999px
+    background: #5E7C8C
+    border: none
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    flex-shrink: 0
+
+    :global(svg path)
+        fill: #FFFCF5
+
+.feedPlaceIconWrap
+    width: 28px
+    height: 28px
+    min-width: 28px
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    background: transparent
+    border: none
+    padding: 0
+    flex-shrink: 0
+
+.feedPlaceBadgeImg
+    width: 28px
+    height: 28px
+    object-fit: contain
+    display: block
+
+.feedSentinel
+    height: 4px
+    margin-top: 4px
+    flex-shrink: 0
 
 .feedVerb
     color: #5C5B55
@@ -213,20 +334,32 @@
     color: #333944
     cursor: pointer
     font-size: inherit
+    text-decoration: none
+    &:hover
+        opacity: 0.82
 
-.feedPlace
-    color: #2F7A51
+.feedPlaceButton
+    border: none
+    background: transparent
+    padding: 0
+    margin: 0
+    font-size: 15px
+    line-height: 1.45
     font-weight: 800
+    font-family: inherit
+    cursor: pointer
+    text-align: left
+    text-decoration: none
+    &:hover
+        opacity: 0.82
+    &:focus-visible
+        outline: 2px solid rgba(51, 57, 68, 0.35)
+        outline-offset: 2px
+        border-radius: 4px
 
 .feedCommand
     font-weight: 800
     color: #E95B47
-
-.feedDate
-    color: #74736E
-    font-size: 12px
-    white-space: nowrap
-    text-align: right
 
 .feedActions
     display: flex
@@ -237,16 +370,14 @@
     display: inline-flex
     align-items: center
     justify-content: center
-    width: 34px
-    height: 34px
-    border: 1px solid #E7E1D2
-    border-radius: 999px
-    background: rgba(255, 252, 245, 0.96)
+    border: none
+    border-radius: 0
+    background: transparent
+    padding: 0
     cursor: pointer
 
 .likeButtonActive
-    background: rgba(233, 91, 71, 0.08)
-    border-color: rgba(233, 91, 71, 0.2)
+    background: transparent
 
 .likesCount
     border: none
@@ -254,7 +385,13 @@
     padding: 0
     color: #74736E
     font-size: 13px
+    font-weight: 500
     cursor: pointer
+    min-width: 1ch
+
+.likesCountActive
+    color: #333944
+    font-weight: 800
 
 .likesSheetContent
     padding: 12px
@@ -394,3 +531,48 @@ $breeder-feed-rgba-16: rgba(94, 124, 140, 0.16)
     line-height: 1.45
     color: #2E2D30
     white-space: pre-wrap
+
+@media (max-width: 600px)
+    .content
+        gap: 6px
+        padding: 8px 0
+
+    .newsTop
+        gap: 6px
+        padding: 8px 0 6px
+
+    .topRow
+        margin-bottom: 6px
+
+    .leaderboardButton
+        gap: 8px
+        padding: 8px 10px
+        border-radius: 16px
+
+    .feedCard
+        border-radius: 20px
+        padding: 8px
+        margin-bottom: 10px
+
+    .feedCardTop
+        gap: 8px
+
+    .feedBody
+        gap: 6px
+
+    .feedTimeBelow
+        font-size: 12px
+
+    .feedContentRow
+        gap: 8px
+
+    .feedText
+        font-size: 14px
+        line-height: 1.35
+
+    .feedActor
+        font-size: 14px
+
+    .feedPlaceButton
+        font-size: 14px
+        line-height: 1.35

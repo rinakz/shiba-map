@@ -123,3 +123,39 @@
   .row > *
     flex: 1 1 100%
 
+// Скелетон: повторяет шапку и сетку страницы
+.skeletonHeader
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 8px
+  flex-wrap: wrap
+  width: 100%
+
+.skeletonTitle
+  flex: 1
+  min-width: 120px
+  height: 28px !important
+  transform: none
+
+.skeletonDownload
+  flex-shrink: 0
+
+.skeletonGrow
+  flex: 1
+  min-width: 100px
+
+.skeletonChart
+  width: 100%
+  margin-top: 8px
+  border-radius: 14px
+
+@media (max-width: 680px)
+  .skeletonHeader
+    .skeletonTitle
+      width: 100% !important
+      order: 2
+    .skeletonDownload
+      order: 3
+      width: 100% !important
+

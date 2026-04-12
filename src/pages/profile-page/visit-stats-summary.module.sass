@@ -1,0 +1,58 @@
+// Как .achievements в анкете сибы: колонка и отступ между заголовком и сеткой
+.visitStatsRoot
+    display: flex
+    flex-direction: column
+    width: 100%
+    max-width: 100%
+    min-width: 0
+    gap: 8px
+
+.sectionTitle
+    color: #333944
+    font-weight: 700
+    font-size: 14px
+    margin: 0
+
+.visitStatsGrid
+    display: grid
+    grid-template-columns: repeat(3, minmax(0, 1fr))
+    gap: 12px
+    width: 100%
+
+.visitStatCard
+    border: 1px solid rgba(231, 225, 210, 0.95)
+    background: linear-gradient(180deg, rgba(255, 252, 245, 0.98) 0%, rgba(248, 244, 236, 0.94) 100%)
+    border-radius: 18px
+    box-shadow: 0 8px 18px rgba(103, 100, 94, 0.05)
+    min-height: 86px
+    padding: 8px 4px
+    display: flex
+    flex-direction: column
+    align-items: center
+    justify-content: center
+    gap: 6px
+    cursor: pointer
+    color: #333944
+    text-align: center
+
+.visitStatCardIcon
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    width: 28px
+    height: 28px
+
+    :global(svg)
+        width: 22px
+        height: 22px
+        flex-shrink: 0
+
+.visitStatCardCount
+    font-size: 24px
+    line-height: 1
+    font-weight: 800
+    color: #333944
+
+.visitStatCardLabel
+    font-size: 12px
+    color: #74736E

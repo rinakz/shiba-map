@@ -5,6 +5,7 @@ import {
   fetchActiveHazards,
   insertHazard,
   type HazardKind,
+  HAZARD_MAP_ICON_SIZE,
   hazardIconHrefByKind,
 } from "./general-map.utils";
 import stls from "./map.module.sass";
@@ -41,7 +42,7 @@ export const HazardsFeature = ({
           options={{
             iconLayout: "default#image",
             iconImageHref: hazardIconHrefByKind[addingKind],
-            iconImageSize: [40, 40],
+            iconImageSize: HAZARD_MAP_ICON_SIZE,
           }}
         />
       )}

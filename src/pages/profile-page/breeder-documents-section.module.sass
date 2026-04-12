@@ -1,11 +1,10 @@
 @use '../../styles/config/Color.module' as colors
+@use '../../styles/mixins/profile-surface' as surf
 
 .section
     margin-top: 20px
     padding: 16px
-    background: colors.$white
-    border-radius: 16px
-    border: 1px solid colors.$gray-border
+    +surf.profileBlockCard
 
 .title
     margin: 0 0 6px
@@ -24,10 +23,10 @@
     gap: 12px
 
 .tile
-    border: 1px dashed colors.$gray-border
-    border-radius: 14px
+    border: 1px dashed rgba(231, 225, 210, 0.95)
+    border-radius: 16px
     padding: 10px
-    background: #FFFCF5
+    background: rgba(255, 252, 245, 0.85)
     cursor: pointer
     display: flex
     flex-direction: column
@@ -54,10 +53,10 @@
 
 .awardsBlock
     grid-column: 1 / -1
-    border: 1px dashed colors.$gray-border
-    border-radius: 14px
+    border: 1px dashed rgba(231, 225, 210, 0.95)
+    border-radius: 16px
     padding: 10px
-    background: #FFFCF5
+    background: rgba(255, 252, 245, 0.85)
 
 .awardsRow
     display: flex

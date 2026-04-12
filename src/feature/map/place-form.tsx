@@ -4,6 +4,7 @@ import { Checkbox } from "@mui/material";
 import { supabase } from "../../shared/api/supabase-сlient";
 import { PLACES_PHOTOS_BUCKET } from "../../shared/constants/storage";
 import { AppContext } from "../../shared/context/app-context";
+import type { ShibaType } from "../../shared/types";
 import type { PlaceKind } from "./place-types";
 import { Map, Placemark, SearchControl, YMaps } from "@pbe/react-yandex-maps";
 import { IconMap } from "../../shared/icons/IconMap";
@@ -63,7 +64,8 @@ type PlaceFormProps = {
 };
 
 export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
-  const { authUserId, mySiba, setMySiba } = useContext(AppContext);
+  const { authUserId, mySiba, setMySiba, user } = useContext(AppContext);
+  const isBreederAccount = user?.account_type === "breeder";
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -272,7 +274,16 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
         .single();
       if (placeErr) throw placeErr;
 
-      if (withVisitMark) {
+      if (mySiba?.id) {
+        const { data: refreshed } = await supabase
+          .from("siba_map_markers")
+          .select("*")
+          .eq("id", mySiba.id)
+          .maybeSingle();
+        if (refreshed) setMySiba(refreshed as ShibaType);
+      }
+
+      if (withVisitMark && !isBreederAccount) {
         await savePlaceVisit({
           kind,
           placeId: place.id,
@@ -462,13 +473,15 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
           />
         </div>
 
-        <label className={stls.checkRow}>
-          <Checkbox
-            checked={withVisit}
-            onChange={(e) => setWithVisit(e.target.checked)}
-          />
-          {mySiba?.siba_name} здесь был
-        </label>
+        {!isBreederAccount ? (
+          <label className={stls.checkRow}>
+            <Checkbox
+              checked={withVisit}
+              onChange={(e) => setWithVisit(e.target.checked)}
+            />
+            {mySiba?.siba_name} здесь был
+          </label>
+        ) : null}
 
         {error && <span className={stls.error}>{error}</span>}
 

@@ -1,6 +1,7 @@
 import { supabase } from "../../shared/api/supabase-сlient";
 import { buildSafeAvatarSrc } from "../../shared/header/news-panel/news-panel.utils";
 import type { ShibaType } from "../../shared/types";
+import { getSiteAuthUrl } from "../../shared/utils/site-url";
 import { OPEN_SIBA_FROM_KENNEL_EVENT } from "./kennel-section.constants";
 import type { Kennel, KennelWithAvatar } from "./kennel-section.types";
 
@@ -176,13 +177,13 @@ export async function fetchBreederKennelCatalogWithAvatars(
 }
 
 export function buildBreederInviteShareText(): string {
-  const url = `${window.location.origin}${window.location.pathname}#/auth`;
+  const url = getSiteAuthUrl();
   return `Привет! Зарегистрируйся как заводчик в Сибинаторе и пройди верификацию питомника — после проверки документов тебя смогут выбрать владельцы: ${url}`;
 }
 
 /** Приглашение для владельцев щенков / выпускников (не для других заводчиков). */
 export function buildGraduateOwnerInviteShareText(): string {
-  const url = `${window.location.origin}${window.location.pathname}#/auth`;
+  const url = getSiteAuthUrl();
   return `Привет! Зарегистрируйся в Сибинаторе, добавь анкету своей сибы и в разделе «Питомник» привяжи её к нашему питомнику — так мы останемся на связи в приложении: ${url}`;
 }
 

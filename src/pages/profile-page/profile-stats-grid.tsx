@@ -1,4 +1,5 @@
 import stls from "./profile.module.sass";
+import { IconCrown } from "../../shared/icons";
 
 type ProfileStatsGridProps = {
   level?: number | null;
@@ -15,12 +16,24 @@ export const ProfileStatsGrid = ({
   onSubscriptionsClick,
   onSubscribersClick,
 }: ProfileStatsGridProps) => {
+  const currentLevel = level ?? 0;
+  const nextLevel = currentLevel + 1;
+  const currentXp = 14;
+  const xpToNext = 50;
+  const remainingXp = Math.max(xpToNext - currentXp, 0);
+  const progress = Math.max(0, Math.min((currentXp / xpToNext) * 100, 100));
+
   return (
     <div className={stls.profileStatsSection}>
       <div className={stls.profileStatsGrid}>
         <div className={stls.profileStatCell}>
-          <span className={stls.profileStatLabel}>⭐ Level</span>
-          <span className={stls.profileStatValue}>{level ?? 0}</span>
+          <span className={stls.profileStatLabel}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <IconCrown size={14} color="#FEAE11" />
+              Level
+            </span>
+          </span>
+          <span className={stls.profileStatValue}>{currentLevel}</span>
         </div>
         {onSubscriptionsClick ? (
           <button
@@ -52,6 +65,15 @@ export const ProfileStatsGrid = ({
             <span className={stls.profileStatValue}>{subscribersCount}</span>
           </div>
         )}
+      </div>
+      <div className={stls.levelLineSection}>
+        <div className={stls.levelLineTrack}>
+          <div className={stls.levelLineFill} style={{ width: `${progress}%` }} />
+        </div>
+        <div className={stls.levelLineBottom}>
+          <span className={stls.levelLineProgress}>{currentXp}/{xpToNext} XP</span>
+          <span className={stls.levelLineHint}>До Level {nextLevel} осталось {remainingXp} XP</span>
+        </div>
       </div>
     </div>
   );

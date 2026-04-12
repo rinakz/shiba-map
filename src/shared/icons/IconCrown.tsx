@@ -1,9 +1,18 @@
+import { useId } from "react";
+
 type IconCrownProps = {
   color?: string;
   size?: number;
+  className?: string;
 };
 
-export const IconCrown = ({ color = "#FEAE11", size = 20 }: IconCrownProps) => {
+export const IconCrown = ({
+  color = "#FEAE11",
+  size = 20,
+  className,
+}: IconCrownProps) => {
+  const clipId = useId().replace(/:/g, "");
+
   return (
     <svg
       width={size}
@@ -11,15 +20,17 @@ export const IconCrown = ({ color = "#FEAE11", size = 20 }: IconCrownProps) => {
       viewBox="0 0 21 20"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden
     >
-      <g clipPath="url(#clip0_2049_689)">
+      <g clipPath={`url(#${clipId})`}>
         <path
           d="M19.4717 3.80494C19.1672 3.67809 18.8318 3.64475 18.5083 3.70916C18.1847 3.77357 17.8877 3.93281 17.655 4.16661L15.5 6.32161L11.6783 2.49994C11.3658 2.18749 10.9419 2.01196 10.5 2.01196C10.0581 2.01196 9.63421 2.18749 9.32167 2.49994L5.5 6.32161L3.345 4.16661C3.11191 3.93359 2.81497 3.77491 2.49172 3.71063C2.16846 3.64636 1.83341 3.67936 1.52891 3.80548C1.22441 3.93159 0.964138 4.14516 0.780997 4.41918C0.597857 4.69319 0.50007 5.01536 0.5 5.34494V14.1666C0.501323 15.2713 0.940735 16.3303 1.72185 17.1114C2.50296 17.8925 3.562 18.332 4.66667 18.3333H16.3333C17.438 18.332 18.497 17.8925 19.2782 17.1114C20.0593 16.3303 20.4987 15.2713 20.5 14.1666V5.34494C20.5001 5.01533 20.4024 4.6931 20.2194 4.41898C20.0364 4.14487 19.7761 3.93118 19.4717 3.80494Z"
           fill={color}
         />
       </g>
       <defs>
-        <clipPath id="clip0_2049_689">
+        <clipPath id={clipId}>
           <rect
             width="20"
             height="20"

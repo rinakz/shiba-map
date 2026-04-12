@@ -196,20 +196,7 @@
     background: #FFFCF5
     border-color: #E7E1D2
 
-.fabAdd
-    width: 56px
-    height: 56px
-    border-radius: 28px
-    background: #E95B47
-    color: #FFFCF5
-    border: none
-    box-shadow: 0 8px 20px rgba(233,91,71,0.35)
-    font-size: 28px
-    line-height: 56px
-    text-align: center
-    cursor: pointer
-
-.mapAddMenuWrapper
+.mapAddFabStack
     position: fixed
     right: 16px
     bottom: 160px
@@ -217,60 +204,31 @@
     display: flex
     flex-direction: column
     align-items: flex-end
+    gap: 10px
 
-.mapAddMenu
-    display: flex
-    flex-direction: column
-    gap: 8px
-    background: rgba(255, 252, 245, 0.96)
-    border: 1px solid #E7E1D2
-    border-radius: 18px
-    padding: 10px
-    box-shadow: 0 6px 16px rgba(0,0,0,0.12)
-
-.mapAddMenuItem
+.fabAddPlace
+    width: 56px
+    height: 56px
+    border-radius: 28px
+    background: #E95B47
+    color: #FFFCF5
+    border: none
+    box-shadow: 0 8px 20px rgba(233,91,71,0.35)
     display: flex
     align-items: center
-    gap: 10px
-    min-width: 220px
-    padding: 8px 10px
-    border: none
-    border-radius: 12px
-    background: transparent
-    text-align: left
+    justify-content: center
     cursor: pointer
 
-.mapAddMenuIcon
-    width: 36px
-    height: 36px
-    border-radius: 10px
-    background: #FFF4DE
-    display: flex
-    align-items: center
-    justify-content: center
-
-.mapAddMenuEmoji
-    width: 36px
-    height: 36px
-    border-radius: 10px
-    background: #FEE2E2
-    display: flex
-    align-items: center
-    justify-content: center
-    font-size: 20px
-
-.mapAddMenuText
-    color: #333944
-    font-size: 13px
-    font-weight: 700
-
-.mapAddMenuClose
-    width: 36px
-    height: 36px
-    align-self: flex-end
+.fabAddHazard
+    width: 48px
+    height: 48px
     border-radius: 50%
-    border: 1px solid #E7E1D2
-    background: #FFFCF5
+    background: #E95B47
+    border: none
+    box-shadow: 0 6px 14px rgba(233,91,71,0.3)
+    display: flex
+    align-items: center
+    justify-content: center
     cursor: pointer
 
 .hazardConfirm
@@ -310,14 +268,12 @@
     justify-content: center
     padding: 8px 16px
 
-.placePickerCard
+.placePickerDrawerInner
     display: flex
     gap: 14px
     justify-content: center
-    background: #FFFCF5
-    border-radius: 24px
-    padding: 12px 16px
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.12)
+    width: 100%
+    padding: 4px 4px 8px
 
 .placePickerItem
     display: flex
