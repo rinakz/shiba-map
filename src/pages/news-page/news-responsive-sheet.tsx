@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Dialog, SwipeableDrawer } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
+import { NEWS_Z_INDEX_LIKES_SHEET } from "./news-page.constants";
 
 type Props = {
   isMobile: boolean;
@@ -27,6 +28,10 @@ export const NewsResponsiveSheet = ({
         onClose={onClose}
         onOpen={() => {}}
         PaperProps={{ sx: drawerSx }}
+        ModalProps={{
+          keepMounted: false,
+          sx: { zIndex: NEWS_Z_INDEX_LIKES_SHEET },
+        }}
       >
         {children}
       </SwipeableDrawer>
@@ -39,6 +44,7 @@ export const NewsResponsiveSheet = ({
       fullWidth
       maxWidth="xs"
       PaperProps={{ sx: dialogSx }}
+      sx={{ zIndex: NEWS_Z_INDEX_LIKES_SHEET }}
     >
       {children}
     </Dialog>

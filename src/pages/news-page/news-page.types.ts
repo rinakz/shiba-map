@@ -1,5 +1,13 @@
 import type { FeedItem } from "../../shared/header/news-panel/news-panel.types";
 
+/** Данные сибы при открытии сторис из ленты (аватар в просмотрщике). */
+export type NewsStoryViewerOpenPayload = {
+  sibaId: string;
+  sibaName: string;
+  photos: string | null;
+  siba_icon: string;
+};
+
 export type NewsFeedGroupSheetState = {
   variant: "subscriptions" | "visits";
   title: string;

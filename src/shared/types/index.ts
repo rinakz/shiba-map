@@ -32,6 +32,10 @@ export type ShibaType = {
   is_verified?: boolean | null;
   /** Из users.account_type; для маркера заводчика на карте — иконка питомника. */
   account_type?: "owner" | "breeder" | string | null;
+  /** Сколько мест на карте добавил пользователь сибы (cafes+parks+groomers по created_by). */
+  owner_places_count?: number | null;
+  /** Число отмеченных в академии команд (длина learned_skill_ids). */
+  academy_commands_count?: number | null;
 };
 
 export type Community = {

@@ -3,15 +3,15 @@ import stls from "./leaderboard-page.module.sass";
 type Props = {
   heading: string;
   detailLine: string;
-  metricValue: number;
-  metricLabel: string;
+  levelValue: number;
+  levelLabel: string;
 };
 
 export const LeaderboardMyPlaceBar = ({
   heading,
   detailLine,
-  metricValue,
-  metricLabel,
+  levelValue,
+  levelLabel,
 }: Props) => {
   return (
     <div className={stls.myPlaceBar}>
@@ -19,9 +19,11 @@ export const LeaderboardMyPlaceBar = ({
         <div className={stls.myPlaceText}>{heading}</div>
         <div className={stls.myPlaceValue}>{detailLine}</div>
       </div>
-      <div className={stls.points}>
-        <div className={stls.pointsValue}>{metricValue}</div>
-        <div className={stls.pointsLabel}>{metricLabel}</div>
+      <div className={stls.myPlaceMetrics}>
+        <div className={stls.pointsLabelStack}>
+          <div className={stls.pointsValue}>{levelValue}</div>
+          <div className={stls.pointsLabel}>{levelLabel}</div>
+        </div>
       </div>
     </div>
   );

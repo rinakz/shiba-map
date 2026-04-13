@@ -1,5 +1,5 @@
 import { supabase } from "../../shared/api/supabase-сlient";
-import { SIBA_PHOTOS_BUCKET } from "../../shared/constants/storage";
+import { uploadImageFileLikePlaceForm } from "../../shared/utils/places-bucket-upload";
 import type { AccountType, AuthFormType } from "../../pages/auth-page/types";
 
 export function buildSignupUserMetadata(
@@ -223,35 +223,16 @@ export async function uploadKennelLogoToSiba(
   sibaId: string,
   file: File,
 ): Promise<{ error: string | null }> {
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from(SIBA_PHOTOS_BUCKET)
-    .upload(
-      `images/${userId}/${sibaId}_kennel_${Date.now()}_${file.name}`,
-      file,
-      {
-        contentType: file.type || "image/png",
-        upsert: true,
-      },
-    );
-
-  if (uploadError) {
-    return { error: uploadError.message };
-  }
-  if (!uploadData?.path) {
-    return { error: "Не удалось получить путь загруженного файла." };
-  }
-
-  const { data: urlData } = supabase.storage
-    .from(SIBA_PHOTOS_BUCKET)
-    .getPublicUrl(uploadData.path);
-
-  if (!urlData?.publicUrl) {
-    return { error: "Ошибка получения публичного URL логотипа." };
+  let publicUrl: string;
+  try {
+    publicUrl = await uploadImageFileLikePlaceForm(userId, file);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Ошибка загрузки логотипа." };
   }
 
   const { error: updateError } = await supabase
     .from("sibains")
-    .update({ photos: urlData.publicUrl })
+    .update({ photos: publicUrl })
     .eq("id", sibaId);
 
   if (updateError) {

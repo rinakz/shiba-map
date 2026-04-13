@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ChangeEvent,
 } from "react";
 import { AppContext } from "../../shared/context/app-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,7 +25,6 @@ import { publishExpertPost } from "../../shared/api/breeder";
 import { supabase } from "../../shared/api/supabase-сlient";
 import { useNavigate } from "react-router-dom";
 import { PATH } from "../../shared/constants/path";
-import { getSibaStatus } from "../../shared/utils/siba-status";
 import type { ShibaType } from "../../shared/types";
 import type { Place, PlaceKind } from "../../feature/map/place-types";
 import {
@@ -36,23 +36,33 @@ import {
   NEWS_FEED_INTERSECTION_ROOT_MARGIN,
   NEWS_MEDIA_MOBILE,
   NEWS_PAGE_SIZE,
+  NEWS_STORIES_MAX_PER_24H,
   NEWS_TOAST_MS,
-  NEWS_WALKING_MAX_STORIES,
 } from "./news-page.constants";
-import type { NewsFeedGroupSheetState } from "./news-page.types";
+import type {
+  NewsFeedGroupSheetState,
+  NewsStoryViewerOpenPayload,
+} from "./news-page.types";
 import { NewsPageHeader } from "./news-page-header";
-import { NewsWalkingStrip } from "./news-walking-strip";
+import {
+  fetchSibaPublicationsLast24h,
+  fetchStoryRingsForNews,
+  publishSibaStoryFromFile,
+} from "../../shared/api/siba-publications";
+import { NewsStoriesStrip } from "./news-stories-strip";
+import { NewsStoryViewer } from "./news-story-viewer";
 import { NewsLeaderboardCta } from "./news-leaderboard-cta";
 import { NewsExpertComposer } from "./news-expert-composer";
 import { NewsFeedLoading } from "./news-feed-loading";
 import { NewsFeedEntries } from "./news-feed-entries";
+import { fetchSibasWhoLikedNewsItems } from "./news-likes.repository";
 import { NewsLikesSheet } from "./news-likes-sheet";
 import { NewsFeedGroupSheet } from "./news-feed-group-sheet";
 import { NewsSibaDetailSheet } from "./news-siba-detail-sheet";
 import { NewsPlaceDetailSheet } from "./news-place-detail-sheet";
 
 export const NewsPage = () => {
-  const { authUserId, setSibaIns } = useContext(AppContext);
+  const { authUserId, mySiba, setSibaIns } = useContext(AppContext);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -72,6 +82,12 @@ export const NewsPage = () => {
     kind: PlaceKind;
     place: Place;
   } | null>(null);
+  const [storyViewer, setStoryViewer] =
+    useState<NewsStoryViewerOpenPayload | null>(null);
+  const [storyPublicationLikesOpenId, setStoryPublicationLikesOpenId] =
+    useState<string | null>(null);
+  const [storyPublishBusy, setStoryPublishBusy] = useState(false);
+  const storyFileInputRef = useRef<HTMLInputElement>(null);
   const feedSentinelRef = useRef<HTMLDivElement>(null);
   const [prevAuthUserId, setPrevAuthUserId] = useState(authUserId);
   if (prevAuthUserId !== authUserId) {
@@ -220,65 +236,86 @@ export const NewsPage = () => {
   const likesListQuery = useQuery({
     queryKey: ["news-likes-list", likesListQueryKey],
     enabled: Boolean(likesOpenItemIds?.length),
-    queryFn: async () => {
-      if (!likesOpenItemIds?.length) {
-        return [] as Array<{
-          id: string;
-          siba_user_id: string;
-          siba_name: string;
-          siba_icon: string;
-          photos: string | null;
-          community_title?: string | null;
-          community_avatar_url?: string | null;
-          community_tg_link?: string | null;
-        }>;
-      }
-      const { data, error } = await supabase
-        .from("news_likes")
-        .select("user_id")
-        .in("item_id", likesOpenItemIds);
-      if (error) return [];
-      const userIds = [
-        ...new Set(
-          (data ?? []).map((x: { user_id: string }) => x.user_id),
-        ),
-      ];
-      if (!userIds.length) return [];
-      const { data: sibas, error: sibErr } = await supabase
-        .from("siba_map_markers")
-        .select(
-          "id,siba_user_id,siba_name,siba_icon,photos,community_title,community_avatar_url,community_tg_link",
-        )
-        .in("siba_user_id", userIds);
-      if (sibErr) return [];
-      const rows = (sibas ?? []) as Array<{
-        id: string;
-        siba_user_id: string;
-        siba_name: string;
-        siba_icon: string;
-        photos: string | null;
-        community_title?: string | null;
-        community_avatar_url?: string | null;
-        community_tg_link?: string | null;
-      }>;
-      const byUser = new Map<string, (typeof rows)[0]>();
-      for (const row of rows) {
-        if (!byUser.has(row.siba_user_id)) byUser.set(row.siba_user_id, row);
-      }
-      return userIds
-        .map((uid) => byUser.get(uid))
-        .filter(Boolean) as typeof rows;
-    },
+    queryFn: () => fetchSibasWhoLikedNewsItems(likesOpenItemIds ?? []),
   });
   const likesList = likesListQuery.data ?? [];
 
-  const walkingSibas = useMemo(
-    () =>
-      ((sibasQuery.data ?? []) as ShibaType[])
-        .filter((item) => getSibaStatus(item) === "walk")
-        .slice(0, NEWS_WALKING_MAX_STORIES),
-    [sibasQuery.data],
-  );
+  useEffect(() => {
+    if (!storyViewer) setStoryPublicationLikesOpenId(null);
+  }, [storyViewer]);
+
+  const storyPubLikesListQuery = useQuery({
+    queryKey: [
+      "news-likes-list",
+      "publication",
+      storyPublicationLikesOpenId ?? "",
+    ],
+    enabled: Boolean(storyPublicationLikesOpenId),
+    queryFn: () =>
+      fetchSibasWhoLikedNewsItems([storyPublicationLikesOpenId!]),
+  });
+
+  const storiesRingsQuery = useQuery({
+    queryKey: ["news-stories-rings"],
+    enabled: Boolean(authUserId),
+    queryFn: async () => {
+      try {
+        return await fetchStoryRingsForNews();
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  const mySibaForStories = useMemo(() => {
+    if (mySiba?.id) return mySiba;
+    if (!authUserId) return undefined;
+    const list = (sibasQuery.data ?? []) as ShibaType[];
+    return list.find((s) => s.siba_user_id === authUserId);
+  }, [mySiba, authUserId, sibasQuery.data]);
+
+  const mySibaStories24hQuery = useQuery({
+    queryKey: ["siba-publications-24h-for-limit", mySibaForStories?.id],
+    enabled: Boolean(mySibaForStories?.id),
+    queryFn: () => fetchSibaPublicationsLast24h(mySibaForStories!.id),
+  });
+  const myStories24hCount = mySibaStories24hQuery.data?.length ?? 0;
+  const addStoryDisabledByLimit = myStories24hCount >= NEWS_STORIES_MAX_PER_24H;
+
+  const handleStoryFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !authUserId || !mySibaForStories?.id) return;
+    if (addStoryDisabledByLimit) {
+      setNewsToast("За сутки уже 5 сторис — новый можно завтра.");
+      window.setTimeout(() => setNewsToast(null), NEWS_TOAST_MS);
+      return;
+    }
+    setStoryPublishBusy(true);
+    try {
+      await publishSibaStoryFromFile({
+        file,
+        authUserId,
+        sibaId: mySibaForStories.id,
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["siba-publications", mySibaForStories.id],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["news-stories-rings"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["siba-publications-24h-for-limit", mySibaForStories.id],
+      });
+      setNewsToast("Сторис опубликован.");
+      window.setTimeout(() => setNewsToast(null), NEWS_TOAST_MS);
+    } catch (err) {
+      setNewsToast(
+        err instanceof Error ? err.message : "Не удалось опубликовать сторис.",
+      );
+      window.setTimeout(() => setNewsToast(null), NEWS_TOAST_MS);
+    } finally {
+      setStoryPublishBusy(false);
+    }
+  };
 
   if (!authUserId) return null;
   return (
@@ -286,10 +323,21 @@ export const NewsPage = () => {
       <div className={`${stls.mapWrapper} ${pageStls.pageInner}`}>
         <div className={pageStls.newsTop}>
           <NewsPageHeader onOpenCalendar={() => setIsCalendarOpen(true)} />
-          <NewsWalkingStrip
-            isLoading={sibasQuery.isLoading}
-            walkingSibas={walkingSibas}
-            onSelectSiba={setSelectedSibaId}
+          <input
+            ref={storyFileInputRef}
+            type="file"
+            accept="image/*"
+            className={pageStls.storiesHiddenFileInput}
+            onChange={handleStoryFileChange}
+          />
+          <NewsStoriesStrip
+            isLoading={storiesRingsQuery.isLoading}
+            rings={storiesRingsQuery.data ?? []}
+            onOpenStory={(payload) => setStoryViewer(payload)}
+            showAddStory={Boolean(mySibaForStories?.id)}
+            addStoryBusy={storyPublishBusy}
+            addStoryDisabled={addStoryDisabledByLimit}
+            onAddStory={() => storyFileInputRef.current?.click()}
           />
           <NewsLeaderboardCta onClick={() => navigate(PATH.Leaderboard)} />
         </div>
@@ -384,6 +432,18 @@ export const NewsPage = () => {
           setSelectedSibaId(id);
         }}
       />
+      <NewsLikesSheet
+        isMobile={isMobile}
+        open={Boolean(storyPublicationLikesOpenId)}
+        onClose={() => setStoryPublicationLikesOpenId(null)}
+        isLoading={storyPubLikesListQuery.isLoading}
+        list={storyPubLikesListQuery.data ?? []}
+        onPickSiba={(id) => {
+          setStoryPublicationLikesOpenId(null);
+          setStoryViewer(null);
+          setSelectedSibaId(id);
+        }}
+      />
       <NewsFeedGroupSheet
         isMobile={isMobile}
         sheet={feedGroupSheet}
@@ -407,6 +467,27 @@ export const NewsPage = () => {
         isMobile={isMobile}
         selected={selectedPlace}
         onClose={() => setSelectedPlace(null)}
+      />
+      <NewsStoryViewer
+        open={Boolean(storyViewer)}
+        authUserId={authUserId}
+        sibaId={storyViewer?.sibaId ?? null}
+        sibaName={storyViewer?.sibaName ?? ""}
+        sibaPhotos={storyViewer?.photos ?? null}
+        sibaIcon={storyViewer?.siba_icon ?? ""}
+        canDeletePublications={Boolean(
+          authUserId &&
+            storyViewer &&
+            mySibaForStories?.id === storyViewer.sibaId,
+        )}
+        onClose={() => setStoryViewer(null)}
+        onOpenSiba={(id) => {
+          setStoryViewer(null);
+          setSelectedSibaId(id);
+        }}
+        onOpenPublicationLikes={(publicationId) =>
+          setStoryPublicationLikesOpenId(publicationId)
+        }
       />
     </div>
   );

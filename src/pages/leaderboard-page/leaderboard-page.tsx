@@ -234,8 +234,8 @@ export const LeaderboardPage = () => {
         <LeaderboardMyPlaceBar
           heading="Моё место"
           detailLine={`#${myWorldPlace.place} • ${myWorldPlace.siba_name}`}
-          metricValue={myWorldPlace.points}
-          metricLabel="баллов"
+          levelValue={myWorldPlace.level ?? 0}
+          levelLabel="ур."
         />
       )}
 
@@ -243,8 +243,8 @@ export const LeaderboardPage = () => {
         <LeaderboardMyPlaceBar
           heading="Мой питомник в рейтинге"
           detailLine={`#${myBreederPlace.place} • ${myBreederPlace.siba_name}`}
-          metricValue={myBreederPlace.points}
-          metricLabel="баллов"
+          levelValue={myBreederPlace.level ?? 0}
+          levelLabel="ур. щенков"
         />
       )}
 
@@ -252,8 +252,8 @@ export const LeaderboardPage = () => {
         <LeaderboardMyPlaceBar
           heading="Моё сообщество"
           detailLine={`#${myCommunity.place} • ${myCommunity.title}`}
-          metricValue={myCommunity.energy}
-          metricLabel="энергии"
+          levelValue={myCommunity.energy}
+          levelLabel="сумм. ур."
         />
       )}
 

@@ -19,16 +19,20 @@ export const IconButton: FC<ButtonProps> = ({
   variant = "primary",
   icon,
   ...props
-}) => (
-  <button
-    className={cn(className, styles.button, styles[variant], styles[size])}
-    type={type}
-    {...props}
-  >
-    {loading ? (
-      <CircularProgress size={22} sx={{ color: "inherit" }} />
-    ) : (
-      icon
-    )}
-  </button>
-);
+}) => {
+  const progressColor =
+    variant === "secondary" ? "#FEAE11" : "#FFFCF5";
+  return (
+    <button
+      className={cn(className, styles.button, styles[variant], styles[size])}
+      type={type}
+      {...props}
+    >
+      {loading ? (
+        <CircularProgress size={22} sx={{ color: progressColor }} />
+      ) : (
+        icon
+      )}
+    </button>
+  );
+};

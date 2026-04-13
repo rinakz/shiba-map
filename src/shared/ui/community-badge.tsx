@@ -25,7 +25,13 @@ export const CommunityBadge = ({
   const content = (
     <>
       {avatarUrl ? (
-        <img className={stls.avatar} src={avatarUrl} alt={title} />
+        <img
+          className={stls.avatar}
+          src={avatarUrl}
+          alt={title}
+          decoding="async"
+          referrerPolicy="no-referrer"
+        />
       ) : (
         <span className={stls.avatar} />
       )}

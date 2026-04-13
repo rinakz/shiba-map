@@ -1,8 +1,11 @@
+import type { ShibaType } from "../../shared/types";
 import stls from "./profile.module.sass";
-import { IconCrown } from "../../shared/icons";
+import visitStls from "./visit-stats-summary.module.sass";
+import { IconCrown, IconPeople } from "../../shared/icons";
+import { getXpBarSegment } from "./profile-xp.utils";
 
 type ProfileStatsGridProps = {
-  level?: number | null;
+  mySiba?: ShibaType;
   subscriptionsCount: number;
   subscribersCount: number;
   onSubscriptionsClick?: () => void;
@@ -10,69 +13,99 @@ type ProfileStatsGridProps = {
 };
 
 export const ProfileStatsGrid = ({
-  level,
+  mySiba,
   subscriptionsCount,
   subscribersCount,
   onSubscriptionsClick,
   onSubscribersClick,
 }: ProfileStatsGridProps) => {
-  const currentLevel = level ?? 0;
-  const nextLevel = currentLevel + 1;
-  const currentXp = 14;
-  const xpToNext = 50;
-  const remainingXp = Math.max(xpToNext - currentXp, 0);
-  const progress = Math.max(0, Math.min((currentXp / xpToNext) * 100, 100));
+  const xp = Math.max(0, Math.trunc(Number(mySiba?.experience_points) || 0));
+  const segment = getXpBarSegment(xp);
+  const displayLevel = mySiba?.level ?? 0;
+  const currentXp = segment.xpInStep;
+  const xpToNext = segment.xpStepSize;
+  const progress = Math.max(
+    0,
+    Math.min((currentXp / Math.max(xpToNext, 1)) * 100, 100),
+  );
 
   return (
     <div className={stls.profileStatsSection}>
-      <div className={stls.profileStatsGrid}>
-        <div className={stls.profileStatCell}>
-          <span className={stls.profileStatLabel}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              <IconCrown size={14} color="#FEAE11" />
-              Level
+      <div className={visitStls.visitStatsRoot} style={{ gap: 0 }}>
+        <div className={visitStls.visitStatsGrid}>
+          <div
+            className={`${visitStls.visitStatCard} ${visitStls.visitStatCardStatic}`}
+          >
+            <span className={visitStls.visitStatCardIcon}>
+              <IconCrown size={22} color="#FEAE11" />
             </span>
-          </span>
-          <span className={stls.profileStatValue}>{currentLevel}</span>
+            <span className={visitStls.visitStatCardCount}>{displayLevel}</span>
+            <span className={visitStls.visitStatCardLabel}>Level</span>
+          </div>
+          {onSubscriptionsClick ? (
+            <button
+              type="button"
+              className={visitStls.visitStatCard}
+              onClick={onSubscriptionsClick}
+            >
+              <span className={visitStls.visitStatCardIcon}>
+                <IconPeople />
+              </span>
+              <span className={visitStls.visitStatCardCount}>
+                {subscriptionsCount}
+              </span>
+              <span className={visitStls.visitStatCardLabel}>Подписки</span>
+            </button>
+          ) : (
+            <div
+              className={`${visitStls.visitStatCard} ${visitStls.visitStatCardStatic}`}
+            >
+              <span className={visitStls.visitStatCardIcon}>
+                <IconPeople />
+              </span>
+              <span className={visitStls.visitStatCardCount}>
+                {subscriptionsCount}
+              </span>
+              <span className={visitStls.visitStatCardLabel}>Подписки</span>
+            </div>
+          )}
+          {onSubscribersClick ? (
+            <button
+              type="button"
+              className={visitStls.visitStatCard}
+              onClick={onSubscribersClick}
+            >
+              <span className={visitStls.visitStatCardIcon}>
+                <IconPeople />
+              </span>
+              <span className={visitStls.visitStatCardCount}>
+                {subscribersCount}
+              </span>
+              <span className={visitStls.visitStatCardLabel}>Подписчики</span>
+            </button>
+          ) : (
+            <div
+              className={`${visitStls.visitStatCard} ${visitStls.visitStatCardStatic}`}
+            >
+              <span className={visitStls.visitStatCardIcon}>
+                <IconPeople />
+              </span>
+              <span className={visitStls.visitStatCardCount}>
+                {subscribersCount}
+              </span>
+              <span className={visitStls.visitStatCardLabel}>Подписчики</span>
+            </div>
+          )}
         </div>
-        {onSubscriptionsClick ? (
-          <button
-            type="button"
-            className={`${stls.profileStatCell} ${stls.profileStatButton}`}
-            onClick={onSubscriptionsClick}
-          >
-            <span className={stls.profileStatLabel}>Подписки</span>
-            <span className={stls.profileStatValue}>{subscriptionsCount}</span>
-          </button>
-        ) : (
-          <div className={stls.profileStatCell}>
-            <span className={stls.profileStatLabel}>Подписки</span>
-            <span className={stls.profileStatValue}>{subscriptionsCount}</span>
-          </div>
-        )}
-        {onSubscribersClick ? (
-          <button
-            type="button"
-            className={`${stls.profileStatCell} ${stls.profileStatButton}`}
-            onClick={onSubscribersClick}
-          >
-            <span className={stls.profileStatLabel}>Подписчики</span>
-            <span className={stls.profileStatValue}>{subscribersCount}</span>
-          </button>
-        ) : (
-          <div className={stls.profileStatCell}>
-            <span className={stls.profileStatLabel}>Подписчики</span>
-            <span className={stls.profileStatValue}>{subscribersCount}</span>
-          </div>
-        )}
       </div>
       <div className={stls.levelLineSection}>
         <div className={stls.levelLineTrack}>
           <div className={stls.levelLineFill} style={{ width: `${progress}%` }} />
         </div>
         <div className={stls.levelLineBottom}>
-          <span className={stls.levelLineProgress}>{currentXp}/{xpToNext} XP</span>
-          <span className={stls.levelLineHint}>До Level {nextLevel} осталось {remainingXp} XP</span>
+          <span className={stls.levelLineProgress}>
+            {currentXp}/{xpToNext} XP до следующего уровня
+          </span>
         </div>
       </div>
     </div>

@@ -1,9 +1,10 @@
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
-import { supabase } from "../../shared/api/supabase-сlient";
 import {
-  COMMUNITIES_BUCKET,
-  SIBA_PHOTOS_BUCKET,
-} from "../../shared/constants/storage";
+  isLikelyImageFile,
+  resizeImageFileToJpeg,
+} from "../../shared/utils/image-avatar-prep";
+import { uploadImageFileLikePlaceForm } from "../../shared/utils/places-bucket-upload";
+import { supabase } from "../../shared/api/supabase-сlient";
 import { PATH } from "../../shared/constants/path";
 import type { BreederKennelRow } from "../../shared/api/breeder";
 import type { SibaStatus, ShibaType, ShibaUser } from "../../shared/types";
@@ -141,12 +142,12 @@ export const fetchUserById = async (authUserId: string) => {
 
 export const fetchMySibaByUserId = async (authUserId: string) => {
   const { data, error } = await supabase
-    .from("sibains")
+    .from("siba_map_markers")
     .select("*")
     .eq("siba_user_id", authUserId)
     .maybeSingle();
   if (error) throw error;
-  return data ?? undefined;
+  return (data as ShibaType | null) ?? undefined;
 };
 
 export const fetchSubscriptionsCount = async (authUserId: string) => {
@@ -341,29 +342,47 @@ const extractErrorMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
-export const processCommunityAvatarChange = (
+export const processCommunityAvatarChange = async (
   event: ChangeEvent<HTMLInputElement>,
   setError: (value: string | null) => void,
   setCommunityAvatarFile: (value: File | null) => void,
   setCommunityAvatarPreviewUrl: (value: string | null) => void,
+  previousPreviewUrl: string | null,
 ) => {
+  const input = event.target;
   setError(null);
-  const file = event.target.files?.[0];
-  if (!file) return;
+  const file = input.files?.[0];
+  try {
+    if (!file) return;
 
-  if (!file.type.startsWith("image/")) {
-    setError("Можно загрузить только изображение сообщества.");
-    return;
+    if (!isLikelyImageFile(file)) {
+      setError("Можно загрузить только изображение сообщества.");
+      return;
+    }
+
+    const maxSizeMb = 25;
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      setError(`Файл слишком большой. Максимум ${maxSizeMb} МБ до сжатия.`);
+      return;
+    }
+
+    const prepared = await resizeImageFileToJpeg(file, {
+      maxEdge: 512,
+      quality: 0.88,
+      filename: "community-avatar.jpg",
+    });
+
+    if (previousPreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(previousPreviewUrl);
+    }
+
+    setCommunityAvatarFile(prepared);
+    setCommunityAvatarPreviewUrl(URL.createObjectURL(prepared));
+  } catch (error) {
+    setError(extractErrorMessage(error, "Не удалось обработать фото сообщества."));
+  } finally {
+    input.value = "";
   }
-
-  const maxSizeMb = 10;
-  if (file.size > maxSizeMb * 1024 * 1024) {
-    setError(`Файл слишком большой. Максимум ${maxSizeMb} МБ.`);
-    return;
-  }
-
-  setCommunityAvatarFile(file);
-  setCommunityAvatarPreviewUrl(URL.createObjectURL(file));
 };
 
 type SubmitProfileParams = {
@@ -419,37 +438,16 @@ export const submitProfile = async (
 
   let uploadedPhotoUrl: string | undefined;
   if (photoFile) {
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from(SIBA_PHOTOS_BUCKET)
-      .upload(
-        `images/${authUserId}/${mySiba.id}_${Date.now()}_${photoFile.name}`,
-        photoFile,
-        {
-          contentType: photoFile.type ?? "image/png",
-          upsert: true,
-        },
+    try {
+      uploadedPhotoUrl = await uploadImageFileLikePlaceForm(authUserId, photoFile);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? `Не удалось загрузить фото профиля: ${e.message}`
+          : "Не удалось загрузить фото профиля.",
       );
-
-    if (uploadError) {
-      setError(`Не удалось загрузить фото профиля: ${uploadError.message}`);
       return false;
     }
-
-    if (!uploadData?.path) {
-      setError("Не удалось получить путь загруженного файла.");
-      return false;
-    }
-
-    const { data } = supabase.storage
-      .from(SIBA_PHOTOS_BUCKET)
-      .getPublicUrl(uploadData.path);
-
-    if (!data?.publicUrl) {
-      setError("Ошибка получения публичного URL фото.");
-      return false;
-    }
-
-    uploadedPhotoUrl = data.publicUrl;
   }
 
   const breederKennelTitle =
@@ -576,52 +574,13 @@ export const submitProfile = async (
 export const uploadCommunityAvatar = async (
   authUserId: string,
   communityAvatarFile: File,
-) => {
-  const targetPath = `avatars/${authUserId}/${Date.now()}_${communityAvatarFile.name}`;
-  const bucketsToTry =
-    COMMUNITIES_BUCKET === SIBA_PHOTOS_BUCKET
-      ? [COMMUNITIES_BUCKET]
-      : [COMMUNITIES_BUCKET, SIBA_PHOTOS_BUCKET];
-
-  let lastErrorMessage = "";
-
-  for (const bucket of bucketsToTry) {
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(targetPath, communityAvatarFile, {
-        contentType: communityAvatarFile.type ?? "image/png",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      lastErrorMessage = uploadError.message;
-      const isMissingBucket =
-        uploadError.message.toLowerCase().includes("bucket not found");
-
-      if (isMissingBucket && bucket !== bucketsToTry[bucketsToTry.length - 1]) {
-        continue;
-      }
-
-      throw new Error(`Не удалось загрузить фото сообщества: ${uploadError.message}`);
-    }
-
-    if (!uploadData?.path) {
-      throw new Error("Не удалось получить путь загруженного аватара сообщества.");
-    }
-
-    const { data } = supabase.storage.from(bucket).getPublicUrl(uploadData.path);
-    if (!data?.publicUrl) {
-      throw new Error("Ошибка получения публичного URL аватара сообщества.");
-    }
-
-    return data.publicUrl;
+): Promise<string> => {
+  try {
+    return await uploadImageFileLikePlaceForm(authUserId, communityAvatarFile);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Неизвестная ошибка";
+    throw new Error(`Не удалось загрузить фото сообщества: ${msg}`);
   }
-
-  throw new Error(
-    lastErrorMessage
-      ? `Не удалось загрузить фото сообщества: ${lastErrorMessage}`
-      : "Не удалось загрузить фото сообщества.",
-  );
 };
 
 export const getProfileActionErrorMessage = (

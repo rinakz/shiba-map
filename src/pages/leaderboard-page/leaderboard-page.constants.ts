@@ -1,9 +1,7 @@
 import { IconGlobe, IconHouse, IconTg } from "../../shared/icons";
 import type { LeaderboardTab } from "./leaderboard-page.types";
 
-/** Формула баллов: level * PER_LEVEL + followers * PER_FOLLOWER */
-export const LEADERBOARD_POINTS_PER_LEVEL = 100;
-export const LEADERBOARD_POINTS_PER_FOLLOWER = 5;
+/** См. `computeSibaRatingScore` — места + визиты + команды с весами 20/10/25. */
 
 export const LEADERBOARD_PAGE_TITLE = "Лидеры Сиба-мира";
 export const LEADERBOARD_PAGE_SUBTITLE = "Топ сиб, питомников и сообществ";

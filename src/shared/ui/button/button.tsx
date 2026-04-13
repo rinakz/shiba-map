@@ -24,21 +24,25 @@ export const Button: FC<ButtonProps> = ({
   innerRef,
   disabled,
   ...props
-}) => (
-  <button
-    disabled={loading || disabled}
-    ref={innerRef}
-    className={cn(className, styles.button, styles[variant], styles[size])}
-    type={type}
-    {...props}
-  >
-    {loading ? (
-      <CircularProgress size={20} sx={{ color: "#FFFCF5" }} />
-    ) : (
-      <span className={styles.iconContainer}>
-        {children}
-        {iconRight && <span className={styles.icon}>{iconRight}</span>}
-      </span>
-    )}
-  </button>
-);
+}) => {
+  const progressColor =
+    variant === "secondary" ? "#FEAE11" : "#FFFCF5";
+  return (
+    <button
+      disabled={loading || disabled}
+      ref={innerRef}
+      className={cn(className, styles.button, styles[variant], styles[size])}
+      type={type}
+      {...props}
+    >
+      {loading ? (
+        <CircularProgress size={20} sx={{ color: progressColor }} />
+      ) : (
+        <span className={styles.iconContainer}>
+          {children}
+          {iconRight && <span className={styles.icon}>{iconRight}</span>}
+        </span>
+      )}
+    </button>
+  );
+};

@@ -252,17 +252,17 @@ export const ProfileHeaderCard = ({
           </div>
         </div>
         <ProfileStatsGrid
-          level={mySiba?.level}
+          mySiba={mySiba}
           subscriptionsCount={subscriptionsCount}
           subscribersCount={subscribersCount}
           onSubscriptionsClick={onOpenSubscriptions}
           onSubscribersClick={onOpenSubscribers}
         />
-        {!breederMode ? (
+        {!breederMode && academyRank ? (
           <ProfileRoleLore
-            rank={academyRank?.rank}
-            icon={academyRank?.icon}
-            quote={academyRank?.bossQuote}
+            rank={academyRank.rank}
+            icon={academyRank.icon}
+            quote={academyRank.bossQuote}
           />
         ) : null}
       </div>

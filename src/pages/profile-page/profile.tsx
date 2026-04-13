@@ -13,6 +13,7 @@ import { PeopleListOverlay } from "../../shared/ui/people-list-overlay";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { Siba } from "../../feature/siba/siba";
+import { SibaPublicationsSection } from "../../feature/siba/siba-publications-section";
 import { ProfileAchievements } from "./profile-achievements";
 import { KennelSection } from "./kennel-section";
 import { BreederDocumentsSection } from "./breeder-documents-section";
@@ -411,6 +412,7 @@ export const ProfilePage = () => {
             />
           </div>
         ) : null}
+        {mySiba ? <SibaPublicationsSection siba={mySiba} /> : null}
         {error && (
           <span className={stls.errorText}>{error}</span>
         )}

@@ -24,6 +24,7 @@ import {
   sumSibaLevels,
 } from "../../pages/profile-page/kennel-section.utils";
 import { SibaLocationMap } from "./siba-location-map";
+import { SibaPublicationsSection } from "./siba-publications-section";
 import { getSibaStatus, isGreenStatus, SHIBA_STATUSES } from "../../shared/utils/siba-status";
 import {
   NESTED_SIBA_DIALOG_PAPER_SX,
@@ -37,6 +38,8 @@ import {
   profileDisplayNameFromContext,
   visitStatsTotal,
 } from "./siba.utils";
+import { getXpBarSegment } from "../../pages/profile-page/profile-xp.utils";
+import visitStls from "../../pages/profile-page/visit-stats-summary.module.sass";
 
 type SibaProps = {
   id: string;
@@ -192,6 +195,23 @@ export const Siba = ({ id }: SibaProps) => {
       : (breederGraduateLevelSumQuery.data ?? 0)
     : (siba?.level ?? 0);
 
+  const ownerXpBar =
+    !isBreederView && siba
+      ? getXpBarSegment(
+          Math.max(0, Math.trunc(Number(siba.experience_points) || 0)),
+        )
+      : null;
+  const ownerXpBarProgress =
+    ownerXpBar != null
+      ? Math.max(
+          0,
+          Math.min(
+            (ownerXpBar.xpInStep / Math.max(ownerXpBar.xpStepSize, 1)) * 100,
+            100,
+          ),
+        )
+      : 0;
+
   const handleSubscribe = async () => {
     if (!authUserId || !siba?.siba_user_id) return;
     if (isSubscribing) return;
@@ -309,52 +329,99 @@ export const Siba = ({ id }: SibaProps) => {
                 </div>
               </div>
               <div className={stls.profileStatsSection}>
-                <div className={stls.profileStatsGrid}>
-                  <div className={stls.profileStatCell}>
-                    <span
-                      className={stls.profileStatLabelRow}
-                      title={
-                        isBreederView
-                          ? "Сколько уровней в сумме набрали все сибы питомника, привязанные в приложении"
-                          : undefined
-                      }
+                <div className={visitStls.visitStatsRoot} style={{ gap: 0 }}>
+                  <div className={visitStls.visitStatsGrid}>
+                    {isBreederView ? (
+                      <div
+                        className={`${visitStls.visitStatCard} ${visitStls.visitStatCardStatic}`}
+                        title="Сколько уровней в сумме набрали все сибы питомника, привязанные в приложении"
+                      >
+                        <span className={visitStls.visitStatCardIcon}>
+                          <IconCrown color="#FEAE11" size={22} />
+                        </span>
+                        <span className={visitStls.visitStatCardCount}>
+                          {profileLevelDisplay === null
+                            ? "…"
+                            : profileLevelDisplay}
+                        </span>
+                        <span className={visitStls.visitStatCardLabel}>
+                          Уровни
+                        </span>
+                      </div>
+                    ) : (
+                      <div
+                        className={`${visitStls.visitStatCard} ${visitStls.visitStatCardStatic}`}
+                        title="Уровень по опыту в игре"
+                      >
+                        <span className={visitStls.visitStatCardIcon}>
+                          <IconCrown color="#FEAE11" size={22} />
+                        </span>
+                        <span className={visitStls.visitStatCardCount}>
+                          {siba?.level ?? 0}
+                        </span>
+                        <span className={visitStls.visitStatCardLabel}>Level</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      className={visitStls.visitStatCard}
+                      onClick={() => setListMode("followings")}
                     >
-                      <IconCrown color="#FEAE11" size={14} />
-                      {isBreederView ? "Ур. у щенков" : "Level"}
-                    </span>
-                    <span className={stls.profileStatValue}>
-                      {profileLevelDisplay === null ? "…" : profileLevelDisplay}
-                    </span>
+                      <span className={visitStls.visitStatCardIcon}>
+                        <IconPeople />
+                      </span>
+                      <span className={visitStls.visitStatCardCount}>
+                        {followingsCountQuery.data ?? 0}
+                      </span>
+                      <span className={visitStls.visitStatCardLabel}>
+                        Подписки
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className={visitStls.visitStatCard}
+                      onClick={() => setListMode("followers")}
+                    >
+                      <span className={visitStls.visitStatCardIcon}>
+                        <IconPeople />
+                      </span>
+                      <span className={visitStls.visitStatCardCount}>
+                        {followersCountQuery.data ?? 0}
+                      </span>
+                      <span className={visitStls.visitStatCardLabel}>
+                        Подписчики
+                      </span>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className={`${stls.profileStatCell} ${stls.profileStatButton}`}
-                    onClick={() => setListMode("followings")}
-                  >
-                    <span className={stls.profileStatLabel}>Подписки</span>
-                    <span className={stls.profileStatValue}>
-                      {followingsCountQuery.data ?? 0}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`${stls.profileStatCell} ${stls.profileStatButton}`}
-                    onClick={() => setListMode("followers")}
-                  >
-                    <span className={stls.profileStatLabel}>Подписчики</span>
-                    <span className={stls.profileStatValue}>
-                      {followersCountQuery.data ?? 0}
-                    </span>
-                  </button>
                 </div>
+                {!isBreederView && ownerXpBar ? (
+                  <div className={stls.levelLineSection}>
+                    <div className={stls.levelLineTrack}>
+                      <div
+                        className={stls.levelLineFill}
+                        style={{ width: `${ownerXpBarProgress}%` }}
+                      />
+                    </div>
+                    <div className={stls.levelLineBottom}>
+                      <span className={stls.levelLineProgress}>
+                        {ownerXpBar.xpInStep}/{ownerXpBar.xpStepSize} XP до
+                        следующего уровня
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
               </div>
-              {!isBreederView && academyRank ? (
+              {!isBreederView &&
+              academyRank &&
+              academyRank.bossQuote?.trim() ? (
                 <div className={stls.roleLoreSection}>
                   <div className={stls.roleLoreCard}>
                     <div className={stls.roleLoreTitle}>
                       {academyRank.icon} {academyRank.rank}
                     </div>
-                    <div className={stls.roleLoreQuote}>{academyRank.bossQuote}</div>
+                    <div className={stls.roleLoreQuote}>
+                      {academyRank.bossQuote}
+                    </div>
                   </div>
                 </div>
               ) : null}
@@ -415,6 +482,7 @@ export const Siba = ({ id }: SibaProps) => {
           coordinates={siba?.coordinates}
           sibaIcon={siba?.siba_icon}
         />
+        {siba ? <SibaPublicationsSection siba={siba} /> : null}
       </div>
       <PeopleListOverlay
         open={Boolean(listMode)}

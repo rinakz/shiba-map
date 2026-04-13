@@ -3,7 +3,10 @@ import { UserBadge } from "../../shared/ui/user-badge";
 import { IconCrown } from "../../shared/icons";
 import { crownColorByPlace } from "./leaderboard-page.utils";
 import { sibaLeaderboardStatusLine } from "./leaderboard-page.ui";
-import type { LeaderboardSibaRow, SibaLeaderboardSubtitle } from "./leaderboard-page.types";
+import type {
+  LeaderboardSibaRow,
+  SibaLeaderboardSubtitle,
+} from "./leaderboard-page.types";
 import stls from "./leaderboard-page.module.sass";
 
 type Props = {
@@ -64,8 +67,9 @@ export const LeaderboardSibaList = ({
               </div>
             </div>
             <div className={stls.points}>
-              <div className={stls.pointsValue}>{item.points}</div>
-              <div className={stls.pointsLabel}>баллов</div>
+              <div className={stls.pointsLabelStack}>
+                <div className={stls.pointsValue}>{item.level ?? 0}</div>
+              </div>
             </div>
           </button>
         );

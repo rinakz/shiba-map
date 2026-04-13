@@ -166,9 +166,45 @@
 
 .profileStatsGrid
     display: grid
-    grid-template-columns: repeat(3, minmax(0, 1fr))
+    grid-template-columns: repeat(4, minmax(0, 1fr))
     gap: 12px
     width: 100%
+
+.profileStatsGridBreeder
+    grid-template-columns: repeat(3, minmax(0, 1fr))
+
+.levelLineSection
+    width: 100%
+    display: flex
+    flex-direction: column
+    gap: 5px
+    padding: 0 2px
+    box-sizing: border-box
+
+.levelLineBottom
+    display: flex
+    align-items: center
+    justify-content: center
+    gap: 10px
+    flex-wrap: wrap
+
+.levelLineProgress
+    font-size: 11px
+    color: #74736E
+    font-weight: 700
+    text-align: center
+
+.levelLineTrack
+    width: 100%
+    height: 5px
+    border-radius: 999px
+    background: #F3EEE3
+    overflow: hidden
+
+.levelLineFill
+    height: 100%
+    border-radius: 999px
+    background: linear-gradient(90deg, #FEAE11 0%, #E95B47 100%)
 
 .profileStatCell
     display: flex
@@ -469,3 +505,49 @@
     flex-shrink: 0
     line-height: 1.3
     text-align: right
+
+.publicationsSection
+    width: 100%
+    max-width: 100%
+    min-width: 0
+    display: flex
+    flex-direction: column
+    gap: 10px
+    +surfaceCream
+    padding: 14px
+    box-sizing: border-box
+
+.publicationsGrid
+    display: grid
+    grid-template-columns: repeat(3, 1fr)
+    gap: 6px
+    width: 100%
+
+.publicationCell
+    position: relative
+    aspect-ratio: 1
+    border-radius: 12px
+    overflow: hidden
+    background: #E7E1D2
+    display: block
+    border: none
+    padding: 0
+    margin: 0
+    font: inherit
+    color: inherit
+    cursor: pointer
+    text-align: left
+    &:focus-visible
+        outline: 2px solid rgba(51, 57, 68, 0.35)
+        outline-offset: 2px
+
+.publicationImg
+    width: 100%
+    height: 100%
+    object-fit: cover
+    display: block
+
+.publicationSkeletonInner
+    position: absolute
+    inset: 0
+    border-radius: 12px

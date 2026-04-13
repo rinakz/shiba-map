@@ -73,14 +73,13 @@ export const LeaderboardChatList = ({
                 )}
               </div>
               <div className={stls.chatMeta}>
-                {chat.participants} участников в приложении • {chat.energy}{" "}
-                энергии
+                {chat.participants} участников • суммарный уровень {chat.energy}
               </div>
               {chat.isLeader ? (
                 <div className={stls.leaderBadge}>Лидирующий чат</div>
               ) : (
                 <div className={stls.chatMeta}>
-                  До лидера осталось: {chat.gapToLeader} очков
+                  До лидера: {chat.gapToLeader}
                 </div>
               )}
               <div className={stls.energyBar}>

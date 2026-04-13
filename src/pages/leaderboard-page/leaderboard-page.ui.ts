@@ -10,22 +10,26 @@ import type {
   SibaLeaderboardSubtitle,
 } from "./leaderboard-page.types";
 
+function breederFollowersLine(followers: number): string {
+  const n = Math.max(0, Math.floor(followers));
+  const abs = n % 100;
+  const d = abs % 10;
+  if (abs > 10 && abs < 20) return `${n} подписчиков`;
+  if (d === 1) return `${n} подписчик`;
+  if (d >= 2 && d <= 4) return `${n} подписчика`;
+  return `${n} подписчиков`;
+}
+
 export function sibaLeaderboardStatusLine(
   item: LeaderboardSibaRow,
   subtitle: SibaLeaderboardSubtitle,
 ): string {
   if (subtitle === "breeder") {
-    const followers =
-      (item.followers ?? 0) > 0 ? ` · ${item.followers} подписчиков` : "";
-    const levels =
-      (item.level ?? 0) > 0
-        ? ` · ${item.level} ур. у щенков в приложении`
-        : "";
-    return `Питомник${followers}${levels}`;
+    return breederFollowersLine(item.followers ?? 0);
   }
   const status = getSibaStatus(item);
   if (status) return SIBA_STATUS_LABEL[status];
-  return item.rankTitle ?? "Новичок";
+  return "";
 }
 
 export function isLeaderboardListLoading(
@@ -39,7 +43,10 @@ export function isLeaderboardListLoading(
 ): boolean {
   if (flags.sibasLoading) return true;
   if (tab === "breeders" && flags.kennelLoading) return true;
-  if (tab === "chats" && (flags.communitiesLoading || flags.membershipsLoading)) {
+  if (
+    tab === "chats" &&
+    (flags.communitiesLoading || flags.membershipsLoading)
+  ) {
     return true;
   }
   return false;

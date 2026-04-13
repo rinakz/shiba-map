@@ -11,6 +11,7 @@ import {
   SKILL_TABS,
   type SkillLevel,
 } from "./shiba-academy.data";
+import { profileQueryKeys } from "./profile.utils";
 
 type Row = {
   siba_id: string;
@@ -68,6 +69,9 @@ export const ShibaAcademy = ({ sibaId }: ShibaAcademyProps) => {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["siba-academy", sibaId] });
       await queryClient.refetchQueries({ queryKey: ["siba-academy", sibaId] });
+      await queryClient.invalidateQueries({ queryKey: ["mySiba"] });
+      await queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
+      await queryClient.invalidateQueries({ queryKey: profileQueryKeys.allSibas() });
     },
   });
 

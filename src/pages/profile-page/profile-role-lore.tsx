@@ -13,6 +13,7 @@ export const ProfileRoleLore = ({
 }: ProfileRoleLoreProps) => {
   const title = rank?.trim();
   const loreQuote = quote?.trim();
+  if (!loreQuote) return null;
 
   return (
     <div className={stls.roleLoreSection}>

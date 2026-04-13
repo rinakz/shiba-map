@@ -88,6 +88,8 @@ export const ProfileCommunityBlock = ({
                   className={stls.communitySelectedAvatarImage}
                   src={community.avatar_url}
                   alt={community.title}
+                  decoding="async"
+                  referrerPolicy="no-referrer"
                 />
               ) : (
                 <IconPeople />
@@ -104,6 +106,7 @@ export const ProfileCommunityBlock = ({
             </div>
           </div>
           <CommunityBadge
+            className={stls.communityBadgeFullWidth}
             title={community.title}
             avatarUrl={community.avatar_url}
             tgLink={community.tg_link}
@@ -158,6 +161,7 @@ export const ProfileCommunityBlock = ({
       </div>
       {selectedPreview && (
         <CommunityBadge
+          className={stls.communityBadgeFullWidth}
           title={selectedPreview.title ?? titleValue}
           avatarUrl={avatarPreviewUrl ?? avatarValue}
           tgLink={selectedPreview.tg_link ?? linkValue}
@@ -186,6 +190,8 @@ export const ProfileCommunityBlock = ({
                         className={stls.communitySearchItemAvatarImage}
                         src={item.avatar_url}
                         alt={item.title}
+                        decoding="async"
+                        referrerPolicy="no-referrer"
                       />
                     ) : (
                       <IconPeople />
@@ -221,12 +227,16 @@ export const ProfileCommunityBlock = ({
                 className={stls.communityAvatarImage}
                 src={avatarPreviewUrl}
                 alt="Аватар сообщества"
+                decoding="async"
+                referrerPolicy="no-referrer"
               />
             ) : avatarValue ? (
               <img
                 className={stls.communityAvatarImage}
                 src={avatarValue}
                 alt="Аватар сообщества"
+                decoding="async"
+                referrerPolicy="no-referrer"
               />
             ) : (
               <div className={stls.communityAvatarPlaceholder}>

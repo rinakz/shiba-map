@@ -2,11 +2,9 @@ import type { Community, ShibaType } from "../../shared/types";
 
 export type LeaderboardTab = "world" | "breeders" | "chats";
 
-/** Строка рейтинга сибы / питомника (вкладки «Весь мир» и «Заводчики»). */
+/** Строка лидерборда сибы / питомника (вкладки «Весь мир» и «Заводчики»). */
 export type LeaderboardSibaRow = ShibaType & {
   place: number;
-  points: number;
-  rankTitle?: string;
 };
 
 export type SibaLeaderboardSubtitle = "owner" | "breeder";

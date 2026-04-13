@@ -381,7 +381,7 @@
 
 .profileStatsGrid
     display: grid
-    grid-template-columns: repeat(3, minmax(0, 1fr))
+    grid-template-columns: repeat(4, minmax(0, 1fr))
     gap: 12px
     width: 100%
 
@@ -618,11 +618,20 @@
 
 .communityStandaloneCard
     width: 100%
+    max-width: 100%
+    min-width: 0
+    box-sizing: border-box
     display: flex
     flex-direction: column
     gap: 12px
     padding: 14px
     +surf.profileBlockCard
+
+.communityBadgeFullWidth
+    width: 100%
+    max-width: 100%
+    min-width: 0
+    box-sizing: border-box
 
 .communityHeaderRow
     display: flex
@@ -740,9 +749,17 @@
     background: rgba(238, 234, 222, 0.94) !important
     border-top-left-radius: 24px !important
     border-top-right-radius: 24px !important
+    max-width: 100vw !important
+    width: 100% !important
+    box-sizing: border-box !important
+    overflow-x: hidden !important
 
 .communityDrawerContent
     padding: 16px 12px calc(20px + env(safe-area-inset-bottom))
+    min-width: 0
+    max-width: 100%
+    box-sizing: border-box
+    overflow-x: hidden
 
 .communityDrawerHandle
     width: 42px
@@ -771,11 +788,15 @@
     border: 1px solid rgba(231, 225, 210, 0.95)
     background: rgba(255, 252, 245, 0.98)
     box-shadow: none
+    min-width: 0
+    max-width: 100%
 
 .communitySelectedTop
     display: flex
     align-items: center
     gap: 12px
+    min-width: 0
+    max-width: 100%
 
 .communitySelectedAvatar
     width: 56px
@@ -804,11 +825,18 @@
     align-items: center
     gap: 8px
     flex-wrap: wrap
+    min-width: 0
+    max-width: 100%
 
 .communitySelectedTitle
     font-size: 15px
     font-weight: 800
     color: #333944
+    flex: 1 1 auto
+    min-width: 0
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
 
 .communityOwnerBadge
     display: inline-flex

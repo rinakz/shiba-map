@@ -19,6 +19,40 @@ export const formatFeedTimeAgo = (value: string) => {
   return `${days} д.`;
 };
 
+function ruPlural(
+  n: number,
+  one: string,
+  few: string,
+  many: string,
+): string {
+  const mod100 = n % 100;
+  const mod10 = n % 10;
+  if (mod100 >= 11 && mod100 <= 14) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
+}
+
+/** «5 минут назад», «1 час назад» — для сторис и подобного UI. */
+export const formatStoryTimeAgoRu = (iso: string): string => {
+  const publishedAt = new Date(iso).getTime();
+  if (Number.isNaN(publishedAt)) return "";
+
+  const diffMs = Math.max(0, Date.now() - publishedAt);
+  const minutes = Math.floor(diffMs / (60 * 1000));
+  const hours = Math.floor(diffMs / (60 * 60 * 1000));
+  const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+
+  if (minutes < 1) return "только что";
+  if (minutes < 60) {
+    return `${minutes} ${ruPlural(minutes, "минуту", "минуты", "минут")} назад`;
+  }
+  if (hours < 24) {
+    return `${hours} ${ruPlural(hours, "час", "часа", "часов")} назад`;
+  }
+  return `${days} ${ruPlural(days, "день", "дня", "дней")} назад`;
+};
+
 export const buildSafeAvatarSrc = (photo: string | null, icon: string) => {
   if (!photo) return `/${icon}.png`;
   const trimmed = photo.trim();

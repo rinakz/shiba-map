@@ -248,13 +248,15 @@ export const useProfileCommunityManager = ({
     setCommunityLinkDraft(value);
   };
 
-  const handleCommunityAvatarChange = (event: ChangeEvent<HTMLInputElement>) =>
-    processCommunityAvatarChange(
+  const handleCommunityAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
+    void processCommunityAvatarChange(
       event,
       setError,
       setCommunityAvatarFile,
       setCommunityAvatarPreviewUrl,
+      communityAvatarPreviewUrl,
     );
+  };
 
   const isCommunityDirty =
     (community?.title ?? "") !== communityTitleDraft.trim() ||
