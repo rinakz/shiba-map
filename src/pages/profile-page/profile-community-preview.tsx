@@ -1,5 +1,5 @@
 import { IconPeople } from "../../shared/icons";
-import { CommunityBadge } from "../../shared/ui";
+import { OpenableCommunityBadge } from "../../shared/ui";
 import type { Community, ShibaType } from "../../shared/types";
 import stls from "./profile.module.sass";
 
@@ -36,7 +36,13 @@ export const ProfileCommunityPreview = ({
         <div className={stls.communityPreviewMeta}>
           <div className={stls.communityPreviewTitle}>{title}</div>
           <div className={stls.communityPreviewLink}>{tgLink}</div>
-          <CommunityBadge title={title} avatarUrl={avatarUrl} tgLink={tgLink} />
+          <OpenableCommunityBadge
+            title={title}
+            avatarUrl={avatarUrl}
+            tgLink={tgLink}
+            communityId={community?.id ?? mySiba?.community_id}
+            memberCount={community?.member_count}
+          />
         </div>
       </div>
     </div>

@@ -252,6 +252,7 @@ export const LeaderboardPage = () => {
         <LeaderboardMyPlaceBar
           heading="Моё сообщество"
           detailLine={`#${myCommunity.place} • ${myCommunity.title}`}
+          detailAvatarUrl={myCommunity.avatarUrl}
           levelValue={myCommunity.energy}
           levelLabel="сумм. ур."
         />

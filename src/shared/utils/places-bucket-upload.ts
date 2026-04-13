@@ -1,28 +1,21 @@
 import { supabase } from "../api/supabase-сlient";
 import { PLACES_PHOTOS_BUCKET } from "../constants/storage";
 
-/** Безопасное имя файла для пути в Storage (как при добавлении мест). */
-export function storageSafeFileBaseName(file: File): string {
-  const raw = file.name.replace(/[^\w.-]+/g, "_");
-  const trimmed = raw.replace(/^\.+/, "") || "photo.jpg";
-  return trimmed.slice(0, 120);
-}
-
 /**
- * Загрузка в тот же бакет и с тем же шаблоном пути, что в форме мест (`place-form` / `cafe-form`).
+ * Точная копия загрузки из `place-form.tsx` / `cafe-form.tsx`:
+ * тот же бакет, путь и опции, что при сохранении места.
  */
 export async function uploadImageFileLikePlaceForm(
-  authUserId: string,
+  authUserId: string | null | undefined,
   file: File,
 ): Promise<string> {
-  const uid = authUserId?.trim() || "anon";
-  const path = `places/${uid}/${Date.now()}_${storageSafeFileBaseName(file)}`;
   const { data: up, error: upErr } = await supabase.storage
     .from(PLACES_PHOTOS_BUCKET)
-    .upload(path, file, {
-      contentType: file.type || "image/jpeg",
-      upsert: true,
-    });
+    .upload(
+      `places/${authUserId ?? "anon"}/${Date.now()}_${file.name}`,
+      file,
+      { contentType: file.type || "image/jpeg", upsert: true },
+    );
   if (upErr) {
     throw new Error(upErr.message);
   }

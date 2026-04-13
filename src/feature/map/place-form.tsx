@@ -2,7 +2,7 @@ import { useContext, useRef, useState, type ChangeEvent } from "react";
 import { Button, Input } from "../../shared/ui";
 import { Checkbox } from "@mui/material";
 import { supabase } from "../../shared/api/supabase-сlient";
-import { PLACES_PHOTOS_BUCKET } from "../../shared/constants/storage";
+import { uploadImageFileLikePlaceForm } from "../../shared/utils/places-bucket-upload";
 import { AppContext } from "../../shared/context/app-context";
 import type { ShibaType } from "../../shared/types";
 import type { PlaceKind } from "./place-types";
@@ -87,6 +87,9 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
   const ymapsApiKey = import.meta.env.VITE_YMAPS_API_KEY as string | undefined;
 
   const mapRef = useRef<ymaps.Map | undefined>(undefined);
+  const placePhotoInputRef = useRef<HTMLInputElement>(null);
+  /** `"append"` — добавить слоты; число — заменить фото по индексу (один файл). */
+  const photoPickModeRef = useRef<"append" | number>("append");
 
   const initialCenter: [number, number] = [55.75, 37.57];
 
@@ -194,21 +197,62 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
     );
   };
 
-  const onPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
+  const validateImageFiles = (files: File[]) => {
     const invalid = files.find((file) => !file.type.startsWith("image/"));
     if (invalid) {
       setError("Можно загружать только изображения");
-      return;
+      return false;
     }
     const tooLarge = files.find((file) => file.size > 10 * 1024 * 1024);
     if (tooLarge) {
       setError("Файл слишком большой. Максимум 10 МБ.");
+      return false;
+    }
+    return true;
+  };
+
+  const removePhotoAt = (index: number) => {
+    setPhotoPreviews((prev) => {
+      const url = prev[index];
+      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+      return prev.filter((_, i) => i !== index);
+    });
+    setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const onPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!files.length) return;
+
+    const mode = photoPickModeRef.current;
+    photoPickModeRef.current = "append";
+
+    if (typeof mode === "number") {
+      const pick = files[0];
+      if (!pick || !validateImageFiles([pick])) return;
+      setError(null);
+      setPhotoFiles((prev) => {
+        const next = [...prev];
+        next[mode] = pick;
+        return next;
+      });
+      setPhotoPreviews((prev) => {
+        const next = [...prev];
+        const old = prev[mode];
+        if (old?.startsWith("blob:")) URL.revokeObjectURL(old);
+        next[mode] = URL.createObjectURL(pick);
+        return next;
+      });
       return;
     }
+
+    if (!validateImageFiles(files)) return;
     setError(null);
     const limited = [...photoFiles, ...files].slice(0, 6);
+    photoPreviews.forEach((url) => {
+      if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+    });
     setPhotoFiles(limited);
     setPhotoPreviews(limited.map((file) => URL.createObjectURL(file)));
   };
@@ -234,20 +278,11 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
 
       const photoUrls: string[] = [];
       for (const uploadedPhoto of uploadedPhotos) {
-        const { data: up, error: upErr } = await supabase.storage
-          .from(PLACES_PHOTOS_BUCKET)
-          .upload(
-            `places/${authUserId ?? "anon"}/${Date.now()}_${uploadedPhoto.name}`,
-            uploadedPhoto,
-            { contentType: uploadedPhoto.type || "image/jpeg", upsert: true },
-          );
-        if (upErr) throw upErr;
-        const { data } = supabase.storage
-          .from(PLACES_PHOTOS_BUCKET)
-          .getPublicUrl(up.path);
-        if (data.publicUrl) {
-          photoUrls.push(data.publicUrl);
-        }
+        const url = await uploadImageFileLikePlaceForm(
+          authUserId,
+          uploadedPhoto,
+        );
+        photoUrls.push(url);
       }
 
       const photoUrl = photoUrls[0] ?? null;
@@ -446,25 +481,50 @@ export const PlaceForm = ({ kind, onClose }: PlaceFormProps) => {
           <h4 className={stls.sectionTitle}>Фото</h4>
           <div className={stls.photoGrid}>
             {photoPreviews.map((preview, index) => (
-              <div key={`${preview}-${index}`} className={stls.photoCard}>
-                <img src={preview} alt={`Фото ${index + 1}`} />
+              <div key={`${preview}-${index}`} className={stls.photoSlotWrap}>
+                <button
+                  type="button"
+                  className={stls.photoSlotPick}
+                  onClick={() => {
+                    photoPickModeRef.current = index;
+                    placePhotoInputRef.current?.click();
+                  }}
+                  aria-label={`Заменить фото ${index + 1}`}
+                >
+                  <div className={stls.photoCard}>
+                    <img src={preview} alt={`Фото ${index + 1}`} />
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className={stls.photoRemove}
+                  onClick={() => removePhotoAt(index)}
+                  aria-label="Удалить фото"
+                  title="Удалить фото"
+                >
+                  ×
+                </button>
               </div>
             ))}
             {photoPreviews.length < 6 && (
               <button
                 type="button"
                 className={stls.photoAdd}
-                onClick={() =>
-                  document.getElementById(`place-photo-${kind}`)?.click()
-                }
+                onClick={() => {
+                  photoPickModeRef.current = "append";
+                  placePhotoInputRef.current?.click();
+                }}
               >
                 Добавить фото
               </button>
             )}
           </div>
-          <div className={stls.formHint}>Можно загрузить до 6 изображений.</div>
+          <div className={stls.formHint}>
+            Нажмите на фото, чтобы заменить, или «+» чтобы добавить (до 6).
+          </div>
           <input
             id={`place-photo-${kind}`}
+            ref={placePhotoInputRef}
             type="file"
             accept="image/*"
             multiple

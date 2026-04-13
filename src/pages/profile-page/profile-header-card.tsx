@@ -1,14 +1,14 @@
 import cn from "classnames";
 import Skeleton from "@mui/material/Skeleton";
 import {
-  IconAvatar,
+  IconDelete,
   IconEdit,
   IconFirstAid,
   IconRight,
   IconTrophyOutlined,
 } from "../../shared/icons";
 import { IconVerification } from "../../shared/icons/IconVerification";
-import { IconButton } from "../../shared/ui";
+import { IconButton, OpenableCommunityBadge } from "../../shared/ui";
 import type { Community, SibaStatus, ShibaType } from "../../shared/types";
 import {
   getSibaStatusColor,
@@ -17,7 +17,11 @@ import {
 import { ProfileRoleLore } from "./profile-role-lore";
 import { ProfileStatsGrid } from "./profile-stats-grid";
 import { ProfileStatusControl } from "./profile-status-control";
+import placeStls from "../../feature/map/place-sheet.module.sass";
 import stls from "./profile.module.sass";
+
+/** Как `place-form.tsx`: `id={`place-photo-${kind}`}` → стабильный id для `getElementById` */
+export const PROFILE_AVATAR_PHOTO_INPUT_ID = "profile-avatar-photo";
 
 type AcademyRank = {
   icon: string;
@@ -31,6 +35,9 @@ type ProfileHeaderCardProps = {
   community: Community | null;
   isEdit: boolean;
   photoPreviewUrl: string | null;
+  /** Локально сняли фото до сохранения — не показывать старое из mySiba. */
+  profilePhotoClearedInEdit: boolean;
+  onClearProfilePhoto: () => void;
   currentStatus: SibaStatus | null;
   academyRank: AcademyRank;
   subscriptionsCount: number;
@@ -45,7 +52,6 @@ type ProfileHeaderCardProps = {
   onStartEdit: () => void;
   onOpenHealth: () => void;
   onOpenAcademy: () => void;
-  onOpenFilePicker: () => void;
   onPhotoChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   setMySiba: React.Dispatch<React.SetStateAction<ShibaType | undefined>>;
@@ -62,6 +68,8 @@ export const ProfileHeaderCard = ({
   community,
   isEdit,
   photoPreviewUrl,
+  profilePhotoClearedInEdit,
+  onClearProfilePhoto,
   currentStatus,
   academyRank,
   subscriptionsCount,
@@ -76,7 +84,6 @@ export const ProfileHeaderCard = ({
   onStartEdit,
   onOpenHealth,
   onOpenAcademy,
-  onOpenFilePicker,
   onPhotoChange,
   setError,
   setMySiba,
@@ -87,6 +94,11 @@ export const ProfileHeaderCard = ({
 }: ProfileHeaderCardProps) => {
   const communityTitle = community?.title ?? mySiba?.community_title;
   const communityLink = community?.tg_link ?? mySiba?.community_tg_link;
+  const communityAvatarUrl =
+    community?.avatar_url ?? mySiba?.community_avatar_url ?? null;
+  const profileEditPhotoSrc =
+    photoPreviewUrl ??
+    (!profilePhotoClearedInEdit ? (mySiba?.photos ?? null) : null);
   const genderLabel =
     mySiba?.siba_gender === "male" ? "♂" : "♀";
   const profileTitleName =
@@ -153,35 +165,71 @@ export const ProfileHeaderCard = ({
         </div>
       )}
       {isEdit ? (
-        <div className={stls.photoWrapper} onClick={onOpenFilePicker}>
-          {photoPreviewUrl ? (
-            <img
-              className={cn(stls.uploadedPhoto, {
-                [stls.wantToWalk]: mySiba?.want_to_walk,
-              })}
-              src={photoPreviewUrl}
-              alt="Фото"
-            />
-          ) : mySiba?.photos ? (
-            <img
-              className={cn(stls.sibaPhoto, {
-                [stls.wantToWalk]: mySiba?.want_to_walk,
-              })}
-              src={mySiba.photos}
-              alt="Фото"
-            />
-          ) : (
-            <div className={stls.customInputPhoto}>
-              <IconAvatar />
+        <div className={stls.centerRow}>
+          <div className={placeStls.section}>
+            <h4 className={placeStls.sectionTitle}>Фото</h4>
+            <div
+              className={placeStls.photoGrid}
+              style={{
+                gridTemplateColumns: "minmax(0, 220px)",
+                justifyItems: "stretch",
+              }}
+            >
+              {profileEditPhotoSrc ? (
+                <div className={placeStls.photoSlotWrap}>
+                  <button
+                    type="button"
+                    className={placeStls.photoSlotPick}
+                    onClick={() =>
+                      document
+                        .getElementById(PROFILE_AVATAR_PHOTO_INPUT_ID)
+                        ?.click()
+                    }
+                    aria-label="Заменить фото"
+                  >
+                    <div className={placeStls.photoCard}>
+                      <img src={profileEditPhotoSrc} alt="Фото" />
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className={placeStls.photoRemove}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClearProfilePhoto();
+                    }}
+                    aria-label="Удалить фото"
+                    title="Удалить фото"
+                  >
+                    <IconDelete
+                      className={placeStls.photoRemoveIcon}
+                      color="currentColor"
+                    />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={placeStls.photoAdd}
+                  onClick={() =>
+                    document
+                      .getElementById(PROFILE_AVATAR_PHOTO_INPUT_ID)
+                      ?.click()
+                  }
+                >
+                  Добавить фото
+                </button>
+              )}
             </div>
-          )}
-          <input
-            ref={fileInputRef}
-            className={stls.inputPhoto}
-            type="file"
-            accept="image/*"
-            onChange={onPhotoChange}
-          />
+            <input
+              id={PROFILE_AVATAR_PHOTO_INPUT_ID}
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={onPhotoChange}
+              style={{ display: "none" }}
+            />
+          </div>
         </div>
       ) : (
         <img
@@ -235,14 +283,14 @@ export const ProfileHeaderCard = ({
                 </button>
               </div>
               {communityTitle ? (
-                <a
-                  className={stls.communityPanelTitle}
-                  href={communityLink ?? undefined}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {communityTitle}
-                </a>
+                <OpenableCommunityBadge
+                  className={stls.communityPanelBadge}
+                  title={communityTitle}
+                  avatarUrl={communityAvatarUrl}
+                  tgLink={communityLink}
+                  communityId={community?.id ?? mySiba?.community_id}
+                  memberCount={community?.member_count}
+                />
               ) : (
                 <div className={stls.communityPanelEmpty}>
                   Пока не состоит ни в одной стае

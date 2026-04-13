@@ -1,7 +1,7 @@
 import Skeleton from "@mui/material/Skeleton";
 import { YMaps, Map, Placemark, SearchControl } from "@pbe/react-yandex-maps";
 import { Button, Input } from "../ui";
-import { CommunityBadge } from "../ui";
+import { OpenableCommunityBadge } from "../ui";
 import { IconCalendar, IconPawButton } from "../icons";
 import stls from "./event-calendar.module.sass";
 import type {
@@ -117,11 +117,14 @@ export const EventCalendarActions = ({
                 <div>
                   <div className={stls.eventName}>{e.title}</div>
                   <div className={stls.eventMeta}>{formatDateTime(e.event_at)}</div>
-                  <CommunityBadge
-                    title={organizer?.community_title}
-                    avatarUrl={organizer?.community_avatar_url}
-                    tgLink={organizer?.community_tg_link}
-                  />
+                  {organizer?.community_title ? (
+                    <OpenableCommunityBadge
+                      title={organizer.community_title}
+                      avatarUrl={organizer.community_avatar_url}
+                      tgLink={organizer.community_tg_link}
+                      communityId={organizer.community_id}
+                    />
+                  ) : null}
                 </div>
               </div>
               <div className={stls.eventMeta}>{displayAddress}</div>

@@ -25,8 +25,8 @@ type ProfileCommunityDrawerProps = {
   onTitleChange: (value: string) => void;
   onLinkChange: (value: string) => void;
   onToggleCreateMode: () => void;
-  onOpenAvatarPicker: () => void;
   onAvatarChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onAvatarClear: () => void;
   onSelectCommunity: (community: Community) => void;
   onJoin: () => void;
   onSaveNew: () => void;
@@ -57,8 +57,8 @@ export const ProfileCommunityDrawer = ({
   onTitleChange,
   onLinkChange,
   onToggleCreateMode,
-  onOpenAvatarPicker,
   onAvatarChange,
+  onAvatarClear,
   onSelectCommunity,
   onJoin,
   onSaveNew,
@@ -101,8 +101,8 @@ export const ProfileCommunityDrawer = ({
           onTitleChange={onTitleChange}
           onLinkChange={onLinkChange}
           onToggleCreateMode={onToggleCreateMode}
-          onOpenAvatarPicker={onOpenAvatarPicker}
           onAvatarChange={onAvatarChange}
+          onAvatarClear={onAvatarClear}
           onSelectCommunity={onSelectCommunity}
           onJoin={onJoin}
           onSaveNew={onSaveNew}

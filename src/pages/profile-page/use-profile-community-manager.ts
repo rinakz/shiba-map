@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type Dispatch, type RefObject, type SetStateAction } from "react";
+import { useEffect, useState, type ChangeEvent, type Dispatch, type SetStateAction } from "react";
 import {
   assignUserToCommunity,
   clearUserCommunity,
@@ -9,7 +9,6 @@ import {
 import type { Community, ShibaType, ShibaUser } from "../../shared/types";
 import {
   getProfileActionErrorMessage,
-  openFilePicker,
   processCommunityAvatarChange,
   uploadCommunityAvatar,
 } from "./profile.utils";
@@ -21,7 +20,6 @@ type UseProfileCommunityManagerParams = {
   authUserId: string | null;
   communities: Community[];
   communityFromQuery: Community | null;
-  communityAvatarInputRef: RefObject<HTMLInputElement | null>;
   setError: (value: string | null) => void;
   setUser: SetUser;
   setMySiba: SetMySiba;
@@ -31,7 +29,6 @@ export const useProfileCommunityManager = ({
   authUserId,
   communities,
   communityFromQuery,
-  communityAvatarInputRef,
   setError,
   setUser,
   setMySiba,
@@ -249,13 +246,24 @@ export const useProfileCommunityManager = ({
   };
 
   const handleCommunityAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
-    void processCommunityAvatarChange(
+    if (communityAvatarPreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(communityAvatarPreviewUrl);
+    }
+    processCommunityAvatarChange(
       event,
       setError,
       setCommunityAvatarFile,
       setCommunityAvatarPreviewUrl,
-      communityAvatarPreviewUrl,
     );
+  };
+
+  const handleClearCommunityAvatar = () => {
+    if (communityAvatarPreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(communityAvatarPreviewUrl);
+    }
+    setCommunityAvatarFile(null);
+    setCommunityAvatarPreviewUrl(null);
+    setCommunityAvatarDraft("");
   };
 
   const isCommunityDirty =
@@ -307,6 +315,6 @@ export const useProfileCommunityManager = ({
     handleCommunityTitleChange,
     handleCommunityLinkChange,
     handleCommunityAvatarChange,
-    handleOpenCommunityAvatarPicker: () => openFilePicker(communityAvatarInputRef),
+    handleClearCommunityAvatar,
   };
 };

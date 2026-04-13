@@ -10,7 +10,10 @@ import { IconSibkaBlack } from "../../shared/icons/IconSibkaBlack";
 import type { AccountType, AuthFormType } from "../../pages/auth-page/types";
 import { useEffect, useMemo, useRef, useState, type FC } from "react";
 import cn from "classnames";
+import placeStls from "../map/place-sheet.module.sass";
 import stls from "./auth.module.sass";
+
+const KENNEL_LOGO_PHOTO_INPUT_ID = "kennel-logo-photo";
 
 interface FirstStepProps {
   control: Control<AuthFormType>;
@@ -207,37 +210,47 @@ export const FirstStep: FC<FirstStepProps> = ({
                 />
               )}
             />
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <span style={{ fontSize: "14px", color: "#2E2D30" }}>
-                Логотип питомника
-              </span>
+            <div className={placeStls.section}>
+              <h4 className={placeStls.sectionTitle}>Фото</h4>
+              <div className={placeStls.photoGrid}>
+                {kennelLogoPreviewUrl ? (
+                  <div className={placeStls.photoCard}>
+                    <img src={kennelLogoPreviewUrl} alt="" />
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  className={placeStls.photoAdd}
+                  onClick={() =>
+                    document.getElementById(KENNEL_LOGO_PHOTO_INPUT_ID)?.click()
+                  }
+                >
+                  Добавить фото
+                </button>
+              </div>
               <input
+                id={KENNEL_LOGO_PHOTO_INPUT_ID}
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                className={stls.kennelLogoInput}
+                style={{ display: "none" }}
                 onChange={(e) => {
-                  const f = e.target.files?.[0] ?? null;
-                  onKennelLogoChange(f);
+                  const files = Array.from(e.target.files ?? []);
+                  if (!files.length) return;
+                  const invalid = files.find((file) => !file.type.startsWith("image/"));
+                  if (invalid) {
+                    setError("Можно загружать только изображения");
+                    return;
+                  }
+                  const tooLarge = files.find((file) => file.size > 10 * 1024 * 1024);
+                  if (tooLarge) {
+                    setError("Файл слишком большой. Максимум 10 МБ.");
+                    return;
+                  }
+                  setError(null);
+                  onKennelLogoChange(files[0]!);
                 }}
               />
-              <div className={stls.kennelLogoRow}>
-                <div className={stls.kennelLogoPreview}>
-                  {kennelLogoPreviewUrl ? (
-                    <img src={kennelLogoPreviewUrl} alt="" />
-                  ) : (
-                    <span className={stls.kennelLogoPlaceholder}>Нет файла</span>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="medium"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Выбрать файл
-                </Button>
-              </div>
             </div>
           </div>
         )}

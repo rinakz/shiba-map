@@ -2,7 +2,7 @@ import { useState, type ChangeEvent } from "react";
 import { Button, Input } from "../../shared/ui";
 import { Checkbox } from "@mui/material";
 import { supabase } from "../../shared/api/supabase-сlient";
-import { PLACES_PHOTOS_BUCKET } from "../../shared/constants/storage";
+import { uploadImageFileLikePlaceForm } from "../../shared/utils/places-bucket-upload";
 import { useContext } from "react";
 import { AppContext } from "../../shared/context/app-context";
 import type { ShibaType } from "../../shared/types";
@@ -42,16 +42,7 @@ export const CafeForm = ({ coordinates, onClose }: CafeFormProps) => {
     try {
       let photoUrl: string | null = null;
       if (photoFile) {
-        const { data: up, error: upErr } = await supabase.storage
-          .from(PLACES_PHOTOS_BUCKET)
-          .upload(
-            `places/${authUserId ?? "anon"}/${Date.now()}_${photoFile.name}`,
-            photoFile,
-            { contentType: photoFile.type || "image/jpeg", upsert: true },
-          );
-        if (upErr) throw upErr;
-        const { data } = supabase.storage.from(PLACES_PHOTOS_BUCKET).getPublicUrl(up.path);
-        photoUrl = data.publicUrl ?? null;
+        photoUrl = await uploadImageFileLikePlaceForm(authUserId, photoFile);
       }
 
       const { data: cafe, error: cafeErr } = await supabase

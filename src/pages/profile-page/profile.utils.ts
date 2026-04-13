@@ -1,8 +1,4 @@
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
-import {
-  isLikelyImageFile,
-  resizeImageFileToJpeg,
-} from "../../shared/utils/image-avatar-prep";
 import { uploadImageFileLikePlaceForm } from "../../shared/utils/places-bucket-upload";
 import { supabase } from "../../shared/api/supabase-сlient";
 import { PATH } from "../../shared/constants/path";
@@ -15,12 +11,6 @@ export const profileQueryKeys = {
   user: (authUserId: string) => ["user", authUserId] as const,
   mySiba: (authUserId: string) => ["mySiba", authUserId] as const,
   allSibas: () => ["sibas"] as const,
-};
-
-export const openFilePicker = (fileInputRef: {
-  current: HTMLInputElement | null;
-}) => {
-  fileInputRef.current?.click();
 };
 
 export const loadUser = async (authUserId: string, setUser: SetUser) => {
@@ -308,29 +298,33 @@ export const buildBreederKennelDrafts = (
   kennelAddress: kennel?.address ?? "",
 });
 
+/**
+ * Логика выбора файла — как `place-form.tsx` `onPhotoChange` (строки 197–214),
+ * для одного фото берём `files[0]`.
+ */
 export const processProfileFileChange = (
   event: ChangeEvent<HTMLInputElement>,
   setError: (value: string | null) => void,
   setPhotoFile: (value: File | null) => void,
   setPhotoPreviewUrl: (value: string | null) => void,
 ) => {
+  const files = Array.from(event.target.files ?? []);
+  if (!files.length) return;
+  const invalid = files.find((file) => !file.type.startsWith("image/"));
+  if (invalid) {
+    setError("Можно загружать только изображения");
+    return;
+  }
+  const tooLarge = files.find((file) => file.size > 10 * 1024 * 1024);
+  if (tooLarge) {
+    setError("Файл слишком большой. Максимум 10 МБ.");
+    return;
+  }
   setError(null);
-  const file = event.target.files?.[0];
-  if (!file) return;
-
-  if (!file.type.startsWith("image/")) {
-    setError("Можно загрузить только изображение.");
-    return;
-  }
-
-  const maxSizeMb = 10;
-  if (file.size > maxSizeMb * 1024 * 1024) {
-    setError(`Файл слишком большой. Максимум ${maxSizeMb} МБ.`);
-    return;
-  }
-
+  const file = files[0]!;
   setPhotoFile(file);
   setPhotoPreviewUrl(URL.createObjectURL(file));
+  event.target.value = "";
 };
 
 const extractErrorMessage = (error: unknown, fallback: string) => {
@@ -342,47 +336,30 @@ const extractErrorMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
-export const processCommunityAvatarChange = async (
+/** Как `place-form.tsx` `onPhotoChange`, одно фото в стейт сообщества. */
+export const processCommunityAvatarChange = (
   event: ChangeEvent<HTMLInputElement>,
   setError: (value: string | null) => void,
   setCommunityAvatarFile: (value: File | null) => void,
   setCommunityAvatarPreviewUrl: (value: string | null) => void,
-  previousPreviewUrl: string | null,
 ) => {
-  const input = event.target;
-  setError(null);
-  const file = input.files?.[0];
-  try {
-    if (!file) return;
-
-    if (!isLikelyImageFile(file)) {
-      setError("Можно загрузить только изображение сообщества.");
-      return;
-    }
-
-    const maxSizeMb = 25;
-    if (file.size > maxSizeMb * 1024 * 1024) {
-      setError(`Файл слишком большой. Максимум ${maxSizeMb} МБ до сжатия.`);
-      return;
-    }
-
-    const prepared = await resizeImageFileToJpeg(file, {
-      maxEdge: 512,
-      quality: 0.88,
-      filename: "community-avatar.jpg",
-    });
-
-    if (previousPreviewUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(previousPreviewUrl);
-    }
-
-    setCommunityAvatarFile(prepared);
-    setCommunityAvatarPreviewUrl(URL.createObjectURL(prepared));
-  } catch (error) {
-    setError(extractErrorMessage(error, "Не удалось обработать фото сообщества."));
-  } finally {
-    input.value = "";
+  const files = Array.from(event.target.files ?? []);
+  if (!files.length) return;
+  const invalid = files.find((file) => !file.type.startsWith("image/"));
+  if (invalid) {
+    setError("Можно загружать только изображения");
+    return;
   }
+  const tooLarge = files.find((file) => file.size > 10 * 1024 * 1024);
+  if (tooLarge) {
+    setError("Файл слишком большой. Максимум 10 МБ.");
+    return;
+  }
+  setError(null);
+  const file = files[0]!;
+  setCommunityAvatarFile(file);
+  setCommunityAvatarPreviewUrl(URL.createObjectURL(file));
+  event.target.value = "";
 };
 
 type SubmitProfileParams = {
@@ -396,6 +373,8 @@ type SubmitProfileParams = {
   sibaGenderDraft: string;
   sibaIconDraft: string;
   photoFile: File | null;
+  /** Снять фото профиля при сохранении (если не выбран новый файл). */
+  profilePhotoClearedInEdit: boolean;
   setError: (value: string | null) => void;
   setUser: SetUser;
   setMySiba: SetMySiba;
@@ -423,6 +402,7 @@ export const submitProfile = async (
     sibaGenderDraft,
     sibaIconDraft,
     photoFile,
+    profilePhotoClearedInEdit,
     setError,
     setUser,
     setMySiba,
@@ -449,6 +429,13 @@ export const submitProfile = async (
       return false;
     }
   }
+
+  const photosUpdate =
+    photoFile && uploadedPhotoUrl
+      ? uploadedPhotoUrl
+      : !photoFile && profilePhotoClearedInEdit
+        ? null
+        : undefined;
 
   const breederKennelTitle =
     profileKind === "breeder" && kennelId && (kennelNameDraft ?? "").trim()
@@ -503,10 +490,10 @@ export const submitProfile = async (
       }
     }
 
-    if (uploadedPhotoUrl) {
+    if (photosUpdate !== undefined) {
       const { error: photoErr } = await supabase
         .from("sibains")
-        .update({ photos: uploadedPhotoUrl })
+        .update({ photos: photosUpdate })
         .eq("id", mySiba.id);
 
       if (photoErr) {
@@ -531,7 +518,7 @@ export const submitProfile = async (
       ...(kennelId && (kennelNameDraft ?? "").trim()
         ? { siba_name: (kennelNameDraft ?? "").trim() }
         : {}),
-      ...(uploadedPhotoUrl ? { photos: uploadedPhotoUrl } : {}),
+      ...(photosUpdate !== undefined ? { photos: photosUpdate } : {}),
     });
     return true;
   }
@@ -542,7 +529,7 @@ export const submitProfile = async (
       siba_name: sibaNameDraft,
       siba_gender: sibaGenderDraft,
       siba_icon: sibaIconDraft,
-      ...(uploadedPhotoUrl ? { photos: uploadedPhotoUrl } : {}),
+      ...(photosUpdate !== undefined ? { photos: photosUpdate } : {}),
     })
     .eq("id", mySiba.id);
 
@@ -566,7 +553,7 @@ export const submitProfile = async (
     siba_name: sibaNameDraft,
     siba_gender: sibaGenderDraft,
     siba_icon: sibaIconDraft,
-    ...(uploadedPhotoUrl ? { photos: uploadedPhotoUrl } : {}),
+    ...(photosUpdate !== undefined ? { photos: photosUpdate } : {}),
   });
   return true;
 };

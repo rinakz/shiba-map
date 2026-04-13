@@ -67,3 +67,9 @@ export type ShibaUser = {
   community_avatar_url?: string | null;
   community_tg_link?: string | null;
 };
+
+export type {
+  CommunityMemberPreview,
+  CommunityPreviewDrawerContextValue,
+  CommunityPreviewOpenPayload,
+} from "./community-preview-drawer.types";

@@ -1,7 +1,10 @@
-import { IconPeople } from "../../shared/icons";
-import { Button, CommunityBadge, Input } from "../../shared/ui";
+import { IconDelete, IconPeople } from "../../shared/icons";
+import { Button, Input, OpenableCommunityBadge } from "../../shared/ui";
 import type { Community } from "../../shared/types";
+import placeStls from "../../feature/map/place-sheet.module.sass";
 import stls from "./profile.module.sass";
+
+export const COMMUNITY_AVATAR_PHOTO_INPUT_ID = "community-avatar-photo";
 
 type ProfileCommunityBlockProps = {
   community: Community | null;
@@ -23,8 +26,8 @@ type ProfileCommunityBlockProps = {
   onTitleChange: (value: string) => void;
   onLinkChange: (value: string) => void;
   onToggleCreateMode: () => void;
-  onOpenAvatarPicker: () => void;
   onAvatarChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onAvatarClear: () => void;
   onSelectCommunity: (community: Community) => void;
   onJoin: () => void;
   onSaveNew: () => void;
@@ -53,8 +56,8 @@ export const ProfileCommunityBlock = ({
   onTitleChange,
   onLinkChange,
   onToggleCreateMode,
-  onOpenAvatarPicker,
   onAvatarChange,
+  onAvatarClear,
   onSelectCommunity,
   onJoin,
   onSaveNew,
@@ -105,11 +108,13 @@ export const ProfileCommunityBlock = ({
               <div className={stls.communitySelectedLink}>{community.tg_link}</div>
             </div>
           </div>
-          <CommunityBadge
+          <OpenableCommunityBadge
             className={stls.communityBadgeFullWidth}
             title={community.title}
             avatarUrl={community.avatar_url}
             tgLink={community.tg_link}
+            communityId={community.id}
+            memberCount={community.member_count}
           />
         </div>
         <div className={stls.communityActions}>
@@ -160,11 +165,13 @@ export const ProfileCommunityBlock = ({
         </button>
       </div>
       {selectedPreview && (
-        <CommunityBadge
+        <OpenableCommunityBadge
           className={stls.communityBadgeFullWidth}
           title={selectedPreview.title ?? titleValue}
           avatarUrl={avatarPreviewUrl ?? avatarValue}
           tgLink={selectedPreview.tg_link ?? linkValue}
+          communityId={selectedPreview.id}
+          memberCount={selectedPreview.member_count}
         />
       )}
       {!isCreateMode ? (
@@ -218,37 +225,73 @@ export const ProfileCommunityBlock = ({
         </>
       ) : (
         <>
-          <div
-            className={stls.communityAvatarPicker}
-            onClick={onOpenAvatarPicker}
-          >
-            {avatarPreviewUrl ? (
-              <img
-                className={stls.communityAvatarImage}
-                src={avatarPreviewUrl}
-                alt="Аватар сообщества"
-                decoding="async"
-                referrerPolicy="no-referrer"
-              />
-            ) : avatarValue ? (
-              <img
-                className={stls.communityAvatarImage}
-                src={avatarValue}
-                alt="Аватар сообщества"
-                decoding="async"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className={stls.communityAvatarPlaceholder}>
-                <IconPeople />
-              </div>
-            )}
+          <div className={placeStls.section}>
+            <h4 className={placeStls.sectionTitle}>Фото</h4>
+            <div
+              className={placeStls.photoGrid}
+              style={{
+                gridTemplateColumns: "minmax(0, 220px)",
+                justifyItems: "stretch",
+              }}
+            >
+              {avatarPreviewUrl || avatarValue.trim() ? (
+                <div className={placeStls.photoSlotWrap}>
+                  <button
+                    type="button"
+                    className={placeStls.photoSlotPick}
+                    onClick={() =>
+                      document
+                        .getElementById(COMMUNITY_AVATAR_PHOTO_INPUT_ID)
+                        ?.click()
+                    }
+                    aria-label="Заменить фото сообщества"
+                  >
+                    <div className={placeStls.photoCard}>
+                      <img
+                        src={avatarPreviewUrl ?? avatarValue}
+                        alt="Аватар сообщества"
+                        decoding="async"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className={placeStls.photoRemove}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAvatarClear();
+                    }}
+                    aria-label="Удалить фото"
+                    title="Удалить фото"
+                  >
+                    <IconDelete
+                      className={placeStls.photoRemoveIcon}
+                      color="currentColor"
+                    />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={placeStls.photoAdd}
+                  onClick={() =>
+                    document
+                      .getElementById(COMMUNITY_AVATAR_PHOTO_INPUT_ID)
+                      ?.click()
+                  }
+                >
+                  Добавить фото
+                </button>
+              )}
+            </div>
             <input
+              id={COMMUNITY_AVATAR_PHOTO_INPUT_ID}
               ref={communityAvatarInputRef}
-              className={stls.inputPhoto}
               type="file"
               accept="image/*"
               onChange={onAvatarChange}
+              style={{ display: "none" }}
             />
           </div>
           {hasUploadedAvatar && (

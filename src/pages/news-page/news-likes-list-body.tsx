@@ -1,5 +1,5 @@
 import Skeleton from "@mui/material/Skeleton";
-import { CommunityBadge } from "../../shared/ui";
+import { OpenableCommunityBadge } from "../../shared/ui";
 import {
   NEWS_LIKES_EMPTY,
   NEWS_LIKES_SHEET_TITLE,
@@ -38,11 +38,14 @@ export const NewsLikesListBody = ({ isLoading, list, onPickSiba }: Props) => {
           />
           <div className={pageStls.likesMeta}>
             <span>{s.siba_name}</span>
-            <CommunityBadge
-              title={s.community_title}
-              avatarUrl={s.community_avatar_url}
-              tgLink={s.community_tg_link}
-            />
+            {s.community_title ? (
+              <OpenableCommunityBadge
+                title={s.community_title}
+                avatarUrl={s.community_avatar_url}
+                tgLink={s.community_tg_link}
+                communityId={s.community_id}
+              />
+            ) : null}
           </div>
         </button>
       ))}

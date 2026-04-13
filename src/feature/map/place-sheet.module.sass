@@ -176,6 +176,48 @@
   padding: 10px
   cursor: pointer
 
+.photoSlotWrap
+  position: relative
+  width: 100%
+
+.photoSlotPick
+  display: block
+  width: 100%
+  padding: 0
+  margin: 0
+  border: none
+  background: transparent
+  cursor: pointer
+  text-align: left
+  border-radius: 16px
+
+.photoRemove
+  position: absolute
+  top: 6px
+  right: 6px
+  z-index: 2
+  width: 28px
+  height: 28px
+  border-radius: 50%
+  border: 1px solid rgba(231, 225, 210, 0.95)
+  background: rgba(255, 252, 245, 0.94)
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)
+  display: flex
+  align-items: center
+  justify-content: center
+  cursor: pointer
+  padding: 0
+  color: #5C5B55
+  font-size: 18px
+  line-height: 1
+  &:hover
+    background: #FFF
+    color: #E95B47
+
+.photoRemoveIcon
+  width: 14px
+  height: 14px
+
 .section
   display: flex
   flex-direction: column

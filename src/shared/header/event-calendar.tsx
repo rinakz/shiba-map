@@ -5,7 +5,7 @@ import { Siba } from "../../feature/siba/siba";
 import stls from "./event-calendar.module.sass";
 import { supabase } from "../api/supabase-сlient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CommunityBadge } from "../ui";
+import { OpenableCommunityBadge } from "../ui";
 import {
   geocodeAddressFromCoords,
   type YMapGeocodeApi,
@@ -337,11 +337,14 @@ export const EventCalendar = ({ open, onClose, authUserId }: EventCalendarProps)
             />
             <div className={stls.participantMeta}>
               <span>{s.siba_name}</span>
-              <CommunityBadge
-                title={s.community_title}
-                avatarUrl={s.community_avatar_url}
-                tgLink={s.community_tg_link}
-              />
+              {s.community_title ? (
+                <OpenableCommunityBadge
+                  title={s.community_title}
+                  avatarUrl={s.community_avatar_url}
+                  tgLink={s.community_tg_link}
+                  communityId={s.community_id}
+                />
+              ) : null}
             </div>
           </button>
         ))

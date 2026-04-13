@@ -10,7 +10,7 @@ import { PeopleListOverlay } from "../../shared/ui/people-list-overlay";
 import { IconCrown, IconPeople, IconTg, IconRight } from "../../shared/icons";
 import { IconVerification } from "../../shared/icons/IconVerification";
 import { fetchPublicKennelForBreederSiba } from "../../shared/api/breeder";
-import { Button } from "../../shared/ui";
+import { Button, OpenableCommunityBadge } from "../../shared/ui";
 import Skeleton from "@mui/material/Skeleton";
 import { getShibaRank } from "../../pages/profile-page/shiba-academy.data";
 import { KennelSection } from "../../pages/profile-page/kennel-section";
@@ -316,14 +316,13 @@ export const Siba = ({ id }: SibaProps) => {
                       <div className={stls.communityPanelTop}>
                         <span className={stls.communityPanelLabel}>Состоит в чате</span>
                       </div>
-                      <a
-                        className={stls.communityPanelTitle}
-                        href={siba?.community_tg_link ?? undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {siba.community_title}
-                      </a>
+                      <OpenableCommunityBadge
+                        className={stls.communityPanelBadge}
+                        title={siba.community_title}
+                        avatarUrl={siba.community_avatar_url}
+                        tgLink={siba.community_tg_link}
+                        communityId={siba.community_id}
+                      />
                     </div>
                   ) : null}
                 </div>

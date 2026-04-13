@@ -21,7 +21,6 @@ import {
   buildBreederKennelDrafts,
   buildEditDrafts,
   deleteAccount,
-  openFilePicker,
   performSignOut,
   processProfileFileChange,
   submitProfile,
@@ -53,6 +52,8 @@ export const ProfilePage = () => {
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const [profilePhotoClearedInEdit, setProfilePhotoClearedInEdit] =
+    useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nicknameDraft, setNicknameDraft] = useState("");
@@ -148,12 +149,11 @@ export const ProfilePage = () => {
     handleCommunityTitleChange,
     handleCommunityLinkChange,
     handleCommunityAvatarChange,
-    handleOpenCommunityAvatarPicker,
+    handleClearCommunityAvatar,
   } = useProfileCommunityManager({
     authUserId,
     communities: communitiesQuery.data ?? [],
     communityFromQuery: communityQuery.data ?? null,
-    communityAvatarInputRef,
     setError,
     setUser,
     setMySiba,
@@ -202,8 +202,22 @@ export const ProfilePage = () => {
     };
   }, [location.search, mySiba?.id]);
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) =>
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (photoPreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(photoPreviewUrl);
+    }
+    setProfilePhotoClearedInEdit(false);
     processProfileFileChange(event, setError, setPhotoFile, setPhotoPreviewUrl);
+  };
+
+  const handleClearProfilePhoto = () => {
+    if (photoPreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(photoPreviewUrl);
+    }
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
+    setProfilePhotoClearedInEdit(true);
+  };
 
   const handleSubmit = async () => {
     if (isSavingProfile) return;
@@ -225,6 +239,7 @@ export const ProfilePage = () => {
         sibaGenderDraft,
         sibaIconDraft,
         photoFile,
+        profilePhotoClearedInEdit,
         setError,
         setUser,
         setMySiba,
@@ -237,8 +252,11 @@ export const ProfilePage = () => {
         kennelPrefixDraft,
         kennelAddressDraft,
       });
-      if (ok && isBreederProfile) {
-        void queryClient.invalidateQueries({ queryKey: ["breeder-kennel"] });
+      if (ok) {
+        setProfilePhotoClearedInEdit(false);
+        if (isBreederProfile) {
+          void queryClient.invalidateQueries({ queryKey: ["breeder-kennel"] });
+        }
       }
     } catch (error) {
       setError(getProfileActionErrorMessage(error, "Не удалось сохранить профиль."));
@@ -261,6 +279,12 @@ export const ProfilePage = () => {
   };
 
   const handleStartEdit = () => {
+    if (photoPreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(photoPreviewUrl);
+    }
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
+    setProfilePhotoClearedInEdit(false);
     const drafts = buildEditDrafts(user, mySiba);
     setNicknameDraft(drafts.nickname);
     setTgNameDraft(drafts.tgName);
@@ -319,6 +343,8 @@ export const ProfilePage = () => {
           community={community}
           isEdit={isEdit}
           photoPreviewUrl={photoPreviewUrl}
+          profilePhotoClearedInEdit={profilePhotoClearedInEdit}
+          onClearProfilePhoto={handleClearProfilePhoto}
           currentStatus={currentStatus}
           academyRank={academyRank}
           subscriptionsCount={subscriptionsCountQuery.data ?? 0}
@@ -339,7 +365,6 @@ export const ProfilePage = () => {
               : navigate(PATH.HealthPass)
           }
           onOpenAcademy={() => navigate(PATH.ShibaAcademy)}
-          onOpenFilePicker={() => openFilePicker(fileInputRef)}
           onPhotoChange={handleFileChange}
           setError={setError}
           setMySiba={setMySiba}
@@ -422,8 +447,12 @@ export const ProfilePage = () => {
           isSigningOut={isSigningOut}
           onCancelEdit={() => {
             setIsEdit(false);
+            if (photoPreviewUrl?.startsWith("blob:")) {
+              URL.revokeObjectURL(photoPreviewUrl);
+            }
             setPhotoFile(null);
             setPhotoPreviewUrl(null);
+            setProfilePhotoClearedInEdit(false);
             setError(null);
           }}
           onSave={handleSubmit}
@@ -458,8 +487,8 @@ export const ProfilePage = () => {
           onTitleChange={handleCommunityTitleChange}
           onLinkChange={handleCommunityLinkChange}
           onToggleCreateMode={handleToggleCreateMode}
-          onOpenAvatarPicker={handleOpenCommunityAvatarPicker}
           onAvatarChange={handleCommunityAvatarChange}
+          onAvatarClear={handleClearCommunityAvatar}
           onSelectCommunity={handleSelectCommunity}
           onJoin={handleJoinCommunity}
           onSaveNew={handleSaveCommunity}

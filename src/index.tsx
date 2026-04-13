@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import "./styles/base.sass";
 import { App } from "./app";
 import { AppProvider } from "./shared/context/app-context";
+import { CommunityPreviewDrawerProvider } from "./shared/context/community-preview-drawer-provider";
 import { queryClient } from "./shared/api/query-client";
 
 const root = ReactDOM.createRoot(
@@ -12,7 +13,9 @@ const root = ReactDOM.createRoot(
 root.render(
   <QueryClientProvider client={queryClient}>
   <AppProvider>
-    <App />
+    <CommunityPreviewDrawerProvider>
+      <App />
+    </CommunityPreviewDrawerProvider>
   </AppProvider>
   </QueryClientProvider>
 );

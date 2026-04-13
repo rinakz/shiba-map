@@ -81,6 +81,7 @@ export const ClusterItemsOverlay = ({
                     title: s.community_title,
                     avatarUrl: s.community_avatar_url,
                     tgLink: s.community_tg_link,
+                    communityId: s.community_id,
                   }}
                 />
                 {status && (

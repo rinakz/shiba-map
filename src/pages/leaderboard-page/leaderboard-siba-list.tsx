@@ -54,6 +54,7 @@ export const LeaderboardSibaList = ({
                     title: item.community_title,
                     avatarUrl: item.community_avatar_url,
                     tgLink: item.community_tg_link,
+                    communityId: item.community_id,
                   }}
                 />
                 {item.place <= 3 && (

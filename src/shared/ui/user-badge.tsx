@@ -1,4 +1,4 @@
-import { CommunityBadge } from "./community-badge";
+import { OpenableCommunityBadge } from "./openable-community-badge";
 import stls from "./user-badge.module.sass";
 
 type ChatData = {
@@ -7,6 +7,8 @@ type ChatData = {
   avatarUrl?: string | null;
   tgLink?: string | null;
   color?: string | null;
+  communityId?: string | null;
+  memberCount?: number;
 };
 
 type UserBadgeProps = {
@@ -26,12 +28,13 @@ export const UserBadge = ({
     <span className={`${stls.userBadge} ${className ?? ""}`}>
       <span className={`${stls.userName} ${nameClassName ?? ""}`}>{userName}</span>
       {chatData?.title && (
-        <CommunityBadge
+        <OpenableCommunityBadge
           title={chatData.title}
-          slug={chatData.slug}
           avatarUrl={chatData.avatarUrl}
           tgLink={chatData.tgLink}
           color={chatData.color}
+          communityId={chatData.communityId}
+          memberCount={chatData.memberCount}
         />
       )}
     </span>
